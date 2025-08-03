@@ -1,0 +1,5 @@
+struct RamUsageMonitor;
+
+impl RamUsageMonitor {
+    
+}

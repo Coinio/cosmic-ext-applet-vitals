@@ -7,7 +7,8 @@ use cosmic::iced::window;
 use cosmic::iced::Limits;
 use cosmic::iced_winit::commands::popup::{destroy_popup, get_popup};
 use cosmic::widget::{self, autosize, button, container, icon, row, settings, Button, Id};
-use cosmic::{Application, Element, Theme};
+use cosmic::{Application, Element};
+use tokio_util::sync::CancellationToken;
 use once_cell::sync::Lazy;
 
 static AUTOSIZE_MAIN_ID: Lazy<Id> = Lazy::new(|| Id::new("autosize-main"));
@@ -16,6 +17,7 @@ static AUTOSIZE_MAIN_ID: Lazy<Id> = Lazy::new(|| Id::new("autosize-main"));
 pub struct VitalsAppState {
     /// Application state which is managed by the COSMIC runtime.
     core: Core,
+    monitor_cancellation_token: Option<CancellationToken>,
     /// The popup id.
     popup: Option<window::Id>,
     /// Example row toggler.
@@ -30,6 +32,7 @@ pub enum Message {
     TogglePopup,
     PopupClosed(window::Id),
     ToggleExampleRow(bool),
+    StartMonitoring,
 }
 
 /// Implement the `Application` trait for your application.
@@ -68,7 +71,7 @@ impl Application for VitalsAppState {
             ..Default::default()
         };
 
-        (app, Task::none())
+        (app, cosmic::task::message(Message::StartMonitoring))
     }
 
     fn on_close_requested(&self, id: window::Id) -> Option<Message> {
@@ -107,6 +110,35 @@ impl Application for VitalsAppState {
                 }
             }
             Message::ToggleExampleRow(toggled) => self.example_row = toggled,
+            Message::StartMonitoring => {
+                if let Some(token) = &self.monitor_cancellation_token {
+                    token.cancel();
+                }
+
+                let cancellation_token = CancellationToken::new();
+                self.monitor_cancellation_token = Some(cancellation_token.clone());
+
+                return cosmic::Task::stream(async_stream::stream! {
+                    // TODO: Duration from configuration.
+
+                    let mut interval = tokio::time::interval(std::time::Duration::from_secs(1));
+
+                    loop {
+                        tokio::select! {
+                            _ = interval.tick() => {
+                                // TODO: Calculate stats here
+
+                                // TODO: Yield the stat update message
+                                yield Message::TogglePopup;
+                            }
+                            _ = cancellation_token.cancelled() => {
+                                break;
+                            }
+                        }
+
+                    }
+                }).map(cosmic::Action::App);
+            }
         }
         Task::none()
     }
@@ -121,17 +153,12 @@ impl Application for VitalsAppState {
         // TODO: Handle horizontal / vertical layout
         //let horizontal = matches!(self.core.applet.anchor, PanelAnchor::Top |
         // PanelAnchor::Bottom);
-        
-        let ram_section =
-            self.build_indicator(icon::from_name("display-symbolic").icon(),"0.3TB/10TB");
-        let cpu_section = 
-            self.build_indicator(icon::from_name("display-symbolic").icon(), "10.0%");
 
-        let container = container(
-            cosmic::widget::row()
-                .push(ram_section)
-                .push(cpu_section)
-        );
+        let ram_section =
+            self.build_indicator(icon::from_name("display-symbolic").icon(), "0.3TB/10TB");
+        let cpu_section = self.build_indicator(icon::from_name("display-symbolic").icon(), "10.0%");
+
+        let container = container(cosmic::widget::row().push(ram_section).push(cpu_section));
 
         autosize::autosize(container, AUTOSIZE_MAIN_ID.clone()).into()
     }
@@ -155,7 +182,7 @@ impl Application for VitalsAppState {
 
 impl VitalsAppState {
     fn build_indicator<'a>(&self, icon: widget::Icon, text: &'a str) -> Button<'a, Message> {
-        let padding = self.core.applet.suggested_padding(false);        
+        let padding = self.core.applet.suggested_padding(false);
 
         let icon_container = container(icon).padding(padding);
 
