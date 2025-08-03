@@ -1,13 +1,16 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
-use cosmic::app::{Core, Task};
-use cosmic::iced::window::Id;
-use cosmic::iced::Limits;
-use cosmic::iced_winit::commands::popup::{destroy_popup, get_popup};
-use cosmic::widget::{self, settings};
-use cosmic::{Application, Element};
-
 use crate::fl;
+use cosmic::app::{Core, Task};
+use cosmic::iced::alignment::{Horizontal, Vertical};
+use cosmic::iced::Limits;
+use cosmic::iced::window;
+use cosmic::iced_winit::commands::popup::{destroy_popup, get_popup};
+use cosmic::widget::{self, autosize, button, container, icon, row, settings, Id};
+use cosmic::{Application, Element};
+use once_cell::sync::Lazy;
+
+static AUTOSIZE_MAIN_ID: Lazy<Id> = Lazy::new(|| Id::new("autosize-main"));
 
 /// This is the struct that represents your application.
 /// It is used to define the data that will be used by your application.
@@ -16,7 +19,7 @@ pub struct YourApp {
     /// Application state which is managed by the COSMIC runtime.
     core: Core,
     /// The popup id.
-    popup: Option<Id>,
+    popup: Option<window::Id>,
     /// Example row toggler.
     example_row: bool,
 }
@@ -27,7 +30,7 @@ pub struct YourApp {
 #[derive(Debug, Clone)]
 pub enum Message {
     TogglePopup,
-    PopupClosed(Id),
+    PopupClosed(window::Id),
     ToggleExampleRow(bool),
 }
 
@@ -41,11 +44,9 @@ pub enum Message {
 /// - `APP_ID` is the unique identifier of your application.
 impl Application for YourApp {
     type Executor = cosmic::executor::Default;
-
     type Flags = ();
-
-    type Message = Message;
-
+    type Message = Message;    
+    
     const APP_ID: &'static str = "com.example.CosmicAppletTemplate";
 
     fn core(&self) -> &Core {
@@ -72,34 +73,8 @@ impl Application for YourApp {
         (app, Task::none())
     }
 
-    fn on_close_requested(&self, id: Id) -> Option<Message> {
+    fn on_close_requested(&self, id: window::Id) -> Option<Message> {
         Some(Message::PopupClosed(id))
-    }
-
-    /// This is the main view of your application, it is the root of your widget tree.
-    ///
-    /// The `Element` type is used to represent the visual elements of your application,
-    /// it has a `Message` associated with it, which dictates what type of message it can send.
-    ///
-    /// To get a better sense of which widgets are available, check out the `widget` module.
-    fn view(&self) -> Element<Self::Message> {
-        self.core
-            .applet
-            .icon_button("display-symbolic")
-            .on_press(Message::TogglePopup)
-            .into()
-    }
-
-    fn view_window(&self, _id: Id) -> Element<Self::Message> {
-        let content_list = widget::list_column()
-            .padding(5)
-            .spacing(0)
-            .add(settings::item(
-                fl!("example-row"),
-                widget::toggler(self.example_row).on_toggle(Message::ToggleExampleRow),
-            ));
-
-        self.core.applet.popup_container(content_list).into()
     }
 
     /// Application messages are handled here. The application state can be modified based on
@@ -111,7 +86,7 @@ impl Application for YourApp {
                 return if let Some(p) = self.popup.take() {
                     destroy_popup(p)
                 } else {
-                    let new_id = Id::unique();
+                    let new_id = window::Id::unique();
                     self.popup.replace(new_id);
                     let mut popup_settings = self.core.applet.get_popup_settings(
                         self.core.main_window_id().unwrap(),
@@ -136,6 +111,71 @@ impl Application for YourApp {
             Message::ToggleExampleRow(toggled) => self.example_row = toggled,
         }
         Task::none()
+    }
+
+
+    /// This is the main view of your application, it is the root of your widget tree.
+    ///
+    /// The `Element` type is used to represent the visual elements of your application,
+    /// it has a `Message` associated with it, which dictates what type of message it can send.
+    ///
+    /// To get a better sense of which widgets are available, check out the `widget` module.
+    fn view(&self) -> Element<Self::Message> {
+        // TODO: Handle horizontal / vertical layout
+        //let horizontal = matches!(self.core.applet.anchor, PanelAnchor::Top |
+        // PanelAnchor::Bottom);
+
+        let padding = self.core.applet.suggested_padding(false);
+
+        let ram_usage_icon = container(icon::from_name("display-symbolic"))
+            .padding(padding);       
+
+        let ram_content = vec![
+            Element::new(ram_usage_icon),
+            Element::new(self.core.applet.text("0.3TB / 1.0TB"))
+        ];
+
+        let ram_button = button::custom(
+            Element::from(row::with_children(ram_content).align_y(Vertical::Center)))
+            .on_press(Message::TogglePopup)
+            .class(cosmic::theme::Button::Standard);
+
+        let cpu_usage_icon = container(icon::from_name("display-symbolic"))
+            .padding(padding);
+
+        let cpu_content = vec![
+            Element::new(cpu_usage_icon),
+            Element::new(self.core.applet.text("10.0%"))
+        ];
+        
+        let cpu_button = button::custom(
+            Element::from(row::with_children(cpu_content).align_y(Vertical::Center)))
+            .on_press(Message::TogglePopup)
+            .class(cosmic::theme::Button::Standard);
+        
+        let container = container(
+            cosmic::widget::row()
+                .push(ram_button)
+                .push(cpu_button)
+                .padding(padding)
+        );
+
+        autosize::autosize(
+            container,
+            AUTOSIZE_MAIN_ID.clone()
+        ).into()
+    }
+
+    fn view_window(&self, _id: window::Id) -> Element<Self::Message> {
+        let content_list = widget::list_column()
+            .padding(5)
+            .spacing(0)
+            .add(settings::item(
+                fl!("example-row"),
+                widget::toggler(self.example_row).on_toggle(Message::ToggleExampleRow),
+            ));
+
+        self.core.applet.popup_container(content_list).into()
     }
 
     fn style(&self) -> Option<cosmic::iced_runtime::Appearance> {
