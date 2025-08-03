@@ -3,17 +3,17 @@
 use crate::fl;
 use cosmic::app::{Core, Task};
 use cosmic::iced::alignment::{Horizontal, Vertical};
-use cosmic::iced::Limits;
 use cosmic::iced::window;
+use cosmic::iced::Limits;
 use cosmic::iced_winit::commands::popup::{destroy_popup, get_popup};
-use cosmic::widget::{self, autosize, button, container, icon, row, settings, Id};
-use cosmic::{Application, Element};
+use cosmic::widget::{self, autosize, button, container, icon, row, settings, Button, Id};
+use cosmic::{Application, Element, Theme};
 use once_cell::sync::Lazy;
 
 static AUTOSIZE_MAIN_ID: Lazy<Id> = Lazy::new(|| Id::new("autosize-main"));
 
 #[derive(Default)]
-pub struct YourApp {
+pub struct VitalsAppState {
     /// Application state which is managed by the COSMIC runtime.
     core: Core,
     /// The popup id.
@@ -40,7 +40,7 @@ pub enum Message {
 /// - `Flags` is the data that your application needs to use before it starts.
 /// - `Message` is the enum that contains all the possible variants that your application will need to transmit messages.
 /// - `APP_ID` is the unique identifier of your application.
-impl Application for YourApp {
+impl Application for VitalsAppState {
     type Executor = cosmic::executor::Default;
     type Flags = ();
     type Message = Message;
@@ -63,7 +63,7 @@ impl Application for YourApp {
     /// - `flags` is used to pass in any data that your application needs to use before it starts.
     /// - `Command` type is used to send messages to your application. `Command::none()` can be used to send no messages to your application.
     fn init(core: Core, _flags: Self::Flags) -> (Self, Task<Self::Message>) {
-        let app = YourApp {
+        let app = VitalsAppState {
             core,
             ..Default::default()
         };
@@ -121,46 +121,19 @@ impl Application for YourApp {
         // TODO: Handle horizontal / vertical layout
         //let horizontal = matches!(self.core.applet.anchor, PanelAnchor::Top |
         // PanelAnchor::Bottom);
-
-        let padding = self.core.applet.suggested_padding(false);
-
-        let ram_usage_icon = container(icon::from_name("display-symbolic"))
-            .padding(padding);
-
-        let ram_content = vec![
-            Element::new(ram_usage_icon),
-            Element::new(self.core.applet.text("0.3TB / 1.0TB"))
-        ];
-
-        let ram_button = button::custom(
-            Element::from(row::with_children(ram_content).align_y(Vertical::Center)))
-            .on_press(Message::TogglePopup)
-            .class(cosmic::theme::Button::Standard);
-
-        let cpu_usage_icon = container(icon::from_name("display-symbolic"))
-            .padding(padding);
-
-        let cpu_content = vec![
-            Element::new(cpu_usage_icon),
-            Element::new(self.core.applet.text("10.0%"))
-        ];
-
-        let cpu_button = button::custom(
-            Element::from(row::with_children(cpu_content).align_y(Vertical::Center)))
-            .on_press(Message::TogglePopup)
-            .class(cosmic::theme::Button::Standard);
+        
+        let ram_section =
+            self.build_indicator(icon::from_name("display-symbolic").icon(),"0.3TB/10TB");
+        let cpu_section = 
+            self.build_indicator(icon::from_name("display-symbolic").icon(), "10.0%");
 
         let container = container(
             cosmic::widget::row()
-                .push(ram_button)
-                .push(cpu_button)
-                .padding(padding)
+                .push(ram_section)
+                .push(cpu_section)
         );
 
-        autosize::autosize(
-            container,
-            AUTOSIZE_MAIN_ID.clone()
-        ).into()
+        autosize::autosize(container, AUTOSIZE_MAIN_ID.clone()).into()
     }
 
     fn view_window(&self, _id: window::Id) -> Element<Self::Message> {
@@ -177,5 +150,24 @@ impl Application for YourApp {
 
     fn style(&self) -> Option<cosmic::iced_runtime::Appearance> {
         Some(cosmic::applet::style())
+    }
+}
+
+impl VitalsAppState {
+    fn build_indicator<'a>(&self, icon: widget::Icon, text: &'a str) -> Button<'a, Message> {
+        let padding = self.core.applet.suggested_padding(false);        
+
+        let icon_container = container(icon).padding(padding);
+
+        let content = vec![
+            Element::new(icon_container),
+            Element::new(self.core.applet.text(text)),
+        ];
+
+        button::custom(Element::from(
+            row::with_children(content).align_y(Vertical::Center),
+        ))
+        .on_press(Message::TogglePopup)
+        .class(cosmic::theme::Button::Standard)
     }
 }
