@@ -12,8 +12,6 @@ use once_cell::sync::Lazy;
 
 static AUTOSIZE_MAIN_ID: Lazy<Id> = Lazy::new(|| Id::new("autosize-main"));
 
-/// This is the struct that represents your application.
-/// It is used to define the data that will be used by your application.
 #[derive(Default)]
 pub struct YourApp {
     /// Application state which is managed by the COSMIC runtime.
@@ -45,9 +43,9 @@ pub enum Message {
 impl Application for YourApp {
     type Executor = cosmic::executor::Default;
     type Flags = ();
-    type Message = Message;    
-    
-    const APP_ID: &'static str = "com.example.CosmicAppletTemplate";
+    type Message = Message;
+
+    const APP_ID: &'static str = "dev.eidolon.cosmic-vitals-applet";
 
     fn core(&self) -> &Core {
         &self.core
@@ -113,7 +111,6 @@ impl Application for YourApp {
         Task::none()
     }
 
-
     /// This is the main view of your application, it is the root of your widget tree.
     ///
     /// The `Element` type is used to represent the visual elements of your application,
@@ -128,7 +125,7 @@ impl Application for YourApp {
         let padding = self.core.applet.suggested_padding(false);
 
         let ram_usage_icon = container(icon::from_name("display-symbolic"))
-            .padding(padding);       
+            .padding(padding);
 
         let ram_content = vec![
             Element::new(ram_usage_icon),
@@ -147,12 +144,12 @@ impl Application for YourApp {
             Element::new(cpu_usage_icon),
             Element::new(self.core.applet.text("10.0%"))
         ];
-        
+
         let cpu_button = button::custom(
             Element::from(row::with_children(cpu_content).align_y(Vertical::Center)))
             .on_press(Message::TogglePopup)
             .class(cosmic::theme::Button::Standard);
-        
+
         let container = container(
             cosmic::widget::row()
                 .push(ram_button)

@@ -1,10 +1,10 @@
 [Desktop Entry]
-Name=COSMIC Applet Template
-Exec=cosmic-applet-template %F
+Name=COSMIC Vitals
+Exec=cosmic-vitals-applet %F
 Terminal=false
 Type=Application
 StartupNotify=true
-Icon=com.example.CosmicAppletTemplate
+Icon=dev.eidolon.cosmic-vitals-applet
 Categories=COSMIC;Utility;
 Keywords=Folder;Manager;
 MimeType=inode/directory;
