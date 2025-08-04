@@ -15,7 +15,7 @@ use crate::core::memory_monitor::{MemoryInfo, MemoryMonitor};
 static AUTOSIZE_MAIN_ID: Lazy<Id> = Lazy::new(|| Id::new("autosize-main"));
 
 #[derive(Default)]
-pub struct VitalsAppState {
+pub struct AppState {
     /// Application state which is managed by the COSMIC runtime.
     core: Core,
     /// The cancellation token to stop the status updates
@@ -48,7 +48,7 @@ pub enum Message {
 /// - `Flags` is the data that your application needs to use before it starts.
 /// - `Message` is the enum that contains all the possible variants that your application will need to transmit messages.
 /// - `APP_ID` is the unique identifier of your application.
-impl Application for VitalsAppState {
+impl Application for AppState {
     type Executor = cosmic::executor::Default;
     type Flags = ();
     type Message = Message;
@@ -71,7 +71,7 @@ impl Application for VitalsAppState {
     /// - `flags` is used to pass in any data that your application needs to use before it starts.
     /// - `Command` type is used to send messages to your application. `Command::none()` can be used to send no messages to your application.
     fn init(core: Core, _flags: Self::Flags) -> (Self, Task<Self::Message>) {
-        let app = VitalsAppState {
+        let app = AppState {
             core,
             ..Default::default()
         };
@@ -169,7 +169,7 @@ impl Application for VitalsAppState {
         //let horizontal = matches!(self.core.applet.anchor, PanelAnchor::Top |
         // PanelAnchor::Bottom);
 
-        let ram_text = format!("{}/{}", self.memory_usage.used, self.memory_usage.total);
+        let ram_text = format!("{}/{}", self.memory_usage.free_kilobytes, self.memory_usage.total_kilobytes);
 
         let ram_section =
             self.build_indicator(icon::from_name("display-symbolic").icon(), ram_text);
@@ -197,7 +197,7 @@ impl Application for VitalsAppState {
     }
 }
 
-impl VitalsAppState {
+impl AppState {
     fn build_indicator(&self, icon: widget::Icon, text: String) -> Button<Message> {
         let padding = self.core.applet.suggested_padding(false);
 

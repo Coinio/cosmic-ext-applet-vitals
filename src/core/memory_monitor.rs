@@ -4,9 +4,9 @@ pub struct MemoryMonitor;
 
 #[derive(Default, Clone, Debug)]
 pub struct MemoryInfo {
-    pub used: u64,
-    pub total: u64,
-    pub free: u64,
+    pub total_kilobytes: u64,
+    pub free_kilobytes: u64,
+    pub available_kilobytes: u64,
 }
 
 impl MemoryMonitor {
@@ -18,13 +18,13 @@ impl MemoryMonitor {
 
         let mut rng = thread_rng();
 
-        let total = 32676;
-        let used = rng.gen_range(0..32676);
+        let total = 32676;        
+        let available = rng.gen_range(0..32676);
 
         Ok(MemoryInfo {
-            used,
-            total,
-            free: total - used,
+            total_kilobytes: total,
+            free_kilobytes: total - available,
+            available_kilobytes: available,
         })
     }
 }
