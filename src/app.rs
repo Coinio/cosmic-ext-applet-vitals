@@ -10,7 +10,7 @@ use cosmic::widget::{self, autosize, button, container, icon, row, settings, But
 use cosmic::{Application, Element};
 use once_cell::sync::Lazy;
 use tokio_util::sync::CancellationToken;
-use crate::core::memory_monitor::{MemoryInfo, MemoryMonitor};
+use crate::core::proc_meminfo_reader::{MemoryInfo, ProcMemInfoReader};
 
 static AUTOSIZE_MAIN_ID: Lazy<Id> = Lazy::new(|| Id::new("autosize-main"));
 
@@ -21,7 +21,7 @@ pub struct AppState {
     /// The cancellation token to stop the status updates
     monitor_cancellation_token: Option<CancellationToken>,
     /// The current memory usage stats
-    memory_usage: MemoryInfo,
+    memory: MemoryInfo,
     /// The popup id.
     popup: Option<window::Id>,
     /// Example row toggler.
@@ -128,7 +128,7 @@ impl Application for AppState {
 
                     let mut interval = tokio::time::interval(std::time::Duration::from_secs(1));
 
-                    let memory_monitor = MemoryMonitor::new();
+                    let meminfo_reader = ProcMemInfoReader::new();
 
                     loop {
 
@@ -136,7 +136,7 @@ impl Application for AppState {
                             _ = interval.tick() => {
                                 // TODO: Do we want to group everything under one Stats object?
                                 // TODO: Should we make the update methods async?
-                                let memory_usage = memory_monitor.update();
+                                let memory_usage = meminfo_reader.get_memory_info();
 
                                 // TODO: Log errors
 
@@ -152,7 +152,7 @@ impl Application for AppState {
                 .map(cosmic::Action::App);
             },
             Message::MemoryUpdate(memory_usage) => {
-                self.memory_usage = memory_usage;
+                self.memory = memory_usage;
             }
         }
         Task::none()
@@ -169,7 +169,7 @@ impl Application for AppState {
         //let horizontal = matches!(self.core.applet.anchor, PanelAnchor::Top |
         // PanelAnchor::Bottom);
 
-        let ram_text = format!("{}/{}", self.memory_usage.free_kilobytes, self.memory_usage.total_kilobytes);
+        let ram_text = format!("{}/{}", self.memory.used_kibibytes, self.memory.total_kibibytes);
 
         let ram_section =
             self.build_indicator(icon::from_name("display-symbolic").icon(), ram_text);
