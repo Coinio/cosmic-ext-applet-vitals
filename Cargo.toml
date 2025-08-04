@@ -12,6 +12,7 @@ once_cell = "1.21.3"
 tokio = { version = "1.47.1", features = ["macros", "time"] }
 async-stream = "0.3.6"
 tokio-util = "0.7.16"
+rand = "0.8.5"
 
 [dependencies.libcosmic]
 git = "https://github.com/pop-os/libcosmic.git"

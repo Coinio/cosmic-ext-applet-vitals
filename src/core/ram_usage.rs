@@ -1,5 +1,0 @@
-struct RamUsageMonitor;
-
-impl RamUsageMonitor {
-    
-}

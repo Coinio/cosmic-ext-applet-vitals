@@ -8,8 +8,9 @@ use cosmic::iced::Limits;
 use cosmic::iced_winit::commands::popup::{destroy_popup, get_popup};
 use cosmic::widget::{self, autosize, button, container, icon, row, settings, Button, Id};
 use cosmic::{Application, Element};
-use tokio_util::sync::CancellationToken;
 use once_cell::sync::Lazy;
+use tokio_util::sync::CancellationToken;
+use crate::core::memory_monitor::{MemoryInfo, MemoryMonitor};
 
 static AUTOSIZE_MAIN_ID: Lazy<Id> = Lazy::new(|| Id::new("autosize-main"));
 
@@ -17,7 +18,10 @@ static AUTOSIZE_MAIN_ID: Lazy<Id> = Lazy::new(|| Id::new("autosize-main"));
 pub struct VitalsAppState {
     /// Application state which is managed by the COSMIC runtime.
     core: Core,
+    /// The cancellation token to stop the status updates
     monitor_cancellation_token: Option<CancellationToken>,
+    /// The current memory usage stats
+    memory_usage: MemoryInfo,
     /// The popup id.
     popup: Option<window::Id>,
     /// Example row toggler.
@@ -33,6 +37,7 @@ pub enum Message {
     PopupClosed(window::Id),
     ToggleExampleRow(bool),
     StartMonitoring,
+    MemoryUpdate(MemoryInfo)
 }
 
 /// Implement the `Application` trait for your application.
@@ -123,13 +128,19 @@ impl Application for VitalsAppState {
 
                     let mut interval = tokio::time::interval(std::time::Duration::from_secs(1));
 
+                    let memory_monitor = MemoryMonitor::new();
+
                     loop {
+
                         tokio::select! {
                             _ = interval.tick() => {
-                                // TODO: Calculate stats here
+                                // TODO: Do we want to group everything under one Stats object?
+                                // TODO: Should we make the update methods async?
+                                let memory_usage = memory_monitor.update();
 
-                                // TODO: Yield the stat update message
-                                yield Message::TogglePopup;
+                                // TODO: Log errors
+
+                                yield Message::MemoryUpdate(memory_usage.unwrap_or_default());
                             }
                             _ = cancellation_token.cancelled() => {
                                 break;
@@ -137,7 +148,11 @@ impl Application for VitalsAppState {
                         }
 
                     }
-                }).map(cosmic::Action::App);
+                })
+                .map(cosmic::Action::App);
+            },
+            Message::MemoryUpdate(memory_usage) => {
+                self.memory_usage = memory_usage;
             }
         }
         Task::none()
@@ -154,11 +169,13 @@ impl Application for VitalsAppState {
         //let horizontal = matches!(self.core.applet.anchor, PanelAnchor::Top |
         // PanelAnchor::Bottom);
 
-        let ram_section =
-            self.build_indicator(icon::from_name("display-symbolic").icon(), "0.3TB/10TB");
-        let cpu_section = self.build_indicator(icon::from_name("display-symbolic").icon(), "10.0%");
+        let ram_text = format!("{}/{}", self.memory_usage.used, self.memory_usage.total);
 
-        let container = container(cosmic::widget::row().push(ram_section).push(cpu_section));
+        let ram_section =
+            self.build_indicator(icon::from_name("display-symbolic").icon(), ram_text);
+        //let cpu_section = self.build_indicator(icon::from_name("display-symbolic").icon(), "10.0%");
+
+        let container = container(cosmic::widget::row().push(ram_section));//.push(cpu_section));
 
         autosize::autosize(container, AUTOSIZE_MAIN_ID.clone()).into()
     }
@@ -181,7 +198,7 @@ impl Application for VitalsAppState {
 }
 
 impl VitalsAppState {
-    fn build_indicator<'a>(&self, icon: widget::Icon, text: &'a str) -> Button<'a, Message> {
+    fn build_indicator(&self, icon: widget::Icon, text: String) -> Button<Message> {
         let padding = self.core.applet.suggested_padding(false);
 
         let icon_container = container(icon).padding(padding);
