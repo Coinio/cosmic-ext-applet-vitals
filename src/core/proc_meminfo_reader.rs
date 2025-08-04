@@ -27,17 +27,8 @@ impl ProcMemInfoReader {
     pub fn new() -> Self {
         Self
     }
-
+    
     pub fn get_memory_info(&self) -> Result<MemoryInfo, String> {
-        let result = self.read_proc_meminfo();
-
-        match result {
-            Err(e) => Err(e),
-            Ok(info) => Ok(info),
-        }
-    }
-
-    fn read_proc_meminfo(&self) -> Result<MemoryInfo, String> {
         let path = Path::new(MEMORY_INFO_FILE);
 
         let mut file = match File::open(path) {
