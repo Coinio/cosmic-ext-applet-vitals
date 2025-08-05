@@ -1,16 +1,17 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
+use crate::core::proc_meminfo_reader::{MemoryInfo, ProcMemInfoReader};
 use crate::fl;
 use cosmic::app::{Core, Task};
-use cosmic::iced::alignment::{Horizontal, Vertical};
+use cosmic::iced::alignment::Vertical;
 use cosmic::iced::window;
 use cosmic::iced::Limits;
 use cosmic::iced_winit::commands::popup::{destroy_popup, get_popup};
-use cosmic::widget::{self, autosize, button, container, icon, row, settings, Button, Id};
+use cosmic::widget::{self, autosize, button, container, row, settings, Button, Id};
 use cosmic::{Application, Element};
 use once_cell::sync::Lazy;
 use tokio_util::sync::CancellationToken;
-use crate::core::proc_meminfo_reader::{MemoryInfo, ProcMemInfoReader};
+use crate::ui::display_item::DisplayItem;
 
 static AUTOSIZE_MAIN_ID: Lazy<Id> = Lazy::new(|| Id::new("autosize-main"));
 
@@ -37,7 +38,7 @@ pub enum Message {
     PopupClosed(window::Id),
     ToggleExampleRow(bool),
     StartMonitoring,
-    MemoryUpdate(MemoryInfo)
+    MemoryUpdate(MemoryInfo),
 }
 
 /// Implement the `Application` trait for your application.
@@ -126,21 +127,15 @@ impl Application for AppState {
                 return cosmic::Task::stream(async_stream::stream! {
                     // TODO: Duration from configuration.
 
-                    let mut interval = tokio::time::interval(std::time::Duration::from_secs(1));
+                    let mut memory_update_interval = tokio::time::interval(std::time::Duration::from_secs(1));
 
                     let meminfo_reader = ProcMemInfoReader::new();
 
                     loop {
 
                         tokio::select! {
-                            _ = interval.tick() => {
-                                // TODO: Do we want to group everything under one Stats object?
-                                // TODO: Should we make the update methods async?
-                                let memory_usage = meminfo_reader.get_memory_info();
-
-                                // TODO: Log errors
-
-                                yield Message::MemoryUpdate(memory_usage.unwrap_or_default());
+                            _ = memory_update_interval.tick() => {
+                                yield Message::MemoryUpdate(meminfo_reader.get_memory_info().unwrap_or_default());
                             }
                             _ = cancellation_token.cancelled() => {
                                 break;
@@ -150,7 +145,7 @@ impl Application for AppState {
                     }
                 })
                 .map(cosmic::Action::App);
-            },
+            }
             Message::MemoryUpdate(memory_usage) => {
                 self.memory = memory_usage;
             }
@@ -169,13 +164,10 @@ impl Application for AppState {
         //let horizontal = matches!(self.core.applet.anchor, PanelAnchor::Top |
         // PanelAnchor::Bottom);
 
-        let ram_text = format!("{}/{}", self.memory.used_kibibytes, self.memory.total_kibibytes);
-
-        let ram_section =
-            self.build_indicator(icon::from_name("display-symbolic").icon(), ram_text);
+        let ram_section = self.build_indicator(&self.memory);
         //let cpu_section = self.build_indicator(icon::from_name("display-symbolic").icon(), "10.0%");
 
-        let container = container(cosmic::widget::row().push(ram_section));//.push(cpu_section));
+        let container = container(cosmic::widget::row().push(ram_section)); //.push(cpu_section));
 
         autosize::autosize(container, AUTOSIZE_MAIN_ID.clone()).into()
     }
@@ -198,14 +190,13 @@ impl Application for AppState {
 }
 
 impl AppState {
-    fn build_indicator(&self, icon: widget::Icon, text: String) -> Button<Message> {
+    fn build_indicator(&self, display_item: &impl DisplayItem) -> Button<Message> {
         let padding = self.core.applet.suggested_padding(false);
-
-        let icon_container = container(icon).padding(padding);
+        let icon_container = container(display_item.icon()).padding(padding);
 
         let content = vec![
             Element::new(icon_container),
-            Element::new(self.core.applet.text(text)),
+            Element::new(self.core.applet.text(display_item.text())),
         ];
 
         button::custom(Element::from(
