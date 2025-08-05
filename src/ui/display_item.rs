@@ -1,5 +1,5 @@
 use cosmic::widget::icon;
-use crate::core::proc_meminfo_reader::MemoryInfo;
+use crate::sensors::proc_meminfo_reader::MemoryInfo;
 
 /// This trait defines what will display for each resource, i.e. CPU, RAM, etc, on the panel
 pub trait DisplayItem

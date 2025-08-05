@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
-use crate::core::proc_meminfo_reader::{MemoryInfo, ProcMemInfoReader};
 use crate::fl;
 use cosmic::app::{Core, Task};
 use cosmic::iced::alignment::Vertical;
@@ -11,6 +10,7 @@ use cosmic::widget::{self, autosize, button, container, row, settings, Button, I
 use cosmic::{Application, Element};
 use once_cell::sync::Lazy;
 use tokio_util::sync::CancellationToken;
+use crate::sensors::proc_meminfo_reader::{MemoryInfo, ProcMemInfoReader};
 use crate::ui::display_item::DisplayItem;
 
 static AUTOSIZE_MAIN_ID: Lazy<Id> = Lazy::new(|| Id::new("autosize-main"));
