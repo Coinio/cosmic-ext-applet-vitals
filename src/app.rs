@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 use crate::fl;
+use crate::sensors::proc_meminfo_reader::{MemoryStats, ProcMemInfoReader};
+use crate::sensors::proc_stat_reader::{CpuStats, ProcStatReader};
+use crate::ui::display_item::DisplayItem;
 use cosmic::app::{Core, Task};
 use cosmic::iced::alignment::Vertical;
 use cosmic::iced::window;
@@ -10,8 +13,6 @@ use cosmic::widget::{self, autosize, button, container, row, settings, Button, I
 use cosmic::{Application, Element};
 use once_cell::sync::Lazy;
 use tokio_util::sync::CancellationToken;
-use crate::sensors::proc_meminfo_reader::{MemoryInfo, ProcMemInfoReader};
-use crate::ui::display_item::DisplayItem;
 
 static AUTOSIZE_MAIN_ID: Lazy<Id> = Lazy::new(|| Id::new("autosize-main"));
 
@@ -22,7 +23,9 @@ pub struct AppState {
     /// The cancellation token to stop the status updates
     monitor_cancellation_token: Option<CancellationToken>,
     /// The current memory usage stats
-    memory: MemoryInfo,
+    memory: MemoryStats,
+    /// The current cpu usage stats
+    cpu: CpuStats,
     /// The popup id.
     popup: Option<window::Id>,
     /// Example row toggler.
@@ -38,7 +41,8 @@ pub enum Message {
     PopupClosed(window::Id),
     ToggleExampleRow(bool),
     StartMonitoring,
-    MemoryUpdate(MemoryInfo),
+    MemoryUpdate(MemoryStats),
+    CpuUpdate(CpuStats),
 }
 
 /// Implement the `Application` trait for your application.
@@ -127,16 +131,21 @@ impl Application for AppState {
                 return cosmic::Task::stream(async_stream::stream! {
                     // TODO: Duration from configuration.
 
-                    let mut memory_update_interval = tokio::time::interval(std::time::Duration::from_secs(1));
-
+                    let mut memory_update_interval = tokio::time::interval(std::time::Duration::from_secs(3));                    
                     let meminfo_reader = ProcMemInfoReader::new();
+                    
+                    let mut cpu_update_interval = tokio::time::interval(std::time::Duration::from_secs(1));
+                    let mut cpuinfo_reader = ProcStatReader::new();
 
                     loop {
 
                         tokio::select! {
                             _ = memory_update_interval.tick() => {
-                                yield Message::MemoryUpdate(meminfo_reader.get_memory_info().unwrap_or_default());
-                            }
+                                yield Message::MemoryUpdate(meminfo_reader.read_memory_stats().unwrap_or_default());
+                            },
+                            _ = cpu_update_interval.tick() => {
+                                yield Message::CpuUpdate(cpuinfo_reader.read_cpu_stats().unwrap_or_default())
+                            },
                             _ = cancellation_token.cancelled() => {
                                 break;
                             }
@@ -144,10 +153,13 @@ impl Application for AppState {
 
                     }
                 })
-                .map(cosmic::Action::App);
+                    .map(cosmic::Action::App);
             }
             Message::MemoryUpdate(memory_usage) => {
                 self.memory = memory_usage;
+            }
+            Message::CpuUpdate(cpu_usage) => {
+                self.cpu = cpu_usage;
             }
         }
         Task::none()
@@ -165,9 +177,11 @@ impl Application for AppState {
         // PanelAnchor::Bottom);
 
         let ram_section = self.build_indicator(&self.memory);
-        //let cpu_section = self.build_indicator(icon::from_name("display-symbolic").icon(), "10.0%");
+        let cpu_section = self.build_indicator(&self.cpu);
 
-        let container = container(cosmic::widget::row().push(ram_section)); //.push(cpu_section));
+        let container = container(cosmic::widget::row()
+            .push(ram_section)
+            .push(cpu_section));
 
         autosize::autosize(container, AUTOSIZE_MAIN_ID.clone()).into()
     }
@@ -202,7 +216,7 @@ impl AppState {
         button::custom(Element::from(
             row::with_children(content).align_y(Vertical::Center),
         ))
-        .on_press(Message::TogglePopup)
-        .class(cosmic::theme::Button::Standard)
+            .on_press(Message::TogglePopup)
+            .class(cosmic::theme::Button::Standard)
     }
 }
