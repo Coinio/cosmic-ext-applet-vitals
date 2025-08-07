@@ -1,35 +1,32 @@
 use std::fs::File;
 use std::io::Read;
 use std::path::Path;
+use crate::sensors::sensor_traits::SensorReader;
 
 const PROC_STAT_FILE: &str = "/proc/stat";
 const CPU_LINE_PREFIX: &str = "cpu ";
 
 const PROC_STAT_IDLE_INDEX: usize = 3;
 
-#[derive(Default, Clone, Debug)]
-pub struct CpuStats {
-    pub cpu_usage_percent: f64,
+#[derive(Default)]
+pub struct ProcStatStatus {
+    pub idle: u64,
+    pub total: u64,
 }
 
-impl CpuStats {
-    pub fn new(cpu_usage_percent: f64) -> Self {
-        Self { cpu_usage_percent }
+impl ProcStatStatus {
+    pub fn new(idle: u64, total: u64) -> Self {
+        ProcStatStatus { idle, total }
     }
 }
 
-#[derive(Default, Debug)]
-pub struct ProcStatReader {
-    previous_idle: u64,
-    previous_total: u64,
-}
+#[derive(Default)]
+pub struct ProcStatSensorReader;
 
-impl ProcStatReader {
-    pub fn new() -> Self {
-        ProcStatReader::default()
-    }
+impl SensorReader for ProcStatSensorReader {
+    type Output = ProcStatStatus;
 
-    pub fn read_cpu_stats(&mut self) -> Result<CpuStats, String> {
+    fn read(&self) -> Result<ProcStatStatus, String> {
         let path = Path::new(PROC_STAT_FILE);
 
         let mut file = match File::open(path) {
@@ -47,8 +44,11 @@ impl ProcStatReader {
 
         self.parse_cpu_stats_line(first_line)
     }
+}
 
-    fn parse_cpu_stats_line(&mut self, line: &str) -> Result<CpuStats, String> {
+impl ProcStatSensorReader {
+
+    fn parse_cpu_stats_line(&self, line: &str) -> Result<ProcStatStatus, String> {
         let values: Vec<u64> = line
             .strip_prefix(CPU_LINE_PREFIX)
             .unwrap_or(line)
@@ -62,12 +62,6 @@ impl ProcStatReader {
             None => return Err(format!("{PROC_STAT_FILE} is not in a valid format.")),
         };
 
-        let cpu_usage_percent: f64 = 100.0
-            * (1.0 - (idle - self.previous_idle) as f64 / (total - self.previous_total) as f64);
-
-        self.previous_idle = idle;
-        self.previous_total = total;
-
-        Ok(CpuStats::new(cpu_usage_percent))
+        Ok(ProcStatStatus::new(idle, total))
     }
 }

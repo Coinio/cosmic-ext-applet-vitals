@@ -1,34 +1,32 @@
 use std::fs::File;
 use std::io::Read;
 use std::path::Path;
+use crate::sensors::sensor_traits::SensorReader;
 
 const MEMORY_INFO_FILE: &str = "/proc/meminfo";
 const MEMORY_INFO_TOTAL_KEY: &str = "MemTotal";
 const MEMORY_INFO_AVAILABLE_KEY: &str = "MemAvailable";
 
-#[derive(Default, Clone, Debug)]
-pub struct MemoryStats {
-    pub total_kibibytes: u64,
-    pub used_kibibytes: u64,
+pub struct ProcMemInfoStatus {
+    pub total: u64,
+    pub available: u64,
 }
 
-impl MemoryStats {
-    pub fn new(total: u64, used: u64) -> Self {
+impl ProcMemInfoStatus {
+    fn new (total: u64, available: u64) -> Self {
         Self {
-            total_kibibytes: total,
-            used_kibibytes: used,
+            total,
+            available,
         }
-    }
+    }   
 }
 
-pub struct ProcMemInfoReader;   
+pub struct ProcMemInfoSensorReader;
 
-impl ProcMemInfoReader {
-    pub fn new() -> Self {
-        Self
-    }
-    
-    pub fn read_memory_stats(&self) -> Result<MemoryStats, String> {
+impl SensorReader for ProcMemInfoSensorReader {
+    type Output = ProcMemInfoStatus;
+
+    fn read(&self) -> Result<ProcMemInfoStatus, String> {
         let path = Path::new(MEMORY_INFO_FILE);
 
         let mut file = match File::open(path) {
@@ -49,8 +47,7 @@ impl ProcMemInfoReader {
             let result = self.parse_proc_file_line(line);
 
             match result {
-                // TODO: Return error.
-                Err(_) => continue,
+                Err(e) => return Err(format!("Invalid file format: {} {}", MEMORY_INFO_FILE, e)),
                 Ok((key, value)) => match key {
                     MEMORY_INFO_TOTAL_KEY => total = value,
                     MEMORY_INFO_AVAILABLE_KEY => available = value,
@@ -59,10 +56,11 @@ impl ProcMemInfoReader {
             }
         }
 
-        let used = total.saturating_sub(available);
-
-        Ok(MemoryStats::new(total, used))
+        Ok(ProcMemInfoStatus::new(total, available))
     }
+}
+
+impl ProcMemInfoSensorReader {
 
     fn parse_proc_file_line<'a>(&self, line: &'a str) -> Result<(&'a str, u64), String> {
         let parts: Vec<&str> = line.split(':').collect();
@@ -73,7 +71,7 @@ impl ProcMemInfoReader {
 
         let value_parts: Vec<&str> = parts[1].split_whitespace().collect();
 
-        if value_parts.len() != 2 {
+        if value_parts.len() < 1 {
             return Err(format!("Invalid line format on line: {line}"));
         }
 

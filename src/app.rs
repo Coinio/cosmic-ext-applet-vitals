@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 use crate::fl;
-use crate::sensors::proc_meminfo_reader::{MemoryStats, ProcMemInfoReader};
-use crate::sensors::proc_stat_reader::{CpuStats, ProcStatReader};
 use crate::ui::display_item::DisplayItem;
 use cosmic::app::{Core, Task};
 use cosmic::iced::alignment::Vertical;
@@ -13,6 +11,10 @@ use cosmic::widget::{self, autosize, button, container, row, settings, Button, I
 use cosmic::{Application, Element};
 use once_cell::sync::Lazy;
 use tokio_util::sync::CancellationToken;
+use crate::monitors::cpu_monitor::{CpuMonitor, CpuStats};
+use crate::monitors::memory_monitor::{MemoryMonitor, MemoryStats};
+use crate::sensors::proc_meminfo_reader::ProcMemInfoSensorReader;
+use crate::sensors::proc_stat_reader::ProcStatSensorReader;
 
 static AUTOSIZE_MAIN_ID: Lazy<Id> = Lazy::new(|| Id::new("autosize-main"));
 
@@ -133,18 +135,18 @@ impl Application for AppState {
 
                     let mut memory_update_interval = tokio::time::interval(std::time::Duration::from_secs(3));
                     let mut cpu_update_interval = tokio::time::interval(std::time::Duration::from_secs(1));
-                    
-                    let meminfo_reader = ProcMemInfoReader::new();
-                    let mut cpuinfo_reader = ProcStatReader::new();
+                                        
+                    let mut memory_monitor = MemoryMonitor::new(ProcMemInfoSensorReader);
+                    let mut cpuinfo_reader = CpuMonitor::new(ProcStatSensorReader);
 
                     loop {
 
                         tokio::select! {
                             _ = memory_update_interval.tick() => {
-                                yield Message::MemoryUpdate(meminfo_reader.read_memory_stats().unwrap_or_default());
+                                yield Message::MemoryUpdate(memory_monitor.update().unwrap_or_default());
                             },
                             _ = cpu_update_interval.tick() => {
-                                yield Message::CpuUpdate(cpuinfo_reader.read_cpu_stats().unwrap_or_default())
+                                yield Message::CpuUpdate(cpuinfo_reader.update().unwrap_or_default())
                             },
                             _ = cancellation_token.cancelled() => {
                                 break;
