@@ -131,10 +131,10 @@ impl Application for AppState {
                 return cosmic::Task::stream(async_stream::stream! {
                     // TODO: Duration from configuration.
 
-                    let mut memory_update_interval = tokio::time::interval(std::time::Duration::from_secs(3));                    
-                    let meminfo_reader = ProcMemInfoReader::new();
-                    
+                    let mut memory_update_interval = tokio::time::interval(std::time::Duration::from_secs(3));
                     let mut cpu_update_interval = tokio::time::interval(std::time::Duration::from_secs(1));
+                    
+                    let meminfo_reader = ProcMemInfoReader::new();
                     let mut cpuinfo_reader = ProcStatReader::new();
 
                     loop {
@@ -176,12 +176,9 @@ impl Application for AppState {
         //let horizontal = matches!(self.core.applet.anchor, PanelAnchor::Top |
         // PanelAnchor::Bottom);
 
-        let ram_section = self.build_indicator(&self.memory);
-        let cpu_section = self.build_indicator(&self.cpu);
-
         let container = container(cosmic::widget::row()
-            .push(ram_section)
-            .push(cpu_section));
+            .push(self.build_indicator(&self.memory))
+            .push(self.build_indicator(&self.cpu)));
 
         autosize::autosize(container, AUTOSIZE_MAIN_ID.clone()).into()
     }
