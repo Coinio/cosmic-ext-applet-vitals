@@ -30,7 +30,7 @@ impl<S: SensorReader<Output = ProcMemInfoStatus>> MemoryMonitor<S> {
         }
     }
     
-    pub fn update(&mut self) -> Result<MemoryStats, String> {
+    pub fn poll(&mut self) -> Result<MemoryStats, String> {
         let meminfo_state = match self.sensor_reader.read() {
             Ok(state) => state,
             Err(err) => return Err(err),

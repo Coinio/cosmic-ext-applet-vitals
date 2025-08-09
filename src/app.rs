@@ -144,10 +144,10 @@ impl Application for AppState {
 
                         tokio::select! {
                             _ = memory_update_interval.tick() => {
-                                yield Message::MemoryUpdate(memory_monitor.update().unwrap_or_default());
+                                yield Message::MemoryUpdate(memory_monitor.poll().unwrap_or_default());
                             },
                             _ = cpu_update_interval.tick() => {
-                                yield Message::CpuUpdate(cpuinfo_reader.update().unwrap_or_default())
+                                yield Message::CpuUpdate(cpuinfo_reader.poll().unwrap_or_default())
                             },
                             _ = cancellation_token.cancelled() => {
                                 break;

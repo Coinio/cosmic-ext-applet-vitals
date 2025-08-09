@@ -31,18 +31,18 @@ impl<S: SensorReader<Output = ProcStatStatus>> CpuMonitor<S> {
         }
     }
     
-    pub fn update(&mut self) -> Result<CpuStats, String> {
+    pub fn poll(&mut self) -> Result<CpuStats, String> {
         let current = match self.sensor_reader.read() {
             Ok(cpu_stats) => cpu_stats,
             Err(err) => return Err(err),
         };
 
         let total_idle = current.idle + current.iowait;
-        
+
         let current_usage_percent: f64 = 100.0
             * (1.0 - (total_idle - self.previous_idle) as f64 / (current.total - self.previous_total)
             as f64);
-        
+
         self.sample_buffer.push_back(current_usage_percent);
 
         self.previous_idle = total_idle;
@@ -53,7 +53,7 @@ impl<S: SensorReader<Output = ProcStatStatus>> CpuMonitor<S> {
         }
 
         let average_cpu_usage = self.sample_buffer.iter().sum::<f64>() / self.sample_buffer.len() as f64;
-        
+
         Ok(CpuStats::new(average_cpu_usage))
     }
 }
