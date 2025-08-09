@@ -42,13 +42,15 @@ impl<S: SensorReader<Output = ProcStatStatus>> CpuMonitor<S> {
             Err(err) => return Err(err),
         };
 
+        let total_idle = current.idle + current.iowait;
+        
         let current_usage_percent: f64 = 100.0
-            * (1.0 - (current.idle - self.previous_idle) as f64 / (current.total - self.previous_total)
+            * (1.0 - (total_idle - self.previous_idle) as f64 / (current.total - self.previous_total)
             as f64);
         
         self.sample_buffer.push_back(current_usage_percent);
 
-        self.previous_idle = current.idle;
+        self.previous_idle = total_idle;
         self.previous_total = current.total;
 
         if (self.sample_buffer.len() == self.sample_buffer.capacity()) {

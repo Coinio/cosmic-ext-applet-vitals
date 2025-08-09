@@ -13,12 +13,13 @@ const PROC_STAT_IOWAIT_INDEX: usize = 4;
 #[derive(Default)]
 pub struct ProcStatStatus {
     pub idle: u64,
+    pub iowait: u64,
     pub total: u64,
 }
 
 impl ProcStatStatus {
-    pub fn new(idle: u64, total: u64) -> Self {
-        ProcStatStatus { idle, total }
+    pub fn new(idle: u64, iowait: u64, total: u64) -> Self {
+        ProcStatStatus { idle, iowait, total }
     }
 }
 
@@ -70,6 +71,6 @@ impl ProcStatSensorReader {
             None => return Err(format!("{PROC_STAT_FILE} is not in a valid format.")),
         };
 
-        Ok(ProcStatStatus::new(idle + iowait, total))
+        Ok(ProcStatStatus::new(idle, iowait, total))
     }
 }
