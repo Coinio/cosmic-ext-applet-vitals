@@ -180,8 +180,8 @@ impl Application for AppState {
         // PanelAnchor::Bottom);
 
         let container = container(cosmic::widget::row()
-            .push(self.build_indicator(&self.memory))
-            .push(self.build_indicator(&self.cpu)));
+            .push(self.build_indicator(&self.cpu))
+            .push(self.build_indicator(&self.memory)));
 
         autosize::autosize(container, AUTOSIZE_MAIN_ID.clone()).into()
     }
@@ -212,16 +212,16 @@ impl AppState {
             cosmic::widget::text(display_item.label(self))
                 .class(cosmic::theme::Text::Color(display_item.label_color(self)))
                 .font(cosmic::iced::Font {
-                    weight: cosmic::iced::font::Weight::ExtraBold,
+                    weight: cosmic::iced::font::Weight::Bold,
                     ..Default::default()
                 })
-        ).padding(padding);        
+        ).padding(padding);
 
         let text_container = container(
             self.core.applet.text(display_item.text(self))
                 .class(cosmic::theme::Text::default())
                 .font(cosmic::iced::Font {
-                    weight: cosmic::iced::font::Weight::ExtraBold,
+                    weight: cosmic::iced::font::Weight::Bold,
                     ..Default::default()
                 })
         );
@@ -229,13 +229,13 @@ impl AppState {
         let content = vec![
             Element::new(label_container),
             Element::new(text_container),
-        ];
-
+        ];        
+        
         button::custom(Element::from(
             row::with_children(content).align_y(Vertical::Center),
         ))
             .on_press(Message::TogglePopup)
             // Use a text-style button so no background or hover/focus fill is shown
-            .class(cosmic::theme::Button::HeaderBar)
+            .class(cosmic::theme::Button::AppletMenu)
     }
 }
