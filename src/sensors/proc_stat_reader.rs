@@ -7,6 +7,8 @@ const PROC_STAT_FILE: &str = "/proc/stat";
 const CPU_LINE_PREFIX: &str = "cpu ";
 
 const PROC_STAT_IDLE_INDEX: usize = 3;
+const PROC_STAT_IOWAIT_INDEX: usize = 4;
+
 
 #[derive(Default)]
 pub struct ProcStatStatus {
@@ -57,11 +59,17 @@ impl ProcStatSensorReader {
             .collect();
 
         let total = values.iter().sum();
+
         let idle = match values.get(PROC_STAT_IDLE_INDEX) {
             Some(&value) => value,
             None => return Err(format!("{PROC_STAT_FILE} is not in a valid format.")),
         };
 
-        Ok(ProcStatStatus::new(idle, total))
+        let iowait = match values.get(PROC_STAT_IOWAIT_INDEX) {
+            Some(&value) => value,
+            None => return Err(format!("{PROC_STAT_FILE} is not in a valid format.")),
+        };
+
+        Ok(ProcStatStatus::new(idle + iowait, total))
     }
 }
