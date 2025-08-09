@@ -137,7 +137,7 @@ impl Application for AppState {
                     let mut cpu_update_interval = tokio::time::interval(std::time::Duration::from_secs(1));
                                         
                     let mut memory_monitor = MemoryMonitor::new(ProcMemInfoSensorReader);
-                    let mut cpuinfo_reader = CpuMonitor::new(ProcStatSensorReader);
+                    let mut cpuinfo_reader = CpuMonitor::new(ProcStatSensorReader, 5);
 
                     loop {
 
