@@ -22,17 +22,12 @@ pub struct CpuMonitor<S: SensorReader<Output = ProcStatStatus>> {
 
 impl<S: SensorReader<Output = ProcStatStatus>> CpuMonitor<S> {
     pub fn new(sensor_reader: S, window_size: usize) -> Self {
-
-        let mut sample_buffer = VecDeque::new();
-
-        sample_buffer.reserve_exact(window_size);
-
         Self {
             sensor_reader,
             previous_idle: 0,
             previous_total: 0,
             // TODO: Config
-            sample_buffer
+            sample_buffer: VecDeque::with_capacity(window_size),
         }
     }
     

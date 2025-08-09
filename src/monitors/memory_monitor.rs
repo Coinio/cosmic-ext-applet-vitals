@@ -1,3 +1,4 @@
+use std::collections::VecDeque;
 use crate::sensors::proc_meminfo_reader::ProcMemInfoStatus;
 use crate::sensors::sensor_traits::SensorReader;
 
@@ -18,12 +19,14 @@ impl MemoryStats {
 
 pub struct MemoryMonitor<S: SensorReader<Output = ProcMemInfoStatus>> {
     sensor_reader: S,
+    sample_buffer: VecDeque<u64>
 }
 
 impl<S: SensorReader<Output = ProcMemInfoStatus>> MemoryMonitor<S> {
-    pub fn new(sensor_reader: S) -> Self {
+    pub fn new(sensor_reader: S, window_size: usize) -> Self {
         Self {
-            sensor_reader
+            sensor_reader,
+            sample_buffer: VecDeque::with_capacity(window_size)
         }
     }
     
@@ -33,8 +36,16 @@ impl<S: SensorReader<Output = ProcMemInfoStatus>> MemoryMonitor<S> {
             Err(err) => return Err(err),
         };
 
-        let used = meminfo_state.total.saturating_sub(meminfo_state.available);
+        let current_used = meminfo_state.total.saturating_sub(meminfo_state.available);
+        
+        self.sample_buffer.push_back(current_used);
+        
+        if self.sample_buffer.len() > self.sample_buffer.capacity() {
+            self.sample_buffer.pop_front();       
+        }
+        
+        let average_used = self.sample_buffer.iter().sum::<u64>() / self.sample_buffer.len() as u64;
 
-        Ok(MemoryStats::new(meminfo_state.total, used))
+        Ok(MemoryStats::new(meminfo_state.total, average_used))
     }
 }

@@ -133,11 +133,12 @@ impl Application for AppState {
                 return cosmic::Task::stream(async_stream::stream! {
                     // TODO: Duration from configuration.
 
-                    let mut memory_update_interval = tokio::time::interval(std::time::Duration::from_secs(3));
+                    let mut memory_update_interval = tokio::time::interval
+                    (std::time::Duration::from_secs(1));
                     let mut cpu_update_interval = tokio::time::interval(std::time::Duration::from_secs(1));
                                         
-                    let mut memory_monitor = MemoryMonitor::new(ProcMemInfoSensorReader);
-                    let mut cpuinfo_reader = CpuMonitor::new(ProcStatSensorReader, 5);
+                    let mut memory_monitor = MemoryMonitor::new(ProcMemInfoSensorReader,3);
+                    let mut cpuinfo_reader = CpuMonitor::new(ProcStatSensorReader, 4);
 
                     loop {
 
