@@ -1,6 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 use crate::fl;
+use crate::monitors::cpu_monitor::{CpuMonitor, CpuStats};
+use crate::monitors::memory_monitor::{MemoryMonitor, MemoryStats};
+use crate::sensors::proc_meminfo_reader::ProcMemInfoSensorReader;
+use crate::sensors::proc_stat_reader::ProcStatSensorReader;
 use crate::ui::display_item::DisplayItem;
 use cosmic::app::{Core, Task};
 use cosmic::iced::alignment::Vertical;
@@ -11,10 +15,6 @@ use cosmic::widget::{self, autosize, button, container, row, settings, Button, I
 use cosmic::{Application, Element};
 use once_cell::sync::Lazy;
 use tokio_util::sync::CancellationToken;
-use crate::monitors::cpu_monitor::{CpuMonitor, CpuStats};
-use crate::monitors::memory_monitor::{MemoryMonitor, MemoryStats};
-use crate::sensors::proc_meminfo_reader::ProcMemInfoSensorReader;
-use crate::sensors::proc_stat_reader::ProcStatSensorReader;
 
 static AUTOSIZE_MAIN_ID: Lazy<Id> = Lazy::new(|| Id::new("autosize-main"));
 
@@ -205,18 +205,37 @@ impl Application for AppState {
 
 impl AppState {
     fn build_indicator(&self, display_item: &impl DisplayItem) -> Button<Message> {
+        // Use zero padding to avoid any extra space around the text
         let padding = self.core.applet.suggested_padding(false);
-        let icon_container = container(display_item.icon()).padding(padding);
+
+        let label_container = container(
+            cosmic::widget::text(display_item.label(self))
+                .class(cosmic::theme::Text::Color(display_item.label_color(self)))
+                .font(cosmic::iced::Font {
+                    weight: cosmic::iced::font::Weight::ExtraBold,
+                    ..Default::default()
+                })
+        ).padding(padding);        
+
+        let text_container = container(
+            self.core.applet.text(display_item.text(self))
+                .class(cosmic::theme::Text::default())
+                .font(cosmic::iced::Font {
+                    weight: cosmic::iced::font::Weight::ExtraBold,
+                    ..Default::default()
+                })
+        );
 
         let content = vec![
-            Element::new(icon_container),
-            Element::new(self.core.applet.text(display_item.text())),
+            Element::new(label_container),
+            Element::new(text_container),
         ];
 
         button::custom(Element::from(
             row::with_children(content).align_y(Vertical::Center),
         ))
             .on_press(Message::TogglePopup)
-            .class(cosmic::theme::Button::Standard)
+            // Use a text-style button so no background or hover/focus fill is shown
+            .class(cosmic::theme::Button::HeaderBar)
     }
 }
