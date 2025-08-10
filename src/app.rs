@@ -209,22 +209,25 @@ impl AppState {
         let padding = self.core.applet.suggested_padding(false);
 
         let label_container = container(
-            cosmic::widget::text(display_item.label(self))
-                .class(cosmic::theme::Text::Color(display_item.label_color(self)))
+            self.core.applet.text(display_item.label(self))
+                .class(cosmic::theme::Text::Custom(|theme| {
+                    let mut c: cosmic::iced_core::Color = theme.current_container().on.into();
+                    c.a *= 0.5;
+                    cosmic::iced_widget::text::Style { color: Some(c) }
+                }))
                 .font(cosmic::iced::Font {
-                    weight: cosmic::iced::font::Weight::Bold,
+                    weight: cosmic::iced::font::Weight::Medium,
                     ..Default::default()
                 })
-        ).padding(padding);
+        ).padding([0, padding]);
 
         let text_container = container(
             self.core.applet.text(display_item.text(self))
-                .class(cosmic::theme::Text::default())
                 .font(cosmic::iced::Font {
                     weight: cosmic::iced::font::Weight::Bold,
                     ..Default::default()
                 })
-        );
+        ).padding([0, padding]);
 
         let content = vec![
             Element::new(label_container),
