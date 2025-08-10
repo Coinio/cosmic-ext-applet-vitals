@@ -48,7 +48,7 @@ impl<S: SensorReader<Output = ProcStatStatus>> CpuMonitor<S> {
         self.previous_idle = total_idle;
         self.previous_total = current.total;
 
-        if (self.sample_buffer.len() == self.sample_buffer.capacity()) {
+        if self.sample_buffer.len() == self.sample_buffer.capacity() {
             self.sample_buffer.pop_front();
         }
 

@@ -174,7 +174,7 @@ impl Application for AppState {
     /// it has a `Message` associated with it, which dictates what type of message it can send.
     ///
     /// To get a better sense of which widgets are available, check out the `widget` module.
-    fn view(&self) -> Element<Self::Message> {
+    fn view(&self) -> Element<'_, Self::Message> {
         // TODO: Handle horizontal / vertical layout
         //let horizontal = matches!(self.core.applet.anchor, PanelAnchor::Top |
         // PanelAnchor::Bottom);
@@ -186,7 +186,7 @@ impl Application for AppState {
         autosize::autosize(container, AUTOSIZE_MAIN_ID.clone()).into()
     }
 
-    fn view_window(&self, _id: window::Id) -> Element<Self::Message> {
+    fn view_window(&self, _id: window::Id) -> Element<'_, Self::Message> {
         let content_list = widget::list_column()
             .padding(5)
             .spacing(0)
@@ -204,8 +204,7 @@ impl Application for AppState {
 }
 
 impl AppState {
-    fn build_indicator(&self, display_item: &impl DisplayItem) -> Button<Message> {
-        // Use zero padding to avoid any extra space around the text
+    fn build_indicator(&self, display_item: &impl DisplayItem) -> Button<'_, Message> {
         let padding = self.core.applet.suggested_padding(false);
 
         let label_container = container(
@@ -232,13 +231,12 @@ impl AppState {
         let content = vec![
             Element::new(label_container),
             Element::new(text_container),
-        ];        
-        
+        ];
+
         button::custom(Element::from(
             row::with_children(content).align_y(Vertical::Center),
         ))
             .on_press(Message::TogglePopup)
-            // Use a text-style button so no background or hover/focus fill is shown
             .class(cosmic::theme::Button::AppletMenu)
     }
 }
