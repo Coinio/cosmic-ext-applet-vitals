@@ -235,8 +235,7 @@ impl AppState {
 
         button::custom(Element::from(
             row::with_children(content).align_y(Vertical::Center),
-        ))
-            .on_press(Message::TogglePopup)
+        ))  //.on_press(Message::TogglePopup)
             .class(cosmic::theme::Button::AppletMenu)
     }
 }
