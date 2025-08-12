@@ -1,4 +1,5 @@
 use std::collections::VecDeque;
+use crate::core::app_configuration::AppConfiguration;
 use crate::sensors::proc_stat_reader::{ProcStatStatus};
 use crate::sensors::sensor_traits::SensorReader;
 
@@ -21,13 +22,13 @@ pub struct CpuMonitor<S: SensorReader<Output = ProcStatStatus>> {
 }
 
 impl<S: SensorReader<Output = ProcStatStatus>> CpuMonitor<S> {
-    pub fn new(sensor_reader: S, window_size: usize) -> Self {
+    pub fn new(sensor_reader: S, configuration: &AppConfiguration) -> Self {
         Self {
             sensor_reader,
             previous_idle: 0,
             previous_total: 0,
             // TODO: Config
-            sample_buffer: VecDeque::with_capacity(window_size),
+            sample_buffer: VecDeque::with_capacity(configuration.cpu.update_window_size),
         }
     }
     

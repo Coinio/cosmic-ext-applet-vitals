@@ -13,6 +13,8 @@ tokio = { version = "1.47.1", features = ["macros", "time"] }
 async-stream = "0.3.6"
 tokio-util = "0.7.16"
 rand = "0.8.5"
+serde = { version = "1.0.219", features = ["derive"] }
+log = "0.4.27"
 
 [dependencies.libcosmic]
 git = "https://github.com/pop-os/libcosmic.git"

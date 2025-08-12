@@ -8,13 +8,18 @@ use crate::sensors::proc_stat_reader::ProcStatSensorReader;
 use crate::ui::display_item::DisplayItem;
 use cosmic::app::{Core, Task};
 use cosmic::iced::alignment::Vertical;
-use cosmic::iced::window;
+use cosmic::iced::{window, Subscription};
 use cosmic::iced::Limits;
 use cosmic::iced_winit::commands::popup::{destroy_popup, get_popup};
 use cosmic::widget::{self, autosize, button, container, row, settings, Button, Id};
-use cosmic::{Application, Element};
+use cosmic::{cosmic_config, Application, Element};
+use cosmic::Action::App;
+use cosmic::cosmic_config::{Config, CosmicConfigEntry};
+use cosmic::iced::application::Title;
 use once_cell::sync::Lazy;
 use tokio_util::sync::CancellationToken;
+use log::{error, info, warn};
+use crate::core::app_configuration::AppConfiguration;
 
 static AUTOSIZE_MAIN_ID: Lazy<Id> = Lazy::new(|| Id::new("autosize-main"));
 
@@ -24,6 +29,8 @@ pub struct AppState {
     core: Core,
     /// The cancellation token to stop the status updates
     monitor_cancellation_token: Option<CancellationToken>,
+    /// The application configuration
+    configuration: AppConfiguration,
     /// The current memory usage stats
     memory: MemoryStats,
     /// The current cpu usage stats
@@ -43,6 +50,7 @@ pub enum Message {
     PopupClosed(window::Id),
     ToggleExampleRow(bool),
     StartMonitoring,
+    ConfigurationUpdate(AppConfiguration),
     MemoryUpdate(MemoryStats),
     CpuUpdate(CpuStats),
 }
@@ -80,6 +88,12 @@ impl Application for AppState {
     fn init(core: Core, _flags: Self::Flags) -> (Self, Task<Self::Message>) {
         let app = AppState {
             core,
+            configuration: cosmic_config::Config::new(Self::APP_ID, AppConfiguration::VERSION)
+                .map(|context| AppConfiguration::get_entry(&context)
+                    .unwrap_or_else(|(_errors, config)| {
+                        error!("{:?}", _errors);
+                        config
+                    })).unwrap_or_default(),
             ..Default::default()
         };
 
@@ -88,6 +102,13 @@ impl Application for AppState {
 
     fn on_close_requested(&self, id: window::Id) -> Option<Message> {
         Some(Message::PopupClosed(id))
+    }
+
+    fn subscription(&self) -> Subscription<Self::Message> {
+        self.core().watch_config::<AppConfiguration>(Self::APP_ID)
+            .map(|update| {
+                Message::ConfigurationUpdate(update.config)
+            })
     }
 
     /// Application messages are handled here. The application state can be modified based on
@@ -130,18 +151,16 @@ impl Application for AppState {
                 let cancellation_token = CancellationToken::new();
                 self.monitor_cancellation_token = Some(cancellation_token.clone());
 
-                return cosmic::Task::stream(async_stream::stream! {
-                    // TODO: Duration from configuration.
+                let config = self.configuration.clone();
 
-                    let mut memory_update_interval = tokio::time::interval
-                    (std::time::Duration::from_secs(1));
-                    let mut cpu_update_interval = tokio::time::interval(std::time::Duration::from_secs(1));
+                return cosmic::Task::stream(async_stream::stream! {
+                    let mut memory_update_interval = tokio::time::interval(config.memory.update_interval);
+                    let mut cpu_update_interval = tokio::time::interval(config.cpu.update_interval);
                                         
-                    let mut memory_monitor = MemoryMonitor::new(ProcMemInfoSensorReader,3);
-                    let mut cpuinfo_reader = CpuMonitor::new(ProcStatSensorReader, 4);
+                    let mut memory_monitor = MemoryMonitor::new(ProcMemInfoSensorReader, &config);
+                    let mut cpuinfo_reader = CpuMonitor::new(ProcStatSensorReader, &config);
 
                     loop {
-
                         tokio::select! {
                             _ = memory_update_interval.tick() => {
                                 yield Message::MemoryUpdate(memory_monitor.poll().unwrap_or_default());
@@ -163,6 +182,9 @@ impl Application for AppState {
             }
             Message::CpuUpdate(cpu_usage) => {
                 self.cpu = cpu_usage;
+            }
+            Message::ConfigurationUpdate(configuration) => {
+                self.configuration = configuration;
             }
         }
         Task::none()
@@ -208,7 +230,7 @@ impl AppState {
         let padding = self.core.applet.suggested_padding(false);
 
         let label_container = container(
-            self.core.applet.text(display_item.label(self))
+            self.core.applet.text(display_item.label(&self.configuration))
                 .class(cosmic::theme::Text::Custom(|theme| {
                     let mut c: cosmic::iced_core::Color = theme.current_container().on.into();
                     c.a *= 0.5;
@@ -221,7 +243,7 @@ impl AppState {
         ).padding([0, padding]);
 
         let text_container = container(
-            self.core.applet.text(display_item.text(self))
+            self.core.applet.text(display_item.text(&self.configuration))
                 .font(cosmic::iced::Font {
                     weight: cosmic::iced::font::Weight::Bold,
                     ..Default::default()
@@ -235,7 +257,17 @@ impl AppState {
 
         button::custom(Element::from(
             row::with_children(content).align_y(Vertical::Center),
-        ))  //.on_press(Message::TogglePopup)
+        )).on_press(Message::TogglePopup)
             .class(cosmic::theme::Button::AppletMenu)
+    }
+
+    fn save_config(&self) {
+        info!("Saving configuration");
+
+        if let Ok(helper) = Config::new(Self::APP_ID, AppConfiguration::VERSION) {
+            if let Err(err) = self.configuration.write_entry(&helper) {
+                error!("Failed to save configuration: {}", err);
+            }
+        }
     }
 }
