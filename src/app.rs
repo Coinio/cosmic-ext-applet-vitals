@@ -11,13 +11,14 @@ use cosmic::iced::alignment::Vertical;
 use cosmic::iced::{window, Subscription};
 use cosmic::iced::Limits;
 use cosmic::iced_winit::commands::popup::{destroy_popup, get_popup};
-use cosmic::widget::{self, autosize, button, container, row, settings, Button, Id};
+use cosmic::widget::{self, autosize, button, container, row, settings, Button, Id, ListColumn};
 use cosmic::{cosmic_config, Application, Element};
 use cosmic::cosmic_config::{Config, CosmicConfigEntry};
 use once_cell::sync::Lazy;
 use tokio_util::sync::CancellationToken;
-use log::{error, info, warn};
-use crate::core::app_configuration::AppConfiguration;
+use log::{error, info};
+use crate::core::app_configuration::{AppConfiguration, ConfigValue, CPU_SETTINGS_WINDOW_ID, MEMORY_SETTINGS_WINDOW_ID};
+use crate::ui::ui::Ui;
 
 static AUTOSIZE_MAIN_ID: Lazy<Id> = Lazy::new(|| Id::new("autosize-main"));
 
@@ -48,7 +49,8 @@ pub enum Message {
     PopupClosed(window::Id),
     ToggleExampleRow(bool),
     StartMonitoring,
-    ConfigurationUpdate(AppConfiguration),
+    ConfigFileChanged(AppConfiguration),
+    ConfigValueUpdated(ConfigValue),
     MemoryUpdate(MemoryStats),
     CpuUpdate(CpuStats),
 }
@@ -105,7 +107,7 @@ impl Application for AppState {
     fn subscription(&self) -> Subscription<Self::Message> {
         self.core().watch_config::<AppConfiguration>(Self::APP_ID)
             .map(|update| {
-                Message::ConfigurationUpdate(update.config)
+                Message::ConfigFileChanged(update.config)
             })
     }
 
@@ -137,6 +139,7 @@ impl Application for AppState {
             Message::PopupClosed(id) => {
                 if self.popup.as_ref() == Some(&id) {
                     self.popup = None;
+                    self.save_config();
                 }
             }
             Message::ToggleExampleRow(toggled) => self.example_row = toggled,
@@ -153,7 +156,7 @@ impl Application for AppState {
                 return cosmic::Task::stream(async_stream::stream! {
                     let mut memory_update_interval = tokio::time::interval(config.memory.update_interval);
                     let mut cpu_update_interval = tokio::time::interval(config.cpu.update_interval);
-                                        
+
                     let mut memory_monitor = MemoryMonitor::new(ProcMemInfoSensorReader, &config);
                     let mut cpuinfo_reader = CpuMonitor::new(ProcStatSensorReader, &config);
 
@@ -180,8 +183,21 @@ impl Application for AppState {
             Message::CpuUpdate(cpu_usage) => {
                 self.cpu = cpu_usage;
             }
-            Message::ConfigurationUpdate(configuration) => {
+            Message::ConfigFileChanged(configuration) => {
                 self.configuration = configuration;
+            },
+            Message::ConfigValueUpdated(value) => {
+
+                match value {
+                    ConfigValue::MemoryLabelText(_) => {}
+                    ConfigValue::MemoryUpdateInterval(duration) => {
+                        self.configuration.memory.update_interval = duration;
+                    }
+                    ConfigValue::MemoryMaxSamples(_) => {}
+                    ConfigValue::CpuLabelText(_) => {}
+                    ConfigValue::CpuUpdateInterval(_) => {}
+                    ConfigValue::CpuMaxSamples(_) => {}
+                }
             }
         }
         Task::none()
@@ -199,22 +215,21 @@ impl Application for AppState {
         // PanelAnchor::Bottom);
 
         let container = container(cosmic::widget::row()
-            .push(self.build_indicator(&self.cpu))
-            .push(self.build_indicator(&self.memory)));
+            .push(Ui::build_indicator(&self, &self.cpu))
+            .push(Ui::build_indicator(&self, &self.memory)));
 
         autosize::autosize(container, AUTOSIZE_MAIN_ID.clone()).into()
     }
 
-    fn view_window(&self, _id: window::Id) -> Element<'_, Self::Message> {
-        let content_list = widget::list_column()
-            .padding(5)
-            .spacing(0)
-            .add(settings::item(
-                fl!("example-row"),
-                widget::toggler(self.example_row).on_toggle(Message::ToggleExampleRow),
-            ));
+    fn view_window(&self, id: window::Id) -> Element<'_, Self::Message> {
 
-        self.core.applet.popup_container(content_list).into()
+        let content = match id {
+            id if id == *MEMORY_SETTINGS_WINDOW_ID => Ui::build_memory_settings_view(self),
+            id if id == *CPU_SETTINGS_WINDOW_ID => Ui::build_cpu_settings_view(self),
+            _ => container(row()),
+        };
+
+        self.core.applet.popup_container(content).into()
     }
 
     fn style(&self) -> Option<cosmic::iced_runtime::Appearance> {
@@ -223,41 +238,22 @@ impl Application for AppState {
 }
 
 impl AppState {
-    fn build_indicator(&self, display_item: &impl DisplayItem) -> Button<'_, Message> {
-        let padding = self.core.applet.suggested_padding(false);
 
-        let label_container = container(
-            self.core.applet.text(display_item.label(&self.configuration))
-                .class(cosmic::theme::Text::Custom(|theme| {
-                    let mut c: cosmic::iced_core::Color = theme.current_container().on.into();
-                    c.a *= 0.5;
-                    cosmic::iced_widget::text::Style { color: Some(c) }
-                }))
-                .font(cosmic::iced::Font {
-                    weight: cosmic::iced::font::Weight::Medium,
-                    ..Default::default()
-                })
-        ).padding([0, padding]);
-
-        let text_container = container(
-            self.core.applet.text(display_item.text(&self.configuration))
-                .font(cosmic::iced::Font {
-                    weight: cosmic::iced::font::Weight::Bold,
-                    ..Default::default()
-                })
-        ).padding([0, padding]);
-
-        let content = vec![
-            Element::new(label_container),
-            Element::new(text_container),
-        ];
-
-        button::custom(Element::from(
-            row::with_children(content).align_y(Vertical::Center),
-        )).on_press(Message::TogglePopup(display_item.settings_window_id()))
-            .class(cosmic::theme::Button::AppletMenu)
+    pub fn core(&self) -> &Core {
+        &self.core
     }
 
+    pub fn configuration(&self) -> &AppConfiguration {
+        &self.configuration
+    }
+
+    pub fn memory(&self) -> &MemoryStats {
+        &self.memory
+    }
+
+    pub fn cpu(&self) -> &CpuStats {
+        &self.cpu
+    }
     fn save_config(&self) {
         info!("Saving configuration");
 
@@ -267,4 +263,5 @@ impl AppState {
             }
         }
     }
+
 }

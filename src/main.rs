@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
-use app::AppState;
+use crate::app::AppState;
+
 /// The `app` module is used by convention to indicate the main component of our application.
 mod app;
 mod core;
