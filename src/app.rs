@@ -13,9 +13,7 @@ use cosmic::iced::Limits;
 use cosmic::iced_winit::commands::popup::{destroy_popup, get_popup};
 use cosmic::widget::{self, autosize, button, container, row, settings, Button, Id};
 use cosmic::{cosmic_config, Application, Element};
-use cosmic::Action::App;
 use cosmic::cosmic_config::{Config, CosmicConfigEntry};
-use cosmic::iced::application::Title;
 use once_cell::sync::Lazy;
 use tokio_util::sync::CancellationToken;
 use log::{error, info, warn};
@@ -46,7 +44,7 @@ pub struct AppState {
 /// If your application does not need to send messages, you can use an empty enum or `()`.
 #[derive(Debug, Clone)]
 pub enum Message {
-    TogglePopup,
+    TogglePopup(window::Id),
     PopupClosed(window::Id),
     ToggleExampleRow(bool),
     StartMonitoring,
@@ -116,15 +114,14 @@ impl Application for AppState {
     /// background thread managed by the application's executor.
     fn update(&mut self, message: Self::Message) -> Task<Self::Message> {
         match message {
-            Message::TogglePopup => {
+            Message::TogglePopup(id) => {
                 return if let Some(p) = self.popup.take() {
                     destroy_popup(p)
                 } else {
-                    let new_id = window::Id::unique();
-                    self.popup.replace(new_id);
+                    self.popup.replace(id);
                     let mut popup_settings = self.core.applet.get_popup_settings(
                         self.core.main_window_id().unwrap(),
-                        new_id,
+                        id,
                         None,
                         None,
                         None,
@@ -257,7 +254,7 @@ impl AppState {
 
         button::custom(Element::from(
             row::with_children(content).align_y(Vertical::Center),
-        )).on_press(Message::TogglePopup)
+        )).on_press(Message::TogglePopup(display_item.settings_window_id()))
             .class(cosmic::theme::Button::AppletMenu)
     }
 

@@ -1,7 +1,7 @@
-use std::collections::VecDeque;
 use crate::core::app_configuration::AppConfiguration;
-use crate::sensors::proc_stat_reader::{ProcStatStatus};
+use crate::sensors::proc_stat_reader::ProcStatStatus;
 use crate::sensors::sensor_traits::SensorReader;
+use std::collections::VecDeque;
 
 #[derive(Default, Clone, Debug)]
 pub struct CpuStats {

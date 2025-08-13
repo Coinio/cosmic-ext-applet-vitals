@@ -1,6 +1,10 @@
 use std::time::Duration;
 use cosmic::cosmic_config::{self, cosmic_config_derive::CosmicConfigEntry, CosmicConfigEntry};
+use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
+
+pub static CPU_SETTINGS_WINDOW_ID: Lazy<cosmic::iced::window::Id> = Lazy::new(|| cosmic::iced::window::Id::unique());
+pub static MEMORY_SETTINGS_WINDOW_ID: Lazy<cosmic::iced::window::Id> = Lazy::new(|| cosmic::iced::window::Id::unique());
 
 /// The configuration for the CPU monitor
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
