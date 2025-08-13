@@ -18,7 +18,8 @@ pub struct CpuMonitor<S: SensorReader<Output = ProcStatStatus>> {
     sensor_reader: S,
     previous_idle: u64,
     previous_total: u64,
-    sample_buffer: VecDeque<f64>
+    sample_buffer: VecDeque<f64>,
+    max_samples: usize,
 }
 
 impl<S: SensorReader<Output = ProcStatStatus>> CpuMonitor<S> {
@@ -27,8 +28,8 @@ impl<S: SensorReader<Output = ProcStatStatus>> CpuMonitor<S> {
             sensor_reader,
             previous_idle: 0,
             previous_total: 0,
-            // TODO: Config
-            sample_buffer: VecDeque::with_capacity(configuration.cpu.update_window_size),
+            sample_buffer: VecDeque::with_capacity(configuration.cpu.max_samples),
+            max_samples: configuration.cpu.max_samples
         }
     }
     
@@ -49,7 +50,7 @@ impl<S: SensorReader<Output = ProcStatStatus>> CpuMonitor<S> {
         self.previous_idle = total_idle;
         self.previous_total = current.total;
 
-        if self.sample_buffer.len() == self.sample_buffer.capacity() {
+        if self.sample_buffer.len() > self.max_samples {
             self.sample_buffer.pop_front();
         }
 

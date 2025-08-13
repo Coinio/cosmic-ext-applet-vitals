@@ -20,14 +20,16 @@ impl MemoryStats {
 
 pub struct MemoryMonitor<S: SensorReader<Output = ProcMemInfoStatus>> {
     sensor_reader: S,
-    sample_buffer: VecDeque<u64>
+    sample_buffer: VecDeque<u64>,
+    max_samples: usize,
 }
 
 impl<S: SensorReader<Output = ProcMemInfoStatus>> MemoryMonitor<S> {
     pub fn new(sensor_reader: S, configuration: &AppConfiguration) -> Self {
         Self {
             sensor_reader,
-            sample_buffer: VecDeque::with_capacity(configuration.memory.update_window_size)
+            sample_buffer: VecDeque::with_capacity(configuration.memory.max_samples),
+            max_samples: configuration.memory.max_samples
         }
     }
     
@@ -41,7 +43,7 @@ impl<S: SensorReader<Output = ProcMemInfoStatus>> MemoryMonitor<S> {
         
         self.sample_buffer.push_back(current_used);
         
-        if self.sample_buffer.len() > self.sample_buffer.capacity() {
+        if self.sample_buffer.len() > self.max_samples {
             self.sample_buffer.pop_front();       
         }
         

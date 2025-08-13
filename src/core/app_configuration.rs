@@ -7,8 +7,8 @@ use serde::{Deserialize, Serialize};
 pub struct CpuConfiguration {
     /// The duration between each update interval, i.e. 5 seconds
     pub update_interval: Duration,
-    /// The number of readings to keep and average for the final result
-    pub update_window_size: usize,
+    /// The number of samples to keep and average for the final result
+    pub max_samples: usize,
     /// The label text
     pub label_text: String,
 }
@@ -17,7 +17,7 @@ impl Default for CpuConfiguration {
     fn default() -> Self {
         CpuConfiguration {
             update_interval: Duration::from_secs(1),
-            update_window_size: 4,
+            max_samples: 4,
             label_text: "CPU".to_string(),
         }
     }
@@ -28,8 +28,8 @@ impl Default for CpuConfiguration {
 pub struct MemoryConfiguration {
     /// The duration between each update interval, i.e. 5 seconds
     pub update_interval: Duration,
-    /// The number of readings to keep and average for the final result
-    pub update_window_size: usize,
+    /// The number of samples to keep and average for the final result
+    pub max_samples: usize,
     /// The label text
     pub label_text: String,
 }
@@ -38,7 +38,7 @@ impl Default for MemoryConfiguration {
     fn default() -> Self {
         MemoryConfiguration {
             update_interval: Duration::from_secs(1),
-            update_window_size: 2,
+            max_samples: 2,
             label_text: "RAM".to_string(),
         }
     }
