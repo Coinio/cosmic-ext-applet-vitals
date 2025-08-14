@@ -1,6 +1,6 @@
 use crate::app::{AppState, Message};
-use crate::core::app_configuration::ConfigValue::MemoryUpdateInterval;
-use crate::core::app_configuration::SENSOR_INTERVAL_MINIMUM_IN_MS;
+use crate::core::app_configuration::ConfigurationValue::{MemoryLabelText, MemoryMaxSamples, MemoryUpdateInterval};
+use crate::core::app_configuration::{SENSOR_INTERVAL_MINIMUM_IN_MS, SENSOR_MAX_LABEL_LENGTH, SENSOR_MAX_SAMPLES_MINIMUM};
 use crate::ui::display_item::DisplayItem;
 use cosmic::iced::alignment::Vertical;
 use cosmic::iced_widget::{container, Container};
@@ -8,6 +8,7 @@ use cosmic::widget::{button, row, settings, Button};
 use cosmic::{widget, Element, Theme};
 use std::cmp;
 use std::time::Duration;
+use crate::fl;
 
 pub struct Ui;
 
@@ -55,7 +56,7 @@ impl Ui {
     pub fn build_memory_settings_view(app_state: &AppState) -> Container<Message, Theme> {
 
         let configuration = app_state.configuration();
-        let title = "Memory Settings";
+        let title = fl!("settings-memory-title");
 
         let current_interval = configuration.memory.update_interval.as_millis().to_string();
 
@@ -63,16 +64,23 @@ impl Ui {
             .padding(5)
             .spacing(0)
             .add(widget::text(title))
-            .add(settings::item("Update Interval (ms)",
-                widget::text_input("Enter a value in ms...", current_interval)
+            .add(settings::item(fl!("settings-update-interval"),
+                widget::text_input(fl!("settings-empty"), current_interval)
                     .on_input(|new_interval| Self::handle_interval_change(new_interval,
                                                                           configuration.memory
                                                                               .update_interval))))
+            .add(settings::item(fl!("settings-max-samples"),
+                widget::text_input(fl!("settings-empty"), configuration.memory.max_samples
+                    .to_string()).on_input(|new_max_samples| Self::handle_max_samples_change
+                    (new_max_samples, configuration.memory.max_samples))))
+            .add(settings::item(fl!("settings-label-text"),
+                widget::text_input(fl!("settings-empty"), configuration.memory.label_text.as_str())
+                    .on_input(|new_label_text| Self::handle_label_text_change(new_label_text))))
         );
 
         container
     }
-    
+
     pub fn build_cpu_settings_view(app_state: &AppState) -> Container<Message,Theme> {
 
         let title = "CPU Settings";
@@ -88,8 +96,8 @@ impl Ui {
         content_list
     }
 
-    fn handle_interval_change(new_interval: String, previous_interval: Duration) -> Message {
-        let interval = new_interval.trim();
+    fn handle_interval_change(new_input: String, previous_interval: Duration) -> Message {
+        let interval = new_input.trim();
 
         let parsed_interval = match interval.parse() {
             Ok(value) => cmp::max(value, SENSOR_INTERVAL_MINIMUM_IN_MS),
@@ -97,6 +105,28 @@ impl Ui {
         };
 
         Message::ConfigValueUpdated(MemoryUpdateInterval(Duration::from_millis(parsed_interval)))
+    }
+
+    fn handle_max_samples_change(new_input: String, old_value: usize) -> Message {
+        let max_samples = new_input.trim();
+
+        let parsed_max_samples = match max_samples.parse() {
+            Ok(value) => cmp::max(value, SENSOR_MAX_SAMPLES_MINIMUM),
+            Err(_) => return Message::ConfigValueUpdated(MemoryMaxSamples(old_value))
+        };
+
+        Message::ConfigValueUpdated(MemoryMaxSamples(parsed_max_samples))
+    }
+
+    fn handle_label_text_change(new_input: String) -> Message {
+
+        let value = if new_input.len() > SENSOR_MAX_LABEL_LENGTH {
+            new_input[..SENSOR_MAX_LABEL_LENGTH].to_string()
+        } else {
+            new_input.to_string()
+        };
+
+        Message::ConfigValueUpdated(MemoryLabelText(value))
     }
 
 }

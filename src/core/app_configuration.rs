@@ -7,15 +7,17 @@ pub static CPU_SETTINGS_WINDOW_ID: Lazy<cosmic::iced::window::Id> = Lazy::new(||
 pub static MEMORY_SETTINGS_WINDOW_ID: Lazy<cosmic::iced::window::Id> = Lazy::new(|| cosmic::iced::window::Id::unique());
 
 pub static SENSOR_INTERVAL_MINIMUM_IN_MS: u64 = 250;
+pub static SENSOR_MAX_SAMPLES_MINIMUM: usize = 1;
+pub static SENSOR_MAX_LABEL_LENGTH: usize = 16;
 
 #[derive(Debug, Clone)]
-pub enum ConfigValue {
+pub enum ConfigurationValue {
     MemoryLabelText(String),
     MemoryUpdateInterval(Duration),
     MemoryMaxSamples(usize),
     CpuLabelText(String),
     CpuUpdateInterval(Duration),
-    CpuMaxSamples(usize),    
+    CpuMaxSamples(usize),
 }
 
 /// The configuration for the CPU monitor
@@ -63,7 +65,6 @@ impl Default for MemoryConfiguration {
 #[derive(Debug, Default, Clone, CosmicConfigEntry, Eq, PartialEq)]
 #[version = 1]
 pub struct AppConfiguration {
-    pub test: String,
     pub cpu: CpuConfiguration,
     pub memory: MemoryConfiguration
 }

@@ -17,7 +17,7 @@ use cosmic::cosmic_config::{Config, CosmicConfigEntry};
 use once_cell::sync::Lazy;
 use tokio_util::sync::CancellationToken;
 use log::{error, info};
-use crate::core::app_configuration::{AppConfiguration, ConfigValue, CPU_SETTINGS_WINDOW_ID, MEMORY_SETTINGS_WINDOW_ID};
+use crate::core::app_configuration::{AppConfiguration, ConfigurationValue, CPU_SETTINGS_WINDOW_ID, MEMORY_SETTINGS_WINDOW_ID};
 use crate::ui::ui::Ui;
 
 static AUTOSIZE_MAIN_ID: Lazy<Id> = Lazy::new(|| Id::new("autosize-main"));
@@ -50,7 +50,7 @@ pub enum Message {
     ToggleExampleRow(bool),
     StartMonitoring,
     ConfigFileChanged(AppConfiguration),
-    ConfigValueUpdated(ConfigValue),
+    ConfigValueUpdated(ConfigurationValue),
     MemoryUpdate(MemoryStats),
     CpuUpdate(CpuStats),
 }
@@ -189,14 +189,18 @@ impl Application for AppState {
             Message::ConfigValueUpdated(value) => {
 
                 match value {
-                    ConfigValue::MemoryLabelText(_) => {}
-                    ConfigValue::MemoryUpdateInterval(duration) => {
+                    ConfigurationValue::MemoryLabelText(text) => {
+                        self.configuration.memory.label_text = text;
+                    }
+                    ConfigurationValue::MemoryUpdateInterval(duration) => {
                         self.configuration.memory.update_interval = duration;
                     }
-                    ConfigValue::MemoryMaxSamples(_) => {}
-                    ConfigValue::CpuLabelText(_) => {}
-                    ConfigValue::CpuUpdateInterval(_) => {}
-                    ConfigValue::CpuMaxSamples(_) => {}
+                    ConfigurationValue::MemoryMaxSamples(max_samples) => {
+                        self.configuration.memory.max_samples = max_samples;
+                    }
+                    ConfigurationValue::CpuLabelText(_) => {}
+                    ConfigurationValue::CpuUpdateInterval(_) => {}
+                    ConfigurationValue::CpuMaxSamples(_) => {}
                 }
             }
         }
