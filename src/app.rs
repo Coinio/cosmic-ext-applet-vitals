@@ -46,8 +46,8 @@ pub struct AppState {
 /// If your application does not need to send messages, you can use an empty enum or `()`.
 #[derive(Debug, Clone)]
 pub enum Message {
-    TogglePopup(window::Id),
-    PopupClosed(window::Id),
+    ToggleSettingsPopup(window::Id),
+    SettingsPopupClosed(window::Id),
     ToggleExampleRow(bool),
     StartMonitoring,
     ConfigFileChanged(AppConfiguration),
@@ -104,7 +104,7 @@ impl Application for AppState {
     }
 
     fn on_close_requested(&self, id: window::Id) -> Option<Message> {
-        Some(Message::PopupClosed(id))
+        Some(Message::SettingsPopupClosed(id))
     }
 
     fn subscription(&self) -> Subscription<Self::Message> {
@@ -118,7 +118,7 @@ impl Application for AppState {
     /// background thread managed by the application's executor.
     fn update(&mut self, message: Self::Message) -> Task<Self::Message> {
         match message {
-            Message::TogglePopup(id) => {
+            Message::ToggleSettingsPopup(id) => {
                 return if let Some(p) = self.popup.take() {
                     destroy_popup(p)
                 } else {
@@ -138,22 +138,23 @@ impl Application for AppState {
                     get_popup(popup_settings)
                 }
             }
-            Message::PopupClosed(id) => {
+            Message::SettingsPopupClosed(id) => {
                 if self.popup.as_ref() == Some(&id) {
                     self.popup = None;
                     self.save_config();
+                    return cosmic::task::message(Message::StartMonitoring);
                 }
             }
             Message::ToggleExampleRow(toggled) => self.example_row = toggled,
-            Message::StartMonitoring => {                
-                
+            Message::StartMonitoring => {
+
                 if let Some(token) = &self.monitor_cancellation_token {
                     info!("Stopping previous monitors");
                     token.cancel();
                 }
 
-                info!("Starting monitoring");                
-                
+                info!("Starting monitoring");
+
                 let cancellation_token = CancellationToken::new();
                 self.monitor_cancellation_token = Some(cancellation_token.clone());
 
@@ -209,10 +210,10 @@ impl Application for AppState {
                         self.configuration.cpu.label_text = text;
                     }
                     ConfigurationValue::CpuUpdateInterval(update_interval) => {
-                        self.configuration.cpu.update_interval = update_interval;   
+                        self.configuration.cpu.update_interval = update_interval;
                     }
                     ConfigurationValue::CpuMaxSamples(max_samples) => {
-                        self.configuration.cpu.max_samples = max_samples;   
+                        self.configuration.cpu.max_samples = max_samples;
                     }
                 }
             }

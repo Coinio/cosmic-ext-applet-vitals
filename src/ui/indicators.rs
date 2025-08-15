@@ -46,7 +46,7 @@ impl IndicatorsUI {
         button::custom(Element::from(
             row::with_children(content).align_y(Vertical::Center),
         ))
-        .on_press(Message::TogglePopup(display_item.settings_window_id()))
+        .on_press(Message::ToggleSettingsPopup(display_item.settings_window_id()))
         .class(cosmic::theme::Button::AppletMenu)
     }
 }
