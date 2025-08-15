@@ -1,24 +1,25 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
-use crate::fl;
+use crate::core::app_configuration::{
+    AppConfiguration, ConfigurationValue, CPU_SETTINGS_WINDOW_ID, MEMORY_SETTINGS_WINDOW_ID,
+};
 use crate::monitors::cpu_monitor::{CpuMonitor, CpuStats};
 use crate::monitors::memory_monitor::{MemoryMonitor, MemoryStats};
 use crate::sensors::proc_meminfo_reader::ProcMemInfoSensorReader;
 use crate::sensors::proc_stat_reader::ProcStatSensorReader;
-use crate::ui::display_item::DisplayItem;
+use crate::ui::cpu_settings::CpuSettingsUi;
+use crate::ui::indicators::IndicatorsUI;
+use crate::ui::memory_settings::MemorySettingsUi;
 use cosmic::app::{Core, Task};
-use cosmic::iced::alignment::Vertical;
-use cosmic::iced::{window, Subscription};
+use cosmic::cosmic_config::{Config, CosmicConfigEntry};
 use cosmic::iced::Limits;
+use cosmic::iced::{window, Subscription};
 use cosmic::iced_winit::commands::popup::{destroy_popup, get_popup};
 use cosmic::widget::{self, autosize, button, container, row, settings, Button, Id, ListColumn};
 use cosmic::{cosmic_config, Application, Element};
-use cosmic::cosmic_config::{Config, CosmicConfigEntry};
+use log::{error, info};
 use once_cell::sync::Lazy;
 use tokio_util::sync::CancellationToken;
-use log::{error, info};
-use crate::core::app_configuration::{AppConfiguration, ConfigurationValue, CPU_SETTINGS_WINDOW_ID, MEMORY_SETTINGS_WINDOW_ID};
-use crate::ui::ui::Ui;
 
 static AUTOSIZE_MAIN_ID: Lazy<Id> = Lazy::new(|| Id::new("autosize-main"));
 
@@ -89,11 +90,13 @@ impl Application for AppState {
         let app = AppState {
             core,
             configuration: cosmic_config::Config::new(Self::APP_ID, AppConfiguration::VERSION)
-                .map(|context| AppConfiguration::get_entry(&context)
-                    .unwrap_or_else(|(_errors, config)| {
+                .map(|context| {
+                    AppConfiguration::get_entry(&context).unwrap_or_else(|(_errors, config)| {
                         error!("{:?}", _errors);
                         config
-                    })).unwrap_or_default(),
+                    })
+                })
+                .unwrap_or_default(),
             ..Default::default()
         };
 
@@ -105,10 +108,9 @@ impl Application for AppState {
     }
 
     fn subscription(&self) -> Subscription<Self::Message> {
-        self.core().watch_config::<AppConfiguration>(Self::APP_ID)
-            .map(|update| {
-                Message::ConfigFileChanged(update.config)
-            })
+        self.core()
+            .watch_config::<AppConfiguration>(Self::APP_ID)
+            .map(|update| Message::ConfigFileChanged(update.config))
     }
 
     /// Application messages are handled here. The application state can be modified based on
@@ -185,10 +187,9 @@ impl Application for AppState {
             }
             Message::ConfigFileChanged(configuration) => {
                 self.configuration = configuration;
-            },
+            }
             Message::ConfigValueUpdated(value) => {
-
-                // TODO: Move to app configuration method which sanitises the values before 
+                // TODO: Move to app configuration method which sanitises the values before
                 // saving/running.
                 match value {
                     ConfigurationValue::MemoryLabelText(text) => {
@@ -220,18 +221,19 @@ impl Application for AppState {
         //let horizontal = matches!(self.core.applet.anchor, PanelAnchor::Top |
         // PanelAnchor::Bottom);
 
-        let container = container(cosmic::widget::row()
-            .push(Ui::build_indicator(&self, &self.cpu))
-            .push(Ui::build_indicator(&self, &self.memory)));
+        let container = container(
+            cosmic::widget::row()
+                .push(IndicatorsUI::content(&self, &self.cpu))
+                .push(IndicatorsUI::content(&self, &self.memory)),
+        );
 
         autosize::autosize(container, AUTOSIZE_MAIN_ID.clone()).into()
     }
 
     fn view_window(&self, id: window::Id) -> Element<'_, Self::Message> {
-
         let content = match id {
-            id if id == *MEMORY_SETTINGS_WINDOW_ID => Ui::build_memory_settings_view(self),
-            id if id == *CPU_SETTINGS_WINDOW_ID => Ui::build_cpu_settings_view(self),
+            id if id == *MEMORY_SETTINGS_WINDOW_ID => MemorySettingsUi::content(self),
+            id if id == *CPU_SETTINGS_WINDOW_ID => CpuSettingsUi::content(self),
             _ => container(row()),
         };
 
@@ -244,7 +246,6 @@ impl Application for AppState {
 }
 
 impl AppState {
-
     pub fn core(&self) -> &Core {
         &self.core
     }
@@ -271,5 +272,4 @@ impl AppState {
             }
         }
     }
-
 }
