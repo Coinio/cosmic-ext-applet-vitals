@@ -188,6 +188,8 @@ impl Application for AppState {
             },
             Message::ConfigValueUpdated(value) => {
 
+                // TODO: Move to app configuration method which sanitises the values before 
+                // saving/running.
                 match value {
                     ConfigurationValue::MemoryLabelText(text) => {
                         self.configuration.memory.label_text = text;
@@ -260,6 +262,8 @@ impl AppState {
     }
     fn save_config(&self) {
         info!("Saving configuration");
+
+        // TODO: Sanitise the configuration before saving?
 
         if let Ok(helper) = Config::new(Self::APP_ID, AppConfiguration::VERSION) {
             if let Err(err) = self.configuration.write_entry(&helper) {
