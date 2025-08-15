@@ -15,7 +15,7 @@ use cosmic::cosmic_config::{Config, CosmicConfigEntry};
 use cosmic::iced::Limits;
 use cosmic::iced::{window, Subscription};
 use cosmic::iced_winit::commands::popup::{destroy_popup, get_popup};
-use cosmic::widget::{self, autosize, button, container, row, settings, Button, Id, ListColumn};
+use cosmic::widget::{autosize, container, row, Id};
 use cosmic::{cosmic_config, Application, Element};
 use log::{error, info};
 use once_cell::sync::Lazy;
@@ -145,11 +145,15 @@ impl Application for AppState {
                 }
             }
             Message::ToggleExampleRow(toggled) => self.example_row = toggled,
-            Message::StartMonitoring => {
+            Message::StartMonitoring => {                
+                
                 if let Some(token) = &self.monitor_cancellation_token {
+                    info!("Stopping previous monitors");
                     token.cancel();
                 }
 
+                info!("Starting monitoring");                
+                
                 let cancellation_token = CancellationToken::new();
                 self.monitor_cancellation_token = Some(cancellation_token.clone());
 
@@ -201,9 +205,15 @@ impl Application for AppState {
                     ConfigurationValue::MemoryMaxSamples(max_samples) => {
                         self.configuration.memory.max_samples = max_samples;
                     }
-                    ConfigurationValue::CpuLabelText(_) => {}
-                    ConfigurationValue::CpuUpdateInterval(_) => {}
-                    ConfigurationValue::CpuMaxSamples(_) => {}
+                    ConfigurationValue::CpuLabelText(text) => {
+                        self.configuration.cpu.label_text = text;
+                    }
+                    ConfigurationValue::CpuUpdateInterval(update_interval) => {
+                        self.configuration.cpu.update_interval = update_interval;   
+                    }
+                    ConfigurationValue::CpuMaxSamples(max_samples) => {
+                        self.configuration.cpu.max_samples = max_samples;   
+                    }
                 }
             }
         }
@@ -216,7 +226,7 @@ impl Application for AppState {
     /// it has a `Message` associated with it, which dictates what type of message it can send.
     ///
     /// To get a better sense of which widgets are available, check out the `widget` module.
-    fn view(&self) -> Element<'_, Self::Message> {
+    fn view(&self) -> Element<Self::Message> {
         // TODO: Handle horizontal / vertical layout
         //let horizontal = matches!(self.core.applet.anchor, PanelAnchor::Top |
         // PanelAnchor::Bottom);
@@ -230,7 +240,7 @@ impl Application for AppState {
         autosize::autosize(container, AUTOSIZE_MAIN_ID.clone()).into()
     }
 
-    fn view_window(&self, id: window::Id) -> Element<'_, Self::Message> {
+    fn view_window(&self, id: window::Id) -> Element<Self::Message> {
         let content = match id {
             id if id == *MEMORY_SETTINGS_WINDOW_ID => MemorySettingsUi::content(self),
             id if id == *CPU_SETTINGS_WINDOW_ID => CpuSettingsUi::content(self),

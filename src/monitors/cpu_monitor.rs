@@ -2,6 +2,7 @@ use crate::core::app_configuration::AppConfiguration;
 use crate::sensors::proc_stat_reader::ProcStatStatus;
 use crate::sensors::sensor_traits::SensorReader;
 use std::collections::VecDeque;
+use log::info;
 
 #[derive(Default, Clone, Debug)]
 pub struct CpuStats {
@@ -24,6 +25,7 @@ pub struct CpuMonitor<S: SensorReader<Output = ProcStatStatus>> {
 
 impl<S: SensorReader<Output = ProcStatStatus>> CpuMonitor<S> {
     pub fn new(sensor_reader: S, configuration: &AppConfiguration) -> Self {
+        info!("Creating new cpu monitor {:?}", configuration.cpu);
         Self {
             sensor_reader,
             previous_idle: 0,
