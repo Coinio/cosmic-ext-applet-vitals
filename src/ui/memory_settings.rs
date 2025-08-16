@@ -1,21 +1,57 @@
 use crate::app::{AppState, Message};
-use crate::core::app_configuration::ConfigurationValue::{
-    MemoryLabelText, MemoryMaxSamples, MemoryUpdateInterval,
-};
+use crate::core::app_configuration::{CpuConfiguration, MemoryConfiguration, SettingsForm};
 use crate::fl;
 use cosmic::iced_widget::{container, Container};
 use cosmic::widget::settings;
 use cosmic::{widget, Theme};
-use crate::ui::settings_input_sanitisers::SettingsInputSanitisers;
+
+#[derive(Debug, Clone, Default)]
+pub struct MemorySettingsForm {
+    pub label_text: String,
+    pub label_colour: String,
+    pub update_interval: String,
+    pub max_samples: String,
+}
+
+impl MemorySettingsForm {
+    pub fn from(configuration: &MemoryConfiguration) -> Self {
+        Self {
+            label_text: configuration.label_text.clone(),
+            label_colour: configuration.label_colour.display_rgba().to_string(),
+            update_interval: configuration.update_interval.as_millis().to_string(),
+            max_samples: configuration.max_samples.to_string(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct CpuSettingsForm {
+    pub label_text: String,
+    pub label_colour: String,
+    pub update_interval: String,
+    pub max_samples: String,
+}
+
+impl CpuSettingsForm {
+    pub fn from(configuration: &CpuConfiguration) -> Self {
+        Self {
+            label_text: configuration.label_text.clone(),
+            label_colour: configuration.label_colour.display_rgba().to_string(),
+            update_interval: configuration.update_interval.as_millis().to_string(),
+            max_samples: configuration.max_samples.to_string(),
+        }
+    }
+}
 
 pub struct MemorySettingsUi;
 
 impl MemorySettingsUi {
     pub fn content(app_state: &AppState) -> Container<Message, Theme> {
-        let configuration = app_state.configuration();
-        let title = fl!("settings-memory-title");
 
-        let current_interval = configuration.memory.update_interval.as_millis().to_string();
+;        let mut memory_settings_form = app_state.memory_settings_form()
+            .expect("Memory settings form must be set before calling content");
+
+        let title = fl!("settings-memory-title");
 
         let container = container(
             widget::list_column()
@@ -24,42 +60,43 @@ impl MemorySettingsUi {
                 .add(widget::text(title))
                 .add(settings::item(
                     fl!("settings-update-interval"),
-                    widget::text_input(fl!("settings-empty"), current_interval).on_input(
-                        |new_interval| {
-                            let sanitised_interval = SettingsInputSanitisers::sanitise_interval_input(
-                                new_interval,
-                                configuration.memory.update_interval,
-                            );
-                            Message::ConfigValueUpdated(MemoryUpdateInterval(sanitised_interval))
+                    widget::text_input(fl!("settings-empty"), &memory_settings_form.update_interval)
+                        .on_input(
+                        | new_interval| {
+                            let mut form = memory_settings_form.clone();
+                            form.update_interval = new_interval;
+                            Message::SettingFormUpdated(SettingsForm::MemorySettings(form))
                         },
                     ),
                 ))
                 .add(settings::item(
                     fl!("settings-max-samples"),
-                    widget::text_input(
-                        fl!("settings-empty"),
-                        configuration.memory.max_samples.to_string(),
-                    )
-                    .on_input(|new_max_samples| {
-                        let sanitised_samples = SettingsInputSanitisers::sanitise_max_samples(
-                            new_max_samples,
-                            configuration.memory.max_samples,
-                        );
-
-                        Message::ConfigValueUpdated(MemoryMaxSamples(sanitised_samples))
-                    }),
+                    widget::text_input(fl!("settings-empty"), &memory_settings_form.max_samples)
+                        .on_input(|new_max_samples| {
+                            let mut form = memory_settings_form.clone();
+                            form.max_samples = new_max_samples;
+                            Message::SettingFormUpdated(SettingsForm::MemorySettings(form))
+                        }),
                 ))
                 .add(settings::item(
                     fl!("settings-label-text"),
-                    widget::text_input(
-                        fl!("settings-empty"),
-                        configuration.memory.label_text.as_str(),
-                    )
-                    .on_input(|new_label_text| {
-                        let sanitised_label_text = SettingsInputSanitisers::sanitise_label_text(new_label_text);
-
-                        Message::ConfigValueUpdated(MemoryLabelText(sanitised_label_text))
-                    }),
+                    widget::text_input(fl!("settings-empty"), &memory_settings_form.label_text).on_input(
+                        |new_label_text| {
+                            let mut form = memory_settings_form.clone();
+                            form.label_text = new_label_text;
+                            Message::SettingFormUpdated(SettingsForm::MemorySettings(form))
+                        },
+                    ),
+                ))
+                .add(settings::item(
+                    fl!("settings-label-colour"),
+                    widget::text_input(fl!("settings-empty"), &memory_settings_form.label_colour).on_input(
+                        |new_label_color| {
+                            let mut form = memory_settings_form.clone();
+                            form.label_colour = new_label_color;
+                            Message::SettingFormUpdated(SettingsForm::MemorySettings(form))
+                        },
+                    ),
                 )),
         );
 

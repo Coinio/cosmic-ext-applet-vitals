@@ -16,6 +16,7 @@ rand = "0.8.5"
 serde = { version = "1.0.219", features = ["derive"] }
 log = "0.4.27"
 colog = "1.3.0"
+hex_color = { version = "3", features = ["serde"] }
 
 [dependencies.libcosmic]
 git = "https://github.com/pop-os/libcosmic.git"

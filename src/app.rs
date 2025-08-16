@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 use crate::core::app_configuration::{
-    AppConfiguration, ConfigurationValue, CPU_SETTINGS_WINDOW_ID, MEMORY_SETTINGS_WINDOW_ID,
+    AppConfiguration, CpuConfiguration, MemoryConfiguration, SettingsForm, CPU_SETTINGS_WINDOW_ID,
+    MEMORY_SETTINGS_WINDOW_ID,
 };
 use crate::monitors::cpu_monitor::{CpuMonitor, CpuStats};
 use crate::monitors::memory_monitor::{MemoryMonitor, MemoryStats};
@@ -9,16 +10,19 @@ use crate::sensors::proc_meminfo_reader::ProcMemInfoSensorReader;
 use crate::sensors::proc_stat_reader::ProcStatSensorReader;
 use crate::ui::cpu_settings::CpuSettingsUi;
 use crate::ui::indicators::IndicatorsUI;
-use crate::ui::memory_settings::MemorySettingsUi;
+use crate::ui::memory_settings::{CpuSettingsForm, MemorySettingsForm, MemorySettingsUi};
+use crate::ui::settings_input_sanitisers::FormInputValidation;
 use cosmic::app::{Core, Task};
 use cosmic::cosmic_config::{Config, CosmicConfigEntry};
 use cosmic::iced::Limits;
 use cosmic::iced::{window, Subscription};
 use cosmic::iced_winit::commands::popup::{destroy_popup, get_popup};
 use cosmic::widget::{autosize, container, row, Id};
+use cosmic::Action::App;
 use cosmic::{cosmic_config, Application, Element};
 use log::{error, info};
 use once_cell::sync::Lazy;
+use std::time::Duration;
 use tokio_util::sync::CancellationToken;
 
 static AUTOSIZE_MAIN_ID: Lazy<Id> = Lazy::new(|| Id::new("autosize-main"));
@@ -31,6 +35,10 @@ pub struct AppState {
     monitor_cancellation_token: Option<CancellationToken>,
     /// The application configuration
     configuration: AppConfiguration,
+    /// The current memory settings form, Some if open, None if closed.
+    memory_settings_form: Option<MemorySettingsForm>,
+    /// The current cpu settings form, Some if open, None if closed.
+    cpu_settings_form: Option<CpuSettingsForm>,
     /// The current memory usage stats
     memory: MemoryStats,
     /// The current cpu usage stats
@@ -51,7 +59,7 @@ pub enum Message {
     ToggleExampleRow(bool),
     StartMonitoring,
     ConfigFileChanged(AppConfiguration),
-    ConfigValueUpdated(ConfigurationValue),
+    SettingFormUpdated(SettingsForm),
     MemoryUpdate(MemoryStats),
     CpuUpdate(CpuStats),
 }
@@ -123,6 +131,22 @@ impl Application for AppState {
                     destroy_popup(p)
                 } else {
                     self.popup.replace(id);
+
+                    match id {
+                        id if id == *MEMORY_SETTINGS_WINDOW_ID => {
+                            self.memory_settings_form =
+                                Some(MemorySettingsForm::from(&self.configuration.memory))
+                        }
+                        id if id == *CPU_SETTINGS_WINDOW_ID => {
+                            self.cpu_settings_form =
+                                Some(CpuSettingsForm::from(&self.configuration.cpu))
+                        }
+                        _ => {
+                            error!("Unknown window id: {}", id);
+                            panic!("Unknown window id: {}", id)
+                        }
+                    };
+
                     let mut popup_settings = self.core.applet.get_popup_settings(
                         self.core.main_window_id().unwrap(),
                         id,
@@ -136,18 +160,17 @@ impl Application for AppState {
                         .min_height(200.0)
                         .max_height(1080.0);
                     get_popup(popup_settings)
-                }
+                };
             }
             Message::SettingsPopupClosed(id) => {
                 if self.popup.as_ref() == Some(&id) {
                     self.popup = None;
-                    self.save_config();
+                    self.save_configuration();
                     return cosmic::task::message(Message::StartMonitoring);
                 }
             }
             Message::ToggleExampleRow(toggled) => self.example_row = toggled,
             Message::StartMonitoring => {
-
                 if let Some(token) = &self.monitor_cancellation_token {
                     info!("Stopping previous monitors");
                     token.cancel();
@@ -193,29 +216,16 @@ impl Application for AppState {
             Message::ConfigFileChanged(configuration) => {
                 self.configuration = configuration;
             }
-            Message::ConfigValueUpdated(value) => {
-                // TODO: Move to app configuration method which sanitises the values before
-                // saving/running.
-                match value {
-                    ConfigurationValue::MemoryLabelText(text) => {
-                        self.configuration.memory.label_text = text;
+            Message::SettingFormUpdated(settings_form) => {
+                match settings_form {
+                    SettingsForm::MemorySettings(memory_form) => {
+                        self.memory_settings_form = Some(memory_form);
                     }
-                    ConfigurationValue::MemoryUpdateInterval(duration) => {
-                        self.configuration.memory.update_interval = duration;
-                    }
-                    ConfigurationValue::MemoryMaxSamples(max_samples) => {
-                        self.configuration.memory.max_samples = max_samples;
-                    }
-                    ConfigurationValue::CpuLabelText(text) => {
-                        self.configuration.cpu.label_text = text;
-                    }
-                    ConfigurationValue::CpuUpdateInterval(update_interval) => {
-                        self.configuration.cpu.update_interval = update_interval;
-                    }
-                    ConfigurationValue::CpuMaxSamples(max_samples) => {
-                        self.configuration.cpu.max_samples = max_samples;
+                    SettingsForm::CpuSettings(cpu_form) => {
+                        self.cpu_settings_form = Some(cpu_form);
                     }
                 }
+                self.update_configuration();
             }
         }
         Task::none()
@@ -265,17 +275,71 @@ impl AppState {
         &self.configuration
     }
 
-    pub fn memory(&self) -> &MemoryStats {
-        &self.memory
+    pub fn memory_settings_form(&self) -> Option<&MemorySettingsForm> {
+        self.memory_settings_form.as_ref()
     }
 
-    pub fn cpu(&self) -> &CpuStats {
-        &self.cpu
+    pub fn cpu_settings_form(&self) -> Option<&CpuSettingsForm> {
+        self.cpu_settings_form.as_ref()
     }
-    fn save_config(&self) {
+
+    fn update_configuration(&mut self) {
+        let mut configuration = self.configuration.clone();
+
+        let memory_settings_form = self.memory_settings_form.as_ref();
+
+        configuration.memory = match memory_settings_form {
+            None => self.configuration.memory.clone(),
+            Some(new_settings) => MemoryConfiguration {
+                update_interval: FormInputValidation::sanitise_interval_input(
+                    new_settings.update_interval.clone(),
+                    configuration.memory.update_interval,
+                ),
+                max_samples: FormInputValidation::sanitise_max_samples(
+                    new_settings.max_samples.clone(),
+                    configuration.memory.max_samples,
+                ),
+                label_text: FormInputValidation::sanitise_label_text(
+                    new_settings.label_text.clone(),
+                ),
+                label_colour: FormInputValidation::sanitise_label_colour(
+                    new_settings.label_colour.clone(),
+                    configuration.memory.label_colour,
+                ),
+            },
+        };
+
+        let cpu_settings_form = self.cpu_settings_form.as_ref();
+
+        configuration.cpu = match cpu_settings_form {
+            None => self.configuration.cpu.clone(),
+            Some(new_settings) => CpuConfiguration {
+                update_interval: FormInputValidation::sanitise_interval_input(
+                    new_settings.update_interval.clone(),
+                    configuration.cpu.update_interval,
+                ),
+                max_samples: FormInputValidation::sanitise_max_samples(
+                    new_settings.max_samples.clone(),
+                    configuration.cpu.max_samples,
+                ),
+                label_text: FormInputValidation::sanitise_label_text(
+                    new_settings.label_text.clone(),
+                ),
+                label_colour: FormInputValidation::sanitise_label_colour(
+                    new_settings.label_colour.clone(),
+                    configuration.cpu.label_colour,
+                ),
+            },
+        };
+
+        self.configuration = AppConfiguration {
+            memory: configuration.memory,
+            cpu: configuration.cpu,
+        }
+    }
+
+    fn save_configuration(&self) {
         info!("Saving configuration");
-
-        // TODO: Sanitise the configuration before saving?
 
         if let Ok(helper) = Config::new(Self::APP_ID, AppConfiguration::VERSION) {
             if let Err(err) = self.configuration.write_entry(&helper) {

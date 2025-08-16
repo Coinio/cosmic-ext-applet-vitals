@@ -1,7 +1,9 @@
-use std::time::Duration;
 use cosmic::cosmic_config::{self, cosmic_config_derive::CosmicConfigEntry, CosmicConfigEntry};
+use hex_color::HexColor;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
+use std::time::Duration;
+use crate::ui::memory_settings::{CpuSettingsForm, MemorySettingsForm};
 
 pub static CPU_SETTINGS_WINDOW_ID: Lazy<cosmic::iced::window::Id> = Lazy::new(|| cosmic::iced::window::Id::unique());
 pub static MEMORY_SETTINGS_WINDOW_ID: Lazy<cosmic::iced::window::Id> = Lazy::new(|| cosmic::iced::window::Id::unique());
@@ -10,14 +12,11 @@ pub static SENSOR_INTERVAL_MINIMUM_IN_MS: u64 = 250;
 pub static SENSOR_MAX_SAMPLES_MINIMUM: usize = 1;
 pub static SENSOR_MAX_LABEL_LENGTH: usize = 16;
 
+// TODO: Probably shouldn't live here.
 #[derive(Debug, Clone)]
-pub enum ConfigurationValue {
-    MemoryLabelText(String),
-    MemoryUpdateInterval(Duration),
-    MemoryMaxSamples(usize),
-    CpuLabelText(String),
-    CpuUpdateInterval(Duration),
-    CpuMaxSamples(usize),
+pub enum SettingsForm {
+    MemorySettings(MemorySettingsForm),
+    CpuSettings(CpuSettingsForm)
 }
 
 /// The configuration for the CPU monitor
@@ -29,6 +28,8 @@ pub struct CpuConfiguration {
     pub max_samples: usize,
     /// The label text
     pub label_text: String,
+    /// The label colour in hex format
+    pub label_colour: HexColor
 }
 
 impl Default for CpuConfiguration {
@@ -37,6 +38,7 @@ impl Default for CpuConfiguration {
             update_interval: Duration::from_secs(1),
             max_samples: 4,
             label_text: "CPU".to_string(),
+            label_colour: "#029BAC".parse().unwrap()
         }
     }
 }
@@ -50,6 +52,8 @@ pub struct MemoryConfiguration {
     pub max_samples: usize,
     /// The label text
     pub label_text: String,
+    /// The label color in hex format
+    pub label_colour: HexColor
 }
 
 impl Default for MemoryConfiguration {
@@ -58,8 +62,10 @@ impl Default for MemoryConfiguration {
             update_interval: Duration::from_secs(1),
             max_samples: 2,
             label_text: "RAM".to_string(),
+            label_colour: "#029BAC".parse().unwrap()
         }
     }
+
 }
 
 #[derive(Debug, Default, Clone, CosmicConfigEntry, Eq, PartialEq)]

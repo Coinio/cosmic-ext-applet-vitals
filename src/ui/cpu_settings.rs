@@ -1,12 +1,9 @@
 use crate::app::{AppState, Message};
-use crate::core::app_configuration::ConfigurationValue::{
-    CpuLabelText, CpuMaxSamples, CpuUpdateInterval,
-};
 use crate::fl;
-use crate::ui::settings_input_sanitisers::SettingsInputSanitisers;
 use cosmic::iced_widget::{container, Container};
-use cosmic::widget::settings;
 use cosmic::{widget, Theme};
+use cosmic::widget::settings;
+use crate::core::app_configuration::SettingsForm;
 
 pub struct CpuSettingsUi;
 
@@ -15,7 +12,8 @@ impl CpuSettingsUi {
         let configuration = app_state.configuration();
         let title = fl!("settings-cpu-title");
 
-        let current_interval = configuration.cpu.update_interval.as_millis().to_string();
+        let mut cpu_settings_form = app_state.cpu_settings_form()
+            .expect("CPU settings form must be set before calling content");
 
         let container = container(
             widget::list_column()
@@ -24,44 +22,43 @@ impl CpuSettingsUi {
                 .add(widget::text(title))
                 .add(settings::item(
                     fl!("settings-update-interval"),
-                    widget::text_input(fl!("settings-empty"), current_interval).on_input(
-                        |new_interval| {
-                            let sanitised_interval =
-                                SettingsInputSanitisers::sanitise_interval_input(
-                                    new_interval,
-                                    configuration.cpu.update_interval,
-                                );
-                            Message::ConfigValueUpdated(CpuUpdateInterval(sanitised_interval))
+                    widget::text_input(fl!("settings-empty"), &cpu_settings_form.update_interval)
+                        .on_input(
+                            | new_interval| {
+                                let mut form = cpu_settings_form.clone();
+                                form.update_interval = new_interval;
+                                Message::SettingFormUpdated(SettingsForm::CpuSettings(form))
+                            },
+                        ),
+                ))
+                .add(settings::item(
+                    fl!("settings-max-samples"),
+                    widget::text_input(fl!("settings-empty"), &cpu_settings_form.max_samples)
+                        .on_input(|new_max_samples| {
+                            let mut form = cpu_settings_form.clone();
+                            form.max_samples = new_max_samples;
+                            Message::SettingFormUpdated(SettingsForm::CpuSettings(form))
+                        }),
+                ))
+                .add(settings::item(
+                    fl!("settings-label-text"),
+                    widget::text_input(fl!("settings-empty"), &cpu_settings_form.label_text).on_input(
+                        |new_label_text| {
+                            let mut form = cpu_settings_form.clone();
+                            form.label_text = new_label_text;
+                            Message::SettingFormUpdated(SettingsForm::CpuSettings(form))
                         },
                     ),
                 ))
                 .add(settings::item(
-                    fl!("settings-max-samples"),
-                    widget::text_input(
-                        fl!("settings-empty"),
-                        configuration.cpu.max_samples.to_string(),
-                    )
-                    .on_input(|new_max_samples| {
-                        let sanitised_samples = SettingsInputSanitisers::sanitise_max_samples(
-                            new_max_samples,
-                            configuration.cpu.max_samples,
-                        );
-
-                        Message::ConfigValueUpdated(CpuMaxSamples(sanitised_samples))
-                    }),
-                ))
-                .add(settings::item(
-                    fl!("settings-label-text"),
-                    widget::text_input(
-                        fl!("settings-empty"),
-                        configuration.cpu.label_text.as_str(),
-                    )
-                    .on_input(|new_label_text| {
-                        let sanitised_label_text =
-                            SettingsInputSanitisers::sanitise_label_text(new_label_text);
-
-                        Message::ConfigValueUpdated(CpuLabelText(sanitised_label_text))
-                    }),
+                    fl!("settings-label-colour"),
+                    widget::text_input(fl!("settings-empty"), &cpu_settings_form.label_colour).on_input(
+                        |new_label_color| {
+                            let mut form = cpu_settings_form.clone();
+                            form.label_colour = new_label_color;
+                            Message::SettingFormUpdated(SettingsForm::CpuSettings(form))
+                        },
+                    ),
                 )),
         );
 
