@@ -1,3 +1,4 @@
+use log::info;
 use crate::core::app_configuration::{AppConfiguration, CPU_SETTINGS_WINDOW_ID, MEMORY_SETTINGS_WINDOW_ID};
 use crate::monitors::cpu_monitor::CpuStats;
 use crate::monitors::memory_monitor::MemoryStats;
@@ -21,8 +22,15 @@ impl DisplayItem for MemoryStats {
         app_config.memory.label_text.clone()
     }
 
-    fn label_color(&self, app_config: &AppConfiguration) -> cosmic::iced_core::Color {        
-        cosmic::iced_core::Color::from_rgb8(0x15, 0xAC, 0x64)
+    fn label_color(&self, app_config: &AppConfiguration) -> cosmic::iced_core::Color {
+        let hex = app_config.memory.label_colour;
+        
+        cosmic::iced_core::Color::from_rgba(
+            hex.r as f32 / 255.0,
+            hex.g as f32 / 255.0,
+            hex.b as f32 / 255.0,
+            hex.a as f32 / 255.0,
+        )
     }
 
     fn text(&self, app_config: &AppConfiguration) -> String {
@@ -43,7 +51,14 @@ impl DisplayItem for CpuStats {
     }
 
     fn label_color(&self, app_config: &AppConfiguration) -> cosmic::iced_core::Color {
-        cosmic::iced_core::Color::from_rgb8(0x02, 0x9B, 0xAC)        
+        let hex = app_config.cpu.label_colour;
+
+        cosmic::iced_core::Color::from_rgba(
+            hex.r as f32 / 255.0,
+            hex.g as f32 / 255.0,
+            hex.b as f32 / 255.0,
+            hex.a as f32 / 255.0,
+        )
     }
 
     fn text(&self, app_config: &AppConfiguration) -> String {

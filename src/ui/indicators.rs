@@ -17,15 +17,13 @@ impl IndicatorsUI {
         let configuration = app_state.configuration();
 
         let padding = core.applet.suggested_padding(false);
+        let label_color = display_item.label_color(&configuration);
 
         let label_container = container(
             core.applet
                 .text(display_item.label(&configuration))
-                .class(cosmic::theme::Text::Custom(|theme| {
-                    let mut c: cosmic::iced_core::Color = theme.current_container().on.into();
-                    c.a *= 0.5;
-                    cosmic::iced_widget::text::Style { color: Some(c) }
-                }))
+                
+                .class(cosmic::theme::Text::from(label_color))
                 .font(cosmic::iced::Font {
                     weight: cosmic::iced::font::Weight::Medium,
                     ..Default::default()
