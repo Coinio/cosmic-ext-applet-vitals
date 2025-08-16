@@ -57,7 +57,10 @@ impl MemorySettingsUi {
             widget::list_column()
                 .padding(5)
                 .spacing(0)
-                .add(widget::text(title))
+                .add(widget::text(title).font(cosmic::iced::Font {
+                    weight: cosmic::iced::font::Weight::ExtraBold,
+                    ..Default::default()
+                }))
                 .add(settings::item(
                     fl!("settings-update-interval"),
                     widget::text_input(

@@ -8,7 +8,6 @@ use cosmic::Element;
 pub struct IndicatorsUI;
 
 impl IndicatorsUI {
-    
     pub fn content<'a>(
         app_state: &'a AppState,
         display_item: &'a impl DisplayItem,
@@ -22,7 +21,6 @@ impl IndicatorsUI {
         let label_container = container(
             core.applet
                 .text(display_item.label(&configuration))
-                
                 .class(cosmic::theme::Text::from(label_color))
                 .font(cosmic::iced::Font {
                     weight: cosmic::iced::font::Weight::Medium,
@@ -44,7 +42,9 @@ impl IndicatorsUI {
         button::custom(Element::from(
             row::with_children(content).align_y(Vertical::Center),
         ))
-        .on_press(Message::ToggleSettingsPopup(display_item.settings_window_id()))
+        .on_press(Message::ToggleSettingsPopup(
+            display_item.settings_window_id(),
+        ))
         .class(cosmic::theme::Button::AppletMenu)
     }
 }
