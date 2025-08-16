@@ -18,11 +18,9 @@ use cosmic::iced::Limits;
 use cosmic::iced::{window, Subscription};
 use cosmic::iced_winit::commands::popup::{destroy_popup, get_popup};
 use cosmic::widget::{autosize, container, row, Id};
-use cosmic::Action::App;
 use cosmic::{cosmic_config, Application, Element};
 use log::{error, info};
 use once_cell::sync::Lazy;
-use std::time::Duration;
 use tokio_util::sync::CancellationToken;
 
 static AUTOSIZE_MAIN_ID: Lazy<Id> = Lazy::new(|| Id::new("autosize-main"));
@@ -45,8 +43,6 @@ pub struct AppState {
     cpu: CpuStats,
     /// The popup id.
     popup: Option<window::Id>,
-    /// Example row toggler.
-    example_row: bool,
 }
 
 /// This is the enum that contains all the possible variants that your application will need to transmit messages.
@@ -56,7 +52,6 @@ pub struct AppState {
 pub enum Message {
     ToggleSettingsPopup(window::Id),
     SettingsPopupClosed(window::Id),
-    ToggleExampleRow(bool),
     StartMonitoring,
     ConfigFileChanged(AppConfiguration),
     SettingFormUpdated(SettingsForm),
@@ -169,7 +164,6 @@ impl Application for AppState {
                     return cosmic::task::message(Message::StartMonitoring);
                 }
             }
-            Message::ToggleExampleRow(toggled) => self.example_row = toggled,
             Message::StartMonitoring => {
                 if let Some(token) = &self.monitor_cancellation_token {
                     info!("Stopping previous monitors");
@@ -237,7 +231,7 @@ impl Application for AppState {
     /// it has a `Message` associated with it, which dictates what type of message it can send.
     ///
     /// To get a better sense of which widgets are available, check out the `widget` module.
-    fn view(&self) -> Element<Self::Message> {
+    fn view(&self) -> Element<'_, Self::Message> {
         // TODO: Handle horizontal / vertical layout
         //let horizontal = matches!(self.core.applet.anchor, PanelAnchor::Top |
         // PanelAnchor::Bottom);
@@ -251,7 +245,7 @@ impl Application for AppState {
         autosize::autosize(container, AUTOSIZE_MAIN_ID.clone()).into()
     }
 
-    fn view_window(&self, id: window::Id) -> Element<Self::Message> {
+    fn view_window(&'_ self, id: window::Id) -> Element<'_, Self::Message> {
         let content = match id {
             id if id == *MEMORY_SETTINGS_WINDOW_ID => MemorySettingsUi::content(self),
             id if id == *CPU_SETTINGS_WINDOW_ID => CpuSettingsUi::content(self),

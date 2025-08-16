@@ -46,9 +46,9 @@ impl CpuSettingsForm {
 pub struct MemorySettingsUi;
 
 impl MemorySettingsUi {
-    pub fn content(app_state: &AppState) -> Container<Message, Theme> {
-
-;        let mut memory_settings_form = app_state.memory_settings_form()
+    pub fn content(app_state: &'_ AppState) -> Container<'_, Message, Theme> {
+        let memory_settings_form = app_state
+            .memory_settings_form()
             .expect("Memory settings form must be set before calling content");
 
         let title = fl!("settings-memory-title");
@@ -60,14 +60,15 @@ impl MemorySettingsUi {
                 .add(widget::text(title))
                 .add(settings::item(
                     fl!("settings-update-interval"),
-                    widget::text_input(fl!("settings-empty"), &memory_settings_form.update_interval)
-                        .on_input(
-                        | new_interval| {
-                            let mut form = memory_settings_form.clone();
-                            form.update_interval = new_interval;
-                            Message::SettingFormUpdated(SettingsForm::MemorySettings(form))
-                        },
-                    ),
+                    widget::text_input(
+                        fl!("settings-empty"),
+                        &memory_settings_form.update_interval,
+                    )
+                    .on_input(|new_interval| {
+                        let mut form = memory_settings_form.clone();
+                        form.update_interval = new_interval;
+                        Message::SettingFormUpdated(SettingsForm::MemorySettings(form))
+                    }),
                 ))
                 .add(settings::item(
                     fl!("settings-max-samples"),
@@ -80,23 +81,21 @@ impl MemorySettingsUi {
                 ))
                 .add(settings::item(
                     fl!("settings-label-text"),
-                    widget::text_input(fl!("settings-empty"), &memory_settings_form.label_text).on_input(
-                        |new_label_text| {
+                    widget::text_input(fl!("settings-empty"), &memory_settings_form.label_text)
+                        .on_input(|new_label_text| {
                             let mut form = memory_settings_form.clone();
                             form.label_text = new_label_text;
                             Message::SettingFormUpdated(SettingsForm::MemorySettings(form))
-                        },
-                    ),
+                        }),
                 ))
                 .add(settings::item(
                     fl!("settings-label-colour"),
-                    widget::text_input(fl!("settings-empty"), &memory_settings_form.label_colour).on_input(
-                        |new_label_color| {
+                    widget::text_input(fl!("settings-empty"), &memory_settings_form.label_colour)
+                        .on_input(|new_label_color| {
                             let mut form = memory_settings_form.clone();
                             form.label_colour = new_label_color;
                             Message::SettingFormUpdated(SettingsForm::MemorySettings(form))
-                        },
-                    ),
+                        }),
                 )),
         );
 

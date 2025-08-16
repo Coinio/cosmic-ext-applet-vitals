@@ -8,11 +8,10 @@ use crate::core::app_configuration::SettingsForm;
 pub struct CpuSettingsUi;
 
 impl CpuSettingsUi {
-    pub fn content(app_state: &AppState) -> Container<Message, Theme> {
-        let configuration = app_state.configuration();
+    pub fn content(app_state: &'_ AppState) -> Container<'_, Message, Theme> {
         let title = fl!("settings-cpu-title");
 
-        let mut cpu_settings_form = app_state.cpu_settings_form()
+        let cpu_settings_form = app_state.cpu_settings_form()
             .expect("CPU settings form must be set before calling content");
 
         let container = container(
