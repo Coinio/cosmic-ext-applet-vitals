@@ -7,21 +7,25 @@ use crate::monitors::cpu_monitor::{CpuMonitor, CpuStats};
 use crate::monitors::memory_monitor::{MemoryMonitor, MemoryStats};
 use crate::sensors::proc_meminfo_reader::ProcMemInfoSensorReader;
 use crate::sensors::proc_stat_reader::ProcStatSensorReader;
-use crate::ui::cpu_settings::{CpuSettingsForm, CPU_SETTINGS_FORM_KEY};
+use crate::ui::cpu_settings::{CpuSettingsForm};
 use crate::ui::indicators::IndicatorsUI;
-use crate::ui::memory_settings::{MemorySettingsForm, MEMORY_SETTINGS_FORM_KEY};
-use crate::ui::settings::{SettingsForm, SettingsFormEvent, LABEL_COLOUR_SETTING_KEY, LABEL_TEXT_SETTING_KEY, MAX_SAMPLES_SETTING_KEY, UPDATE_INTERVAL_SETTING_KEY};
+use crate::ui::memory_settings::{MemorySettingsForm};
+use crate::ui::settings::{
+    SettingsForm, SettingsFormEvent, LABEL_COLOUR_SETTING_KEY, LABEL_TEXT_SETTING_KEY, MAX_SAMPLES_SETTING_KEY,
+    UPDATE_INTERVAL_SETTING_KEY,
+};
 use crate::ui::settings_input_sanitisers::FormInputValidation;
 use cosmic::app::{Core, Task};
 use cosmic::cosmic_config::{Config, CosmicConfigEntry};
 use cosmic::iced::Limits;
 use cosmic::iced::{window, Subscription};
 use cosmic::iced_winit::commands::popup::{destroy_popup, get_popup};
-use cosmic::widget::{autosize, container, row, Id};
+use cosmic::widget::{autosize, container, Id};
 use cosmic::{cosmic_config, Application, Element};
-use log::{error, info, warn};
+use log::{error, info};
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
+use cosmic::iced_widget::row;
 use tokio_util::sync::CancellationToken;
 
 static AUTOSIZE_MAIN_ID: Lazy<Id> = Lazy::new(|| Id::new("autosize-main"));
@@ -35,7 +39,7 @@ pub struct AppState {
     /// The application configuration
     configuration: AppConfiguration,
     /// The settings forms that are available for configuration of the monitors.
-    settings_forms: HashMap<&'static str, SettingsForm>,
+    settings_forms: HashMap<window::Id, SettingsForm>,
     /// The current memory usage stats
     memory: MemoryStats,
     /// The current cpu usage stats
@@ -100,15 +104,18 @@ impl Application for AppState {
 
         let settings_forms = HashMap::from([
             (
-                MEMORY_SETTINGS_FORM_KEY,
+                MEMORY_SETTINGS_WINDOW_ID.clone(),
                 SettingsForm::new(
-                    MEMORY_SETTINGS_FORM_KEY,
+                    MEMORY_SETTINGS_WINDOW_ID.clone(),
                     MemorySettingsForm::from(&configuration.memory),
                 ),
             ),
             (
-                CPU_SETTINGS_FORM_KEY,
-                SettingsForm::new(CPU_SETTINGS_FORM_KEY, CpuSettingsForm::from(&configuration.cpu)),
+                CPU_SETTINGS_WINDOW_ID.clone(),
+                SettingsForm::new(
+                    CPU_SETTINGS_WINDOW_ID.clone(),
+                    CpuSettingsForm::from(&configuration.cpu),
+                ),
             ),
         ]);
 
@@ -116,7 +123,6 @@ impl Application for AppState {
             core,
             settings_forms,
             configuration,
-            // settings_forms,
             ..Default::default()
         };
 
@@ -144,19 +150,16 @@ impl Application for AppState {
                 } else {
                     self.popup.replace(id);
 
-                     match id {
-                        id if id == *MEMORY_SETTINGS_WINDOW_ID => {
-                            let mut form = self.settings_forms.get_mut(MEMORY_SETTINGS_FORM_KEY)
-                                .expect(format!("No settings form configured with key: {}",
-                                        MEMORY_SETTINGS_FORM_KEY).as_str());
+                    let form = self
+                        .settings_forms
+                        .get_mut(&id)
+                        .expect(format!("No settings form configured with window Id: {}", id).as_str());
 
+                    match id {
+                        id if id == *MEMORY_SETTINGS_WINDOW_ID => {
                             form.values = MemorySettingsForm::from(&self.configuration.memory);
                         }
                         id if id == *CPU_SETTINGS_WINDOW_ID => {
-                            let mut form = self.settings_forms.get_mut(CPU_SETTINGS_FORM_KEY)
-                                .expect(format!("No settings form configured with key: {}",
-                                                CPU_SETTINGS_FORM_KEY).as_str());
-
                             form.values = CpuSettingsForm::from(&self.configuration.cpu);
                         }
                         _ => {
@@ -234,11 +237,11 @@ impl Application for AppState {
             Message::SettingsFormUpdate(settings_form_event) => {
                 match settings_form_event {
                     SettingsFormEvent::StringFieldUpdated(value) => {
-                        let mut form = self.settings_forms.get_mut(value.monitor_form_key).expect(
-                            format!("No settings form configured with key: {}", value.monitor_form_key).as_str(),
+                        let form = self.settings_forms.get_mut(&value.settings_window_id).expect(
+                            format!("No settings form configured with key: {}", value.settings_window_id).as_str(),
                         );
 
-                        let mut label_text = form
+                        let label_text = form
                             .values
                             .get_mut(value.form_value_key)
                             .expect(format!("No form row with key: {}", value.form_value_key).as_str());
@@ -274,19 +277,10 @@ impl Application for AppState {
     }
 
     fn view_window(&'_ self, id: window::Id) -> Element<'_, Self::Message> {
-        // TODO: Should we use the window ID as the form key and we can do a straight lookup?
-        let content = match id {
-            id if id == *MEMORY_SETTINGS_WINDOW_ID => {
-                let form = self.settings_forms.get(MEMORY_SETTINGS_FORM_KEY);
-                // TODO: Temporary unwraps mid refactor
-                form.unwrap().content(self)
-            }
-            id if id == *CPU_SETTINGS_WINDOW_ID => {
-                let form = self.settings_forms.get(CPU_SETTINGS_FORM_KEY);
-                // TODO: Temporary unwraps mid refactor
-                form.unwrap().content(self)
-            }
-            _ => container(row()),
+
+        let content = match self.settings_forms.get(&id) {
+            None => { container(row!["No settings window configured."]) }
+            Some(form) => { form.content(self) }
         };
 
         self.core.applet.popup_container(content).into()
@@ -312,7 +306,7 @@ impl AppState {
         info!("Updating configuration: {:?}", configuration);
 
         // TODO: Temporary unwraps mid refactor
-        configuration.memory = match self.settings_forms.get(MEMORY_SETTINGS_FORM_KEY) {
+        configuration.memory = match self.settings_forms.get(&MEMORY_SETTINGS_WINDOW_ID.clone()) {
             None => self.configuration.memory.clone(),
             Some(new_settings) => MemoryConfiguration {
                 update_interval: FormInputValidation::sanitise_interval_input(
@@ -339,7 +333,7 @@ impl AppState {
         };
 
         // TODO: Temporary unwraps mid refactor
-        configuration.cpu = match self.settings_forms.get(CPU_SETTINGS_FORM_KEY) {
+        configuration.cpu = match self.settings_forms.get(&CPU_SETTINGS_WINDOW_ID.clone()) {
             None => self.configuration.cpu.clone(),
             Some(new_settings) => CpuConfiguration {
                 update_interval: FormInputValidation::sanitise_interval_input(

@@ -1,9 +1,10 @@
 use crate::app::{AppState, Message};
-use cosmic::{widget, Theme};
-use cosmic::iced_widget::{column, container, Container};
-use std::collections::HashMap;
-use cosmic::widget::settings;
 use crate::fl;
+use cosmic::iced::window;
+use cosmic::iced_widget::{column, container, Container};
+use cosmic::widget::settings;
+use cosmic::{widget, Theme};
+use std::collections::HashMap;
 
 pub const LABEL_TEXT_SETTING_KEY: &'static str = "settings-label-text";
 pub const LABEL_COLOUR_SETTING_KEY: &'static str = "settings-label-colour";
@@ -17,29 +18,24 @@ pub enum SettingsFormEvent {
 
 #[derive(Debug, Clone)]
 pub struct SettingsFormEventValue {
-    pub monitor_form_key: &'static str,
+    pub settings_window_id: window::Id,
     pub form_value_key: &'static str,
     pub value: String,
 }
 
 pub struct SettingsFormItem {
-    pub form_value_key: &'static str,
     pub label: String,
-    pub value: String
+    pub value: String,
 }
 
 pub struct SettingsForm {
-    pub form_key: &'static str,
+    pub settings_window_id: window::Id,
     pub values: HashMap<&'static str, SettingsFormItem>,
 }
 
 impl SettingsForm {
-
-    pub fn new(form_key: &'static str, values: HashMap<&'static str, SettingsFormItem>) -> Self {
-        Self {
-            form_key,
-            values,
-        }
+    pub fn new(settings_window_id: window::Id, values: HashMap<&'static str, SettingsFormItem>) -> Self {
+        Self { settings_window_id, values }
     }
 
     pub fn content(&self, app_state: &'_ AppState) -> Container<'_, Message, Theme> {
@@ -53,15 +49,13 @@ impl SettingsForm {
         for (form_value_key, settings_form) in self.values.iter() {
             column = column.push(settings::item(
                 settings_form.label.clone(),
-                widget::text_input(fl!("settings-empty"), &settings_form.value).on_input(
-                    |new_value| {
-                        Message::SettingsFormUpdate(SettingsFormEvent::StringFieldUpdated(SettingsFormEventValue {
-                            monitor_form_key: self.form_key,
-                            form_value_key,
-                            value: new_value,
-                        }))
-                    },
-                ),
+                widget::text_input(fl!("settings-empty"), &settings_form.value).on_input(|new_value| {
+                    Message::SettingsFormUpdate(SettingsFormEvent::StringFieldUpdated(SettingsFormEventValue {
+                        settings_window_id: self.settings_window_id,
+                        form_value_key,
+                        value: new_value,
+                    }))
+                }),
             ));
         }
 
