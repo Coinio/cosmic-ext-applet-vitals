@@ -12,7 +12,7 @@ pub const MAX_SAMPLES_SETTING_KEY: &'static str = "settings-max-samples";
 
 #[derive(Debug, Clone)]
 pub enum SettingsFormEvent {
-    FieldUpdated(SettingsFormEventValue),
+    StringFieldUpdated(SettingsFormEventValue),
 }
 
 #[derive(Debug, Clone)]
@@ -55,7 +55,7 @@ impl SettingsForm {
                 settings_form.label.clone(),
                 widget::text_input(fl!("settings-empty"), &settings_form.value).on_input(
                     |new_value| {
-                        Message::SettingsFormUpdate(SettingsFormEvent::FieldUpdated(SettingsFormEventValue {
+                        Message::SettingsFormUpdate(SettingsFormEvent::StringFieldUpdated(SettingsFormEventValue {
                             monitor_form_key: self.form_key,
                             form_value_key,
                             value: new_value,

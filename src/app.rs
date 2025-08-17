@@ -144,18 +144,26 @@ impl Application for AppState {
                 } else {
                     self.popup.replace(id);
 
-                    /*  match id {
+                     match id {
                         id if id == *MEMORY_SETTINGS_WINDOW_ID => {
-                            self.memory_settings_form = Some(MemorySettingsForm::from(&self.configuration.memory))
+                            let mut form = self.settings_forms.get_mut(MEMORY_SETTINGS_FORM_KEY)
+                                .expect(format!("No settings form configured with key: {}",
+                                        MEMORY_SETTINGS_FORM_KEY).as_str());
+
+                            form.values = MemorySettingsForm::from(&self.configuration.memory);
                         }
                         id if id == *CPU_SETTINGS_WINDOW_ID => {
-                            self.cpu_settings_form = Some(CpuSettingsForm::from(&self.configuration.cpu))
+                            let mut form = self.settings_forms.get_mut(CPU_SETTINGS_FORM_KEY)
+                                .expect(format!("No settings form configured with key: {}",
+                                                CPU_SETTINGS_FORM_KEY).as_str());
+
+                            form.values = CpuSettingsForm::from(&self.configuration.cpu);
                         }
                         _ => {
                             error!("Unknown window id: {}", id);
                             panic!("Unknown window id: {}", id)
                         }
-                    };*/
+                    };
 
                     let mut popup_settings =
                         self.core
@@ -221,10 +229,11 @@ impl Application for AppState {
             }
             Message::ConfigFileChanged(configuration) => {
                 self.configuration = configuration;
+                return cosmic::task::message(Message::StartMonitoring);
             }
             Message::SettingsFormUpdate(settings_form_event) => {
                 match settings_form_event {
-                    SettingsFormEvent::FieldUpdated(value) => {
+                    SettingsFormEvent::StringFieldUpdated(value) => {
                         let mut form = self.settings_forms.get_mut(value.monitor_form_key).expect(
                             format!("No settings form configured with key: {}", value.monitor_form_key).as_str(),
                         );
@@ -269,10 +278,12 @@ impl Application for AppState {
         let content = match id {
             id if id == *MEMORY_SETTINGS_WINDOW_ID => {
                 let form = self.settings_forms.get(MEMORY_SETTINGS_FORM_KEY);
+                // TODO: Temporary unwraps mid refactor
                 form.unwrap().content(self)
             }
             id if id == *CPU_SETTINGS_WINDOW_ID => {
                 let form = self.settings_forms.get(CPU_SETTINGS_FORM_KEY);
+                // TODO: Temporary unwraps mid refactor
                 form.unwrap().content(self)
             }
             _ => container(row()),
@@ -298,7 +309,7 @@ impl AppState {
     fn update_configuration(&mut self) {
         let mut configuration = self.configuration.clone();
 
-        info!("Saving configuration: {:?}", configuration);
+        info!("Updating configuration: {:?}", configuration);
 
         // TODO: Temporary unwraps mid refactor
         configuration.memory = match self.settings_forms.get(MEMORY_SETTINGS_FORM_KEY) {
