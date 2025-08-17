@@ -1,4 +1,4 @@
-use crate::app::{AppState, Message};
+use crate::app::{Message};
 use crate::fl;
 use cosmic::iced::window;
 use cosmic::iced_widget::{column, container, Container};
@@ -38,7 +38,7 @@ impl SettingsForm {
         Self { settings_window_id, values }
     }
 
-    pub fn content(&self, app_state: &'_ AppState) -> Container<'_, Message, Theme> {
+    pub fn content(&self) -> Container<'_, Message, Theme> {
         let title = fl!("settings-cpu-title");
 
         let mut column = column![widget::text(title).font(cosmic::iced::Font {

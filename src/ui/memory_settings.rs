@@ -1,22 +1,13 @@
-use crate::app::{AppState, Message};
 use crate::core::app_configuration::{MemoryConfiguration};
 use crate::fl;
 use crate::ui::settings::{
     SettingsFormItem, LABEL_COLOUR_SETTING_KEY, LABEL_TEXT_SETTING_KEY,
     MAX_SAMPLES_SETTING_KEY, UPDATE_INTERVAL_SETTING_KEY,
 };
-use cosmic::iced_widget::{container, Container};
-use cosmic::widget::settings;
-use cosmic::{widget, Theme};
 use std::collections::HashMap;
 
 #[derive(Debug, Clone, Default)]
-pub struct MemorySettingsForm {
-    pub label_text: String,
-    pub label_colour: String,
-    pub update_interval: String,
-    pub max_samples: String,
-}
+pub struct MemorySettingsForm;
 
 impl MemorySettingsForm {
     pub fn from(configuration: &MemoryConfiguration) -> HashMap<&'static str, SettingsFormItem> {

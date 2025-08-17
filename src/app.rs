@@ -280,7 +280,7 @@ impl Application for AppState {
 
         let content = match self.settings_forms.get(&id) {
             None => { container(row!["No settings window configured."]) }
-            Some(form) => { form.content(self) }
+            Some(form) => { form.content() }
         };
 
         self.core.applet.popup_container(content).into()
