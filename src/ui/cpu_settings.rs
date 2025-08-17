@@ -5,9 +5,9 @@ use crate::ui::settings::{SettingsFormItem, LABEL_COLOUR_SETTING_KEY, LABEL_TEXT
 
 
 #[derive(Debug, Clone, Default)]
-pub struct CpuSettingsForm;
+pub struct CpuSettings;
 
-impl CpuSettingsForm {
+impl CpuSettings {
 
     pub fn from(configuration: &CpuConfiguration) -> HashMap<&'static str, SettingsFormItem> {
         HashMap::from([

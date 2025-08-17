@@ -7,9 +7,9 @@ use crate::monitors::cpu_monitor::{CpuMonitor, CpuStats};
 use crate::monitors::memory_monitor::{MemoryMonitor, MemoryStats};
 use crate::sensors::proc_meminfo_reader::ProcMemInfoSensorReader;
 use crate::sensors::proc_stat_reader::ProcStatSensorReader;
-use crate::ui::cpu_settings::{CpuSettingsForm};
+use crate::ui::cpu_settings::{CpuSettings};
 use crate::ui::indicators::IndicatorsUI;
-use crate::ui::memory_settings::{MemorySettingsForm};
+use crate::ui::memory_settings::{MemorySettings};
 use crate::ui::settings::{
     SettingsForm, SettingsFormEvent, LABEL_COLOUR_SETTING_KEY, LABEL_TEXT_SETTING_KEY, MAX_SAMPLES_SETTING_KEY,
     UPDATE_INTERVAL_SETTING_KEY,
@@ -107,14 +107,14 @@ impl Application for AppState {
                 MEMORY_SETTINGS_WINDOW_ID.clone(),
                 SettingsForm::new(
                     MEMORY_SETTINGS_WINDOW_ID.clone(),
-                    MemorySettingsForm::from(&configuration.memory),
+                    MemorySettings::from(&configuration.memory),
                 ),
             ),
             (
                 CPU_SETTINGS_WINDOW_ID.clone(),
                 SettingsForm::new(
                     CPU_SETTINGS_WINDOW_ID.clone(),
-                    CpuSettingsForm::from(&configuration.cpu),
+                    CpuSettings::from(&configuration.cpu),
                 ),
             ),
         ]);
@@ -157,10 +157,10 @@ impl Application for AppState {
 
                     match id {
                         id if id == *MEMORY_SETTINGS_WINDOW_ID => {
-                            form.values = MemorySettingsForm::from(&self.configuration.memory);
+                            form.values = MemorySettings::from(&self.configuration.memory);
                         }
                         id if id == *CPU_SETTINGS_WINDOW_ID => {
-                            form.values = CpuSettingsForm::from(&self.configuration.cpu);
+                            form.values = CpuSettings::from(&self.configuration.cpu);
                         }
                         _ => {
                             error!("Unknown window id: {}", id);

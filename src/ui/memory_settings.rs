@@ -7,9 +7,9 @@ use crate::ui::settings::{
 use std::collections::HashMap;
 
 #[derive(Debug, Clone, Default)]
-pub struct MemorySettingsForm;
+pub struct MemorySettings;
 
-impl MemorySettingsForm {
+impl MemorySettings {
     pub fn from(configuration: &MemoryConfiguration) -> HashMap<&'static str, SettingsFormItem> {
         HashMap::from([
             (
