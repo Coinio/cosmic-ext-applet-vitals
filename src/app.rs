@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 use crate::core::app_configuration::{
-    AppConfiguration, CpuConfiguration, MemoryConfiguration, SettingsForm, CPU_SETTINGS_WINDOW_ID,
-    MEMORY_SETTINGS_WINDOW_ID,
+    AppConfiguration, CpuConfiguration, MemoryConfiguration, SettingsFormEvent,
+    CPU_SETTINGS_WINDOW_ID, MEMORY_SETTINGS_WINDOW_ID,
 };
 use crate::monitors::cpu_monitor::{CpuMonitor, CpuStats};
 use crate::monitors::memory_monitor::{MemoryMonitor, MemoryStats};
 use crate::sensors::proc_meminfo_reader::ProcMemInfoSensorReader;
 use crate::sensors::proc_stat_reader::ProcStatSensorReader;
-use crate::ui::cpu_settings::CpuSettingsUi;
+use crate::ui::cpu_settings::{CpuSettingsUi, CPU_SETTINGS_FORM_KEY};
 use crate::ui::indicators::IndicatorsUI;
-use crate::ui::memory_settings::{CpuSettingsForm, MemorySettingsForm, MemorySettingsUi};
+use crate::ui::memory_settings::{CpuSettingsForm, MemorySettingsForm, MemorySettingsUi, MEMORY_SETTINGS_FORM_KEY};
 use crate::ui::settings_input_sanitisers::FormInputValidation;
 use cosmic::app::{Core, Task};
 use cosmic::cosmic_config::{Config, CosmicConfigEntry};
@@ -19,7 +19,7 @@ use cosmic::iced::{window, Subscription};
 use cosmic::iced_winit::commands::popup::{destroy_popup, get_popup};
 use cosmic::widget::{autosize, container, row, Id};
 use cosmic::{cosmic_config, Application, Element};
-use log::{error, info};
+use log::{error, info, warn};
 use once_cell::sync::Lazy;
 use tokio_util::sync::CancellationToken;
 
@@ -54,9 +54,9 @@ pub enum Message {
     SettingsPopupClosed(window::Id),
     StartMonitoring,
     ConfigFileChanged(AppConfiguration),
-    SettingFormUpdated(SettingsForm),
     MemoryUpdate(MemoryStats),
     CpuUpdate(CpuStats),
+    SettingsFormUpdate(SettingsFormEvent),
 }
 
 /// Implement the `Application` trait for your application.
@@ -129,12 +129,10 @@ impl Application for AppState {
 
                     match id {
                         id if id == *MEMORY_SETTINGS_WINDOW_ID => {
-                            self.memory_settings_form =
-                                Some(MemorySettingsForm::from(&self.configuration.memory))
+                            self.memory_settings_form = Some(MemorySettingsForm::from(&self.configuration.memory))
                         }
                         id if id == *CPU_SETTINGS_WINDOW_ID => {
-                            self.cpu_settings_form =
-                                Some(CpuSettingsForm::from(&self.configuration.cpu))
+                            self.cpu_settings_form = Some(CpuSettingsForm::from(&self.configuration.cpu))
                         }
                         _ => {
                             error!("Unknown window id: {}", id);
@@ -142,13 +140,10 @@ impl Application for AppState {
                         }
                     };
 
-                    let mut popup_settings = self.core.applet.get_popup_settings(
-                        self.core.main_window_id().unwrap(),
-                        id,
-                        None,
-                        None,
-                        None,
-                    );
+                    let mut popup_settings =
+                        self.core
+                            .applet
+                            .get_popup_settings(self.core.main_window_id().unwrap(), id, None, None, None);
                     popup_settings.positioner.size_limits = Limits::NONE
                         .max_width(372.0)
                         .min_width(300.0)
@@ -199,7 +194,7 @@ impl Application for AppState {
 
                     }
                 })
-                    .map(cosmic::Action::App);
+                .map(cosmic::Action::App);
             }
             Message::MemoryUpdate(memory_usage) => {
                 self.memory = memory_usage;
@@ -210,15 +205,38 @@ impl Application for AppState {
             Message::ConfigFileChanged(configuration) => {
                 self.configuration = configuration;
             }
-            Message::SettingFormUpdated(settings_form) => {
-                match settings_form {
-                    SettingsForm::MemorySettings(memory_form) => {
-                        self.memory_settings_form = Some(memory_form);
-                    }
-                    SettingsForm::CpuSettings(cpu_form) => {
-                        self.cpu_settings_form = Some(cpu_form);
-                    }
+            Message::SettingsFormUpdate(settings_form_event) => {
+                let cpu_settings_form = self
+                    .cpu_settings_form
+                    .get_or_insert_with(|| CpuSettingsForm::from(&self.configuration.cpu));
+
+                let memory_settings_form = self
+                    .memory_settings_form
+                    .get_or_insert_with(|| MemorySettingsForm::from(&self.configuration.memory));
+
+                match settings_form_event {
+                    SettingsFormEvent::LabelTextChanged(value) => match value.monitor_id {
+                        MEMORY_SETTINGS_FORM_KEY => memory_settings_form.label_text = value.value,
+                        CPU_SETTINGS_FORM_KEY => cpu_settings_form.label_text = value.value,
+                        &_ => warn!("Unknown monitor id: {}", value.monitor_id)
+                    },
+                    SettingsFormEvent::LabelColourChanged(value) => match value.monitor_id {
+                        MEMORY_SETTINGS_FORM_KEY => memory_settings_form.label_colour = value.value,
+                        CPU_SETTINGS_FORM_KEY => cpu_settings_form.label_colour = value.value,
+                        &_ => warn!("Unknown monitor id: {}", value.monitor_id)
+                    },
+                    SettingsFormEvent::UpdateIntervalChanged(value) => match value.monitor_id {
+                        MEMORY_SETTINGS_FORM_KEY => memory_settings_form.update_interval = value.value,
+                        CPU_SETTINGS_FORM_KEY => cpu_settings_form.update_interval = value.value,
+                        &_ => warn!("Unknown monitor id: {}", value.monitor_id)
+                    },
+                    SettingsFormEvent::MaxSamplesChanged(value) => match value.monitor_id {
+                        MEMORY_SETTINGS_FORM_KEY => memory_settings_form.max_samples = value.value,
+                        CPU_SETTINGS_FORM_KEY => cpu_settings_form.max_samples = value.value,
+                        &_ => warn!("Unknown monitor id: {}", value.monitor_id)
+                    },
                 }
+
                 self.update_configuration();
             }
         }
@@ -293,9 +311,7 @@ impl AppState {
                     new_settings.max_samples.clone(),
                     configuration.memory.max_samples,
                 ),
-                label_text: FormInputValidation::sanitise_label_text(
-                    new_settings.label_text.clone(),
-                ),
+                label_text: FormInputValidation::sanitise_label_text(new_settings.label_text.clone()),
                 label_colour: FormInputValidation::sanitise_label_colour(
                     new_settings.label_colour.clone(),
                     configuration.memory.label_colour,
@@ -316,9 +332,7 @@ impl AppState {
                     new_settings.max_samples.clone(),
                     configuration.cpu.max_samples,
                 ),
-                label_text: FormInputValidation::sanitise_label_text(
-                    new_settings.label_text.clone(),
-                ),
+                label_text: FormInputValidation::sanitise_label_text(new_settings.label_text.clone()),
                 label_colour: FormInputValidation::sanitise_label_colour(
                     new_settings.label_colour.clone(),
                     configuration.cpu.label_colour,

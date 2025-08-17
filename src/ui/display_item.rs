@@ -1,4 +1,3 @@
-use log::info;
 use crate::core::app_configuration::{AppConfiguration, CPU_SETTINGS_WINDOW_ID, MEMORY_SETTINGS_WINDOW_ID};
 use crate::monitors::cpu_monitor::CpuStats;
 use crate::monitors::memory_monitor::MemoryStats;

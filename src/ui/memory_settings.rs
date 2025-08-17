@@ -1,9 +1,13 @@
 use crate::app::{AppState, Message};
-use crate::core::app_configuration::{CpuConfiguration, MemoryConfiguration, SettingsForm};
+use crate::core::app_configuration::{
+    CpuConfiguration, MemoryConfiguration, SettingsFormEvent, SettingsFormValue,
+};
 use crate::fl;
 use cosmic::iced_widget::{container, Container};
 use cosmic::widget::settings;
 use cosmic::{widget, Theme};
+
+pub const MEMORY_SETTINGS_FORM_KEY: &str = "memory_settings_form";
 
 #[derive(Debug, Clone, Default)]
 pub struct MemorySettingsForm {
@@ -68,36 +72,48 @@ impl MemorySettingsUi {
                         &memory_settings_form.update_interval,
                     )
                     .on_input(|new_interval| {
-                        let mut form = memory_settings_form.clone();
-                        form.update_interval = new_interval;
-                        Message::SettingFormUpdated(SettingsForm::MemorySettings(form))
+                        Message::SettingsFormUpdate(SettingsFormEvent::UpdateIntervalChanged(
+                            SettingsFormValue {
+                                monitor_id: MEMORY_SETTINGS_FORM_KEY,
+                                value: new_interval,
+                            },
+                        ))
                     }),
                 ))
                 .add(settings::item(
                     fl!("settings-max-samples"),
                     widget::text_input(fl!("settings-empty"), &memory_settings_form.max_samples)
                         .on_input(|new_max_samples| {
-                            let mut form = memory_settings_form.clone();
-                            form.max_samples = new_max_samples;
-                            Message::SettingFormUpdated(SettingsForm::MemorySettings(form))
+                            Message::SettingsFormUpdate(SettingsFormEvent::MaxSamplesChanged(
+                                SettingsFormValue {
+                                    monitor_id: MEMORY_SETTINGS_FORM_KEY,
+                                    value: new_max_samples,
+                                },
+                            ))
                         }),
                 ))
                 .add(settings::item(
                     fl!("settings-label-text"),
                     widget::text_input(fl!("settings-empty"), &memory_settings_form.label_text)
                         .on_input(|new_label_text| {
-                            let mut form = memory_settings_form.clone();
-                            form.label_text = new_label_text;
-                            Message::SettingFormUpdated(SettingsForm::MemorySettings(form))
+                            Message::SettingsFormUpdate(SettingsFormEvent::LabelTextChanged(
+                                SettingsFormValue {
+                                    monitor_id: MEMORY_SETTINGS_FORM_KEY,
+                                    value: new_label_text,
+                                },
+                            ))
                         }),
                 ))
                 .add(settings::item(
                     fl!("settings-label-colour"),
                     widget::text_input(fl!("settings-empty"), &memory_settings_form.label_colour)
                         .on_input(|new_label_color| {
-                            let mut form = memory_settings_form.clone();
-                            form.label_colour = new_label_color;
-                            Message::SettingFormUpdated(SettingsForm::MemorySettings(form))
+                            Message::SettingsFormUpdate(SettingsFormEvent::LabelColourChanged(
+                                SettingsFormValue {
+                                    monitor_id: MEMORY_SETTINGS_FORM_KEY,
+                                    value: new_label_color,
+                                },
+                            ))
                         }),
                 )),
         );

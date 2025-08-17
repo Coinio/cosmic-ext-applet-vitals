@@ -3,7 +3,9 @@ use crate::fl;
 use cosmic::iced_widget::{container, Container};
 use cosmic::{widget, Theme};
 use cosmic::widget::settings;
-use crate::core::app_configuration::SettingsForm;
+use crate::core::app_configuration::{SettingsFormEvent, SettingsFormValue};
+
+pub const CPU_SETTINGS_FORM_KEY: &str = "cpu_settings_form";
 
 pub struct CpuSettingsUi;
 
@@ -24,43 +26,54 @@ impl CpuSettingsUi {
                 }))
                 .add(settings::item(
                     fl!("settings-update-interval"),
-                    widget::text_input(fl!("settings-empty"), &cpu_settings_form.update_interval)
-                        .on_input(
-                            | new_interval| {
-                                let mut form = cpu_settings_form.clone();
-                                form.update_interval = new_interval;
-                                Message::SettingFormUpdated(SettingsForm::CpuSettings(form))
-                            },
-                        ),
+                    widget::text_input(
+                        fl!("settings-empty"),
+                        &cpu_settings_form.update_interval,
+                    )
+                        .on_input(|new_interval| {
+                            Message::SettingsFormUpdate(SettingsFormEvent::UpdateIntervalChanged(
+                                SettingsFormValue {
+                                    monitor_id: CPU_SETTINGS_FORM_KEY,
+                                    value: new_interval,
+                                },
+                            ))
+                        }),
                 ))
                 .add(settings::item(
                     fl!("settings-max-samples"),
                     widget::text_input(fl!("settings-empty"), &cpu_settings_form.max_samples)
                         .on_input(|new_max_samples| {
-                            let mut form = cpu_settings_form.clone();
-                            form.max_samples = new_max_samples;
-                            Message::SettingFormUpdated(SettingsForm::CpuSettings(form))
+                            Message::SettingsFormUpdate(SettingsFormEvent::MaxSamplesChanged(
+                                SettingsFormValue {
+                                    monitor_id: CPU_SETTINGS_FORM_KEY,
+                                    value: new_max_samples,
+                                },
+                            ))
                         }),
                 ))
                 .add(settings::item(
                     fl!("settings-label-text"),
-                    widget::text_input(fl!("settings-empty"), &cpu_settings_form.label_text).on_input(
-                        |new_label_text| {
-                            let mut form = cpu_settings_form.clone();
-                            form.label_text = new_label_text;
-                            Message::SettingFormUpdated(SettingsForm::CpuSettings(form))
-                        },
-                    ),
+                    widget::text_input(fl!("settings-empty"), &cpu_settings_form.label_text)
+                        .on_input(|new_label_text| {
+                            Message::SettingsFormUpdate(SettingsFormEvent::LabelTextChanged(
+                                SettingsFormValue {
+                                    monitor_id: CPU_SETTINGS_FORM_KEY,
+                                    value: new_label_text,
+                                },
+                            ))
+                        }),
                 ))
                 .add(settings::item(
                     fl!("settings-label-colour"),
-                    widget::text_input(fl!("settings-empty"), &cpu_settings_form.label_colour).on_input(
-                        |new_label_color| {
-                            let mut form = cpu_settings_form.clone();
-                            form.label_colour = new_label_color;
-                            Message::SettingFormUpdated(SettingsForm::CpuSettings(form))
-                        },
-                    ),
+                    widget::text_input(fl!("settings-empty"), &cpu_settings_form.label_colour)
+                        .on_input(|new_label_color| {
+                            Message::SettingsFormUpdate(SettingsFormEvent::LabelColourChanged(
+                                SettingsFormValue {
+                                    monitor_id: CPU_SETTINGS_FORM_KEY,
+                                    value: new_label_color,
+                                },
+                            ))
+                        }),
                 )),
         );
 
