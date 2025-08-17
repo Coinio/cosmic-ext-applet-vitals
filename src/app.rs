@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 use crate::core::app_configuration::{
-    AppConfiguration, CpuConfiguration, MemoryConfiguration, SettingsFormEvent,
-    CPU_SETTINGS_WINDOW_ID, MEMORY_SETTINGS_WINDOW_ID,
+    AppConfiguration, CpuConfiguration, MemoryConfiguration, CPU_SETTINGS_WINDOW_ID, MEMORY_SETTINGS_WINDOW_ID,
 };
 use crate::monitors::cpu_monitor::{CpuMonitor, CpuStats};
 use crate::monitors::memory_monitor::{MemoryMonitor, MemoryStats};
 use crate::sensors::proc_meminfo_reader::ProcMemInfoSensorReader;
 use crate::sensors::proc_stat_reader::ProcStatSensorReader;
-use crate::ui::cpu_settings::{CpuSettingsUi, CPU_SETTINGS_FORM_KEY};
+use crate::ui::cpu_settings::{CpuSettingsForm, CPU_SETTINGS_FORM_KEY};
 use crate::ui::indicators::IndicatorsUI;
-use crate::ui::memory_settings::{CpuSettingsForm, MemorySettingsForm, MemorySettingsUi, MEMORY_SETTINGS_FORM_KEY};
+use crate::ui::memory_settings::{MemorySettingsForm, MEMORY_SETTINGS_FORM_KEY};
+use crate::ui::settings::{SettingsForm, SettingsFormEvent, LABEL_COLOUR_SETTING_KEY, LABEL_TEXT_SETTING_KEY, MAX_SAMPLES_SETTING_KEY, UPDATE_INTERVAL_SETTING_KEY};
 use crate::ui::settings_input_sanitisers::FormInputValidation;
 use cosmic::app::{Core, Task};
 use cosmic::cosmic_config::{Config, CosmicConfigEntry};
@@ -21,6 +21,7 @@ use cosmic::widget::{autosize, container, row, Id};
 use cosmic::{cosmic_config, Application, Element};
 use log::{error, info, warn};
 use once_cell::sync::Lazy;
+use std::collections::HashMap;
 use tokio_util::sync::CancellationToken;
 
 static AUTOSIZE_MAIN_ID: Lazy<Id> = Lazy::new(|| Id::new("autosize-main"));
@@ -33,10 +34,8 @@ pub struct AppState {
     monitor_cancellation_token: Option<CancellationToken>,
     /// The application configuration
     configuration: AppConfiguration,
-    /// The current memory settings form, Some if open, None if closed.
-    memory_settings_form: Option<MemorySettingsForm>,
-    /// The current cpu settings form, Some if open, None if closed.
-    cpu_settings_form: Option<CpuSettingsForm>,
+    /// The settings forms that are available for configuration of the monitors.
+    settings_forms: HashMap<&'static str, SettingsForm>,
     /// The current memory usage stats
     memory: MemoryStats,
     /// The current cpu usage stats
@@ -90,16 +89,34 @@ impl Application for AppState {
     /// - `flags` is used to pass in any data that your application needs to use before it starts.
     /// - `Command` type is used to send messages to your application. `Command::none()` can be used to send no messages to your application.
     fn init(core: Core, _flags: Self::Flags) -> (Self, Task<Self::Message>) {
+        let configuration = cosmic_config::Config::new(Self::APP_ID, AppConfiguration::VERSION)
+            .map(|context| {
+                AppConfiguration::get_entry(&context).unwrap_or_else(|(_errors, config)| {
+                    error!("{:?}", _errors);
+                    config
+                })
+            })
+            .unwrap_or_default();
+
+        let settings_forms = HashMap::from([
+            (
+                MEMORY_SETTINGS_FORM_KEY,
+                SettingsForm::new(
+                    MEMORY_SETTINGS_FORM_KEY,
+                    MemorySettingsForm::from(&configuration.memory),
+                ),
+            ),
+            (
+                CPU_SETTINGS_FORM_KEY,
+                SettingsForm::new(CPU_SETTINGS_FORM_KEY, CpuSettingsForm::from(&configuration.cpu)),
+            ),
+        ]);
+
         let app = AppState {
             core,
-            configuration: cosmic_config::Config::new(Self::APP_ID, AppConfiguration::VERSION)
-                .map(|context| {
-                    AppConfiguration::get_entry(&context).unwrap_or_else(|(_errors, config)| {
-                        error!("{:?}", _errors);
-                        config
-                    })
-                })
-                .unwrap_or_default(),
+            settings_forms,
+            configuration,
+            // settings_forms,
             ..Default::default()
         };
 
@@ -127,7 +144,7 @@ impl Application for AppState {
                 } else {
                     self.popup.replace(id);
 
-                    match id {
+                    /*  match id {
                         id if id == *MEMORY_SETTINGS_WINDOW_ID => {
                             self.memory_settings_form = Some(MemorySettingsForm::from(&self.configuration.memory))
                         }
@@ -138,7 +155,7 @@ impl Application for AppState {
                             error!("Unknown window id: {}", id);
                             panic!("Unknown window id: {}", id)
                         }
-                    };
+                    };*/
 
                     let mut popup_settings =
                         self.core
@@ -206,35 +223,19 @@ impl Application for AppState {
                 self.configuration = configuration;
             }
             Message::SettingsFormUpdate(settings_form_event) => {
-                let cpu_settings_form = self
-                    .cpu_settings_form
-                    .get_or_insert_with(|| CpuSettingsForm::from(&self.configuration.cpu));
-
-                let memory_settings_form = self
-                    .memory_settings_form
-                    .get_or_insert_with(|| MemorySettingsForm::from(&self.configuration.memory));
-
                 match settings_form_event {
-                    SettingsFormEvent::LabelTextChanged(value) => match value.monitor_id {
-                        MEMORY_SETTINGS_FORM_KEY => memory_settings_form.label_text = value.value,
-                        CPU_SETTINGS_FORM_KEY => cpu_settings_form.label_text = value.value,
-                        &_ => warn!("Unknown monitor id: {}", value.monitor_id)
-                    },
-                    SettingsFormEvent::LabelColourChanged(value) => match value.monitor_id {
-                        MEMORY_SETTINGS_FORM_KEY => memory_settings_form.label_colour = value.value,
-                        CPU_SETTINGS_FORM_KEY => cpu_settings_form.label_colour = value.value,
-                        &_ => warn!("Unknown monitor id: {}", value.monitor_id)
-                    },
-                    SettingsFormEvent::UpdateIntervalChanged(value) => match value.monitor_id {
-                        MEMORY_SETTINGS_FORM_KEY => memory_settings_form.update_interval = value.value,
-                        CPU_SETTINGS_FORM_KEY => cpu_settings_form.update_interval = value.value,
-                        &_ => warn!("Unknown monitor id: {}", value.monitor_id)
-                    },
-                    SettingsFormEvent::MaxSamplesChanged(value) => match value.monitor_id {
-                        MEMORY_SETTINGS_FORM_KEY => memory_settings_form.max_samples = value.value,
-                        CPU_SETTINGS_FORM_KEY => cpu_settings_form.max_samples = value.value,
-                        &_ => warn!("Unknown monitor id: {}", value.monitor_id)
-                    },
+                    SettingsFormEvent::FieldUpdated(value) => {
+                        let mut form = self.settings_forms.get_mut(value.monitor_form_key).expect(
+                            format!("No settings form configured with key: {}", value.monitor_form_key).as_str(),
+                        );
+
+                        let mut label_text = form
+                            .values
+                            .get_mut(value.form_value_key)
+                            .expect(format!("No form row with key: {}", value.form_value_key).as_str());
+
+                        label_text.value = value.value;
+                    }
                 }
 
                 self.update_configuration();
@@ -264,9 +265,16 @@ impl Application for AppState {
     }
 
     fn view_window(&'_ self, id: window::Id) -> Element<'_, Self::Message> {
+        // TODO: Should we use the window ID as the form key and we can do a straight lookup?
         let content = match id {
-            id if id == *MEMORY_SETTINGS_WINDOW_ID => MemorySettingsUi::content(self),
-            id if id == *CPU_SETTINGS_WINDOW_ID => CpuSettingsUi::content(self),
+            id if id == *MEMORY_SETTINGS_WINDOW_ID => {
+                let form = self.settings_forms.get(MEMORY_SETTINGS_FORM_KEY);
+                form.unwrap().content(self)
+            }
+            id if id == *CPU_SETTINGS_WINDOW_ID => {
+                let form = self.settings_forms.get(CPU_SETTINGS_FORM_KEY);
+                form.unwrap().content(self)
+            }
             _ => container(row()),
         };
 
@@ -287,54 +295,60 @@ impl AppState {
         &self.configuration
     }
 
-    pub fn memory_settings_form(&self) -> Option<&MemorySettingsForm> {
-        self.memory_settings_form.as_ref()
-    }
-
-    pub fn cpu_settings_form(&self) -> Option<&CpuSettingsForm> {
-        self.cpu_settings_form.as_ref()
-    }
-
     fn update_configuration(&mut self) {
         let mut configuration = self.configuration.clone();
 
-        let memory_settings_form = self.memory_settings_form.as_ref();
+        info!("Saving configuration: {:?}", configuration);
 
-        configuration.memory = match memory_settings_form {
+        // TODO: Temporary unwraps mid refactor
+        configuration.memory = match self.settings_forms.get(MEMORY_SETTINGS_FORM_KEY) {
             None => self.configuration.memory.clone(),
             Some(new_settings) => MemoryConfiguration {
                 update_interval: FormInputValidation::sanitise_interval_input(
-                    new_settings.update_interval.clone(),
+                    new_settings
+                        .values
+                        .get(UPDATE_INTERVAL_SETTING_KEY)
+                        .unwrap()
+                        .value
+                        .clone(),
                     configuration.memory.update_interval,
                 ),
                 max_samples: FormInputValidation::sanitise_max_samples(
-                    new_settings.max_samples.clone(),
+                    new_settings.values.get(MAX_SAMPLES_SETTING_KEY).unwrap().value.clone(),
                     configuration.memory.max_samples,
                 ),
-                label_text: FormInputValidation::sanitise_label_text(new_settings.label_text.clone()),
+                label_text: FormInputValidation::sanitise_label_text(
+                    new_settings.values.get(LABEL_TEXT_SETTING_KEY).unwrap().value.clone(),
+                ),
                 label_colour: FormInputValidation::sanitise_label_colour(
-                    new_settings.label_colour.clone(),
+                    new_settings.values.get(LABEL_COLOUR_SETTING_KEY).unwrap().value.clone(),
                     configuration.memory.label_colour,
                 ),
             },
         };
 
-        let cpu_settings_form = self.cpu_settings_form.as_ref();
-
-        configuration.cpu = match cpu_settings_form {
+        // TODO: Temporary unwraps mid refactor
+        configuration.cpu = match self.settings_forms.get(CPU_SETTINGS_FORM_KEY) {
             None => self.configuration.cpu.clone(),
             Some(new_settings) => CpuConfiguration {
                 update_interval: FormInputValidation::sanitise_interval_input(
-                    new_settings.update_interval.clone(),
+                    new_settings
+                        .values
+                        .get(UPDATE_INTERVAL_SETTING_KEY)
+                        .unwrap()
+                        .value
+                        .clone(),
                     configuration.cpu.update_interval,
                 ),
                 max_samples: FormInputValidation::sanitise_max_samples(
-                    new_settings.max_samples.clone(),
+                    new_settings.values.get(MAX_SAMPLES_SETTING_KEY).unwrap().value.clone(),
                     configuration.cpu.max_samples,
                 ),
-                label_text: FormInputValidation::sanitise_label_text(new_settings.label_text.clone()),
+                label_text: FormInputValidation::sanitise_label_text(
+                    new_settings.values.get(LABEL_TEXT_SETTING_KEY).unwrap().value.clone(),
+                ),
                 label_colour: FormInputValidation::sanitise_label_colour(
-                    new_settings.label_colour.clone(),
+                    new_settings.values.get(LABEL_COLOUR_SETTING_KEY).unwrap().value.clone(),
                     configuration.cpu.label_colour,
                 ),
             },

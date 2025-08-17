@@ -11,20 +11,6 @@ pub static SENSOR_INTERVAL_MINIMUM_IN_MS: u64 = 250;
 pub static SENSOR_MAX_SAMPLES_MINIMUM: usize = 1;
 pub static SENSOR_MAX_LABEL_LENGTH: usize = 16;
 
-#[derive(Debug, Clone)]
-pub struct SettingsFormValue {
-    pub monitor_id: &'static str,
-    pub value: String
-}
-
-#[derive(Debug, Clone)]
-pub enum SettingsFormEvent {
-    LabelTextChanged(SettingsFormValue),
-    LabelColourChanged(SettingsFormValue),
-    UpdateIntervalChanged(SettingsFormValue),
-    MaxSamplesChanged(SettingsFormValue),
-}
-
 /// The configuration for the CPU monitor
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub struct CpuConfiguration {
