@@ -1,7 +1,7 @@
 use crate::app::Message;
 use crate::fl;
 use cosmic::iced::window;
-use cosmic::iced_widget::{column, container, Container};
+use cosmic::iced_widget::{container, Container};
 use cosmic::widget::settings;
 use cosmic::{widget, Theme};
 use std::collections::HashMap;

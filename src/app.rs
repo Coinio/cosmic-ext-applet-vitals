@@ -7,8 +7,7 @@ use crate::sensors::proc_meminfo_reader::ProcMemInfoSensorReader;
 use crate::sensors::proc_stat_reader::ProcStatSensorReader;
 use crate::ui::indicators::IndicatorsUI;
 use crate::ui::settings::{
-    SettingsForm, SettingsFormEvent, LABEL_COLOUR_SETTING_KEY, LABEL_TEXT_SETTING_KEY, MAX_SAMPLES_SETTING_KEY,
-    UPDATE_INTERVAL_SETTING_KEY,
+    SettingsForm, SettingsFormEvent,
 };
 use cosmic::app::{Core, Task};
 use cosmic::cosmic_config::{Config, CosmicConfigEntry};
