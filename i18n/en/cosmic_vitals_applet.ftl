@@ -1,5 +1,5 @@
 example-row = Example row
-settings-cpu-title = Cpu Settings
+settings-cpu-title = CPU Settings
 settings-memory-title = Memory Settings
 settings-update-interval = Update Interval (ms)
 settings-empty = <empty>

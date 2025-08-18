@@ -27,6 +27,7 @@ use once_cell::sync::Lazy;
 use std::collections::HashMap;
 use cosmic::iced_widget::row;
 use tokio_util::sync::CancellationToken;
+use crate::fl;
 
 static AUTOSIZE_MAIN_ID: Lazy<Id> = Lazy::new(|| Id::new("autosize-main"));
 
@@ -107,6 +108,7 @@ impl Application for AppState {
                 MEMORY_SETTINGS_WINDOW_ID.clone(),
                 SettingsForm::new(
                     MEMORY_SETTINGS_WINDOW_ID.clone(),
+                    fl!("settings-memory-title"),
                     MemorySettings::from(&configuration.memory),
                 ),
             ),
@@ -114,6 +116,7 @@ impl Application for AppState {
                 CPU_SETTINGS_WINDOW_ID.clone(),
                 SettingsForm::new(
                     CPU_SETTINGS_WINDOW_ID.clone(),
+                    fl!("settings-cpu-title"),   
                     CpuSettings::from(&configuration.cpu),
                 ),
             ),

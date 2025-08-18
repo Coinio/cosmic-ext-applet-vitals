@@ -1,4 +1,4 @@
-use crate::app::{Message};
+use crate::app::Message;
 use crate::fl;
 use cosmic::iced::window;
 use cosmic::iced_widget::{column, container, Container};
@@ -30,24 +30,32 @@ pub struct SettingsFormItem {
 
 pub struct SettingsForm {
     pub settings_window_id: window::Id,
+    pub title: String,
     pub values: HashMap<&'static str, SettingsFormItem>,
 }
 
 impl SettingsForm {
-    pub fn new(settings_window_id: window::Id, values: HashMap<&'static str, SettingsFormItem>) -> Self {
-        Self { settings_window_id, values }
+    pub fn new(settings_window_id: window::Id, title: String, values: HashMap<&'static str, 
+        SettingsFormItem>) -> Self {
+        Self {
+            settings_window_id,
+            title,
+            values,
+        }
     }
 
-    pub fn content(&self) -> Container<'_, Message, Theme> {
-        let title = fl!("settings-cpu-title");
+    pub fn content(&self) -> Container<'_, Message, Theme> {       
 
-        let mut column = column![widget::text(title).font(cosmic::iced::Font {
+        let mut column = widget::list_column()
+            .padding(5)
+            .spacing(0)
+            .add(widget::text(&self.title).font(cosmic::iced::Font {
             weight: cosmic::iced::font::Weight::ExtraBold,
             ..Default::default()
-        })];
+        }));
 
         for (form_value_key, settings_form) in self.values.iter() {
-            column = column.push(settings::item(
+            column = column.add(settings::item(
                 settings_form.label.clone(),
                 widget::text_input(fl!("settings-empty"), &settings_form.value).on_input(|new_value| {
                     Message::SettingsFormUpdate(SettingsFormEvent::StringFieldUpdated(SettingsFormEventValue {
