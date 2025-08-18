@@ -11,6 +11,14 @@ pub const LABEL_COLOUR_SETTING_KEY: &'static str = "settings-label-colour";
 pub const UPDATE_INTERVAL_SETTING_KEY: &'static str = "settings-update-interval";
 pub const MAX_SAMPLES_SETTING_KEY: &'static str = "settings-max-samples";
 
+// Define the explicit UI order for settings
+const ORDERED_KEYS: [&'static str; 4] = [
+    LABEL_TEXT_SETTING_KEY,
+    LABEL_COLOUR_SETTING_KEY,
+    UPDATE_INTERVAL_SETTING_KEY,
+    MAX_SAMPLES_SETTING_KEY,
+];
+
 #[derive(Debug, Clone)]
 pub enum SettingsFormEvent {
     StringFieldUpdated(SettingsFormEventValue),
@@ -35,8 +43,7 @@ pub struct SettingsForm {
 }
 
 impl SettingsForm {
-    pub fn new(settings_window_id: window::Id, title: String, values: HashMap<&'static str, 
-        SettingsFormItem>) -> Self {
+    pub fn new(settings_window_id: window::Id, title: String, values: HashMap<&'static str, SettingsFormItem>) -> Self {
         Self {
             settings_window_id,
             title,
@@ -44,27 +51,28 @@ impl SettingsForm {
         }
     }
 
-    pub fn content(&self) -> Container<'_, Message, Theme> {       
-
+    pub fn content(&self) -> Container<'_, Message, Theme> {
         let mut column = widget::list_column()
             .padding(5)
             .spacing(0)
             .add(widget::text(&self.title).font(cosmic::iced::Font {
-            weight: cosmic::iced::font::Weight::ExtraBold,
-            ..Default::default()
-        }));
+                weight: cosmic::iced::font::Weight::ExtraBold,
+                ..Default::default()
+            }));
 
-        for (form_value_key, settings_form) in self.values.iter() {
-            column = column.add(settings::item(
-                settings_form.label.clone(),
-                widget::text_input(fl!("settings-empty"), &settings_form.value).on_input(|new_value| {
-                    Message::SettingsFormUpdate(SettingsFormEvent::StringFieldUpdated(SettingsFormEventValue {
-                        settings_window_id: self.settings_window_id,
-                        form_value_key,
-                        value: new_value,
-                    }))
-                }),
-            ));
+        for &form_value_key in ORDERED_KEYS.iter() {
+            if let Some(settings_form) = self.values.get(form_value_key) {
+                column = column.add(settings::item(
+                    settings_form.label.clone(),
+                    widget::text_input(fl!("settings-empty"), &settings_form.value).on_input(|new_value| {
+                        Message::SettingsFormUpdate(SettingsFormEvent::StringFieldUpdated(SettingsFormEventValue {
+                            settings_window_id: self.settings_window_id,
+                            form_value_key,
+                            value: new_value,
+                        }))
+                    }),
+                ));
+            }
         }
 
         container(column)
