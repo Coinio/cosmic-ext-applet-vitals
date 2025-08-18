@@ -1,6 +1,6 @@
 use std::collections::HashMap;
+use crate::configuration::app_configuration::CpuConfiguration;
 use crate::fl;
-use crate::core::app_configuration::CpuConfiguration;
 use crate::ui::settings::{SettingsFormItem, LABEL_COLOUR_SETTING_KEY, LABEL_TEXT_SETTING_KEY, MAX_SAMPLES_SETTING_KEY, UPDATE_INTERVAL_SETTING_KEY};
 
 

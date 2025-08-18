@@ -3,7 +3,6 @@ use crate::ui::settings::{
     SettingsForm, SettingsFormItem, LABEL_COLOUR_SETTING_KEY, LABEL_TEXT_SETTING_KEY, MAX_SAMPLES_SETTING_KEY,
     UPDATE_INTERVAL_SETTING_KEY,
 };
-use crate::ui::settings_input_sanitisers::FormInputValidation;
 use cosmic::cosmic_config::{self, cosmic_config_derive::CosmicConfigEntry, CosmicConfigEntry};
 use hex_color::HexColor;
 use log::error;
@@ -11,6 +10,7 @@ use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::time::Duration;
+use crate::configuration::validation::ConfigurationValidation;
 
 pub static CPU_SETTINGS_WINDOW_ID: Lazy<cosmic::iced::window::Id> = Lazy::new(|| cosmic::iced::window::Id::unique());
 pub static MEMORY_SETTINGS_WINDOW_ID: Lazy<cosmic::iced::window::Id> = Lazy::new(|| cosmic::iced::window::Id::unique());
@@ -50,7 +50,7 @@ impl CpuConfiguration {
         }
 
         CpuConfiguration {
-            update_interval: FormInputValidation::sanitise_interval_input(
+            update_interval: ConfigurationValidation::sanitise_interval_input(
                 settings_form
                     .values
                     .get(UPDATE_INTERVAL_SETTING_KEY)
@@ -59,14 +59,14 @@ impl CpuConfiguration {
                     .clone(),
                 self.update_interval,
             ),
-            max_samples: FormInputValidation::sanitise_max_samples(
+            max_samples: ConfigurationValidation::sanitise_max_samples(
                 settings_form.values.get(MAX_SAMPLES_SETTING_KEY).unwrap().value.clone(),
                 self.max_samples,
             ),
-            label_text: FormInputValidation::sanitise_label_text(
+            label_text: ConfigurationValidation::sanitise_label_text(
                 settings_form.values.get(LABEL_TEXT_SETTING_KEY).unwrap().value.clone(),
             ),
-            label_colour: FormInputValidation::sanitise_label_colour(
+            label_colour: ConfigurationValidation::sanitise_label_colour(
                 settings_form
                     .values
                     .get(LABEL_COLOUR_SETTING_KEY)
@@ -110,7 +110,7 @@ impl MemoryConfiguration {
         }
 
         MemoryConfiguration {
-            update_interval: FormInputValidation::sanitise_interval_input(
+            update_interval: ConfigurationValidation::sanitise_interval_input(
                 settings_form
                     .values
                     .get(UPDATE_INTERVAL_SETTING_KEY)
@@ -119,14 +119,14 @@ impl MemoryConfiguration {
                     .clone(),
                 self.update_interval,
             ),
-            max_samples: FormInputValidation::sanitise_max_samples(
+            max_samples: ConfigurationValidation::sanitise_max_samples(
                 settings_form.values.get(MAX_SAMPLES_SETTING_KEY).unwrap().value.clone(),
                 self.max_samples,
             ),
-            label_text: FormInputValidation::sanitise_label_text(
+            label_text: ConfigurationValidation::sanitise_label_text(
                 settings_form.values.get(LABEL_TEXT_SETTING_KEY).unwrap().value.clone(),
             ),
-            label_colour: FormInputValidation::sanitise_label_colour(
+            label_colour: ConfigurationValidation::sanitise_label_colour(
                 settings_form
                     .values
                     .get(LABEL_COLOUR_SETTING_KEY)

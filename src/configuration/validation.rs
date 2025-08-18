@@ -1,17 +1,17 @@
-use crate::core::app_configuration::{SENSOR_INTERVAL_MINIMUM_IN_MS, SENSOR_MAX_LABEL_LENGTH, SENSOR_MAX_SAMPLES_MINIMUM};
 use std::cmp;
 use std::time::Duration;
 use hex_color::HexColor;
+use crate::configuration::app_configuration::{SENSOR_INTERVAL_MINIMUM_IN_MS, SENSOR_MAX_LABEL_LENGTH, SENSOR_MAX_SAMPLES_MINIMUM};
 
-pub struct FormInputValidation;
+pub struct ConfigurationValidation;
 
-impl FormInputValidation {
-    pub(crate) fn sanitise_label_colour(new_input: String, previous_colour: HexColor) -> HexColor {
+impl ConfigurationValidation {
+    pub fn sanitise_label_colour(new_input: String, previous_colour: HexColor) -> HexColor {
         HexColor::parse(&new_input).unwrap_or_else(|_| previous_colour)
     }
 }
 
-impl FormInputValidation {
+impl ConfigurationValidation {
    
     pub fn sanitise_interval_input(new_input: String, previous_interval: Duration) -> Duration {
         match new_input.trim().parse() {

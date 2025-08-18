@@ -1,21 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
-use crate::core::app_configuration::{
-    AppConfiguration, CpuConfiguration, MemoryConfiguration, CPU_SETTINGS_WINDOW_ID, MEMORY_SETTINGS_WINDOW_ID,
-};
 use crate::fl;
 use crate::monitors::cpu_monitor::{CpuMonitor, CpuStats};
 use crate::monitors::memory_monitor::{MemoryMonitor, MemoryStats};
 use crate::sensors::proc_meminfo_reader::ProcMemInfoSensorReader;
 use crate::sensors::proc_stat_reader::ProcStatSensorReader;
-use crate::ui::cpu_settings::CpuSettings;
 use crate::ui::indicators::IndicatorsUI;
-use crate::ui::memory_settings::MemorySettings;
 use crate::ui::settings::{
     SettingsForm, SettingsFormEvent, LABEL_COLOUR_SETTING_KEY, LABEL_TEXT_SETTING_KEY, MAX_SAMPLES_SETTING_KEY,
     UPDATE_INTERVAL_SETTING_KEY,
 };
-use crate::ui::settings_input_sanitisers::FormInputValidation;
 use cosmic::app::{Core, Task};
 use cosmic::cosmic_config::{Config, CosmicConfigEntry};
 use cosmic::iced::Limits;
@@ -28,6 +22,9 @@ use log::{error, info};
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
 use tokio_util::sync::CancellationToken;
+use crate::configuration::app_configuration::{AppConfiguration, CPU_SETTINGS_WINDOW_ID, MEMORY_SETTINGS_WINDOW_ID};
+use crate::ui::cpu_settings::CpuSettings;
+use crate::ui::memory_settings::MemorySettings;
 
 static AUTOSIZE_MAIN_ID: Lazy<Id> = Lazy::new(|| Id::new("autosize-main"));
 
@@ -157,7 +154,7 @@ impl Application for AppState {
                         .settings_forms
                         .get_mut(&id)
                         .expect(format!("No settings form configured with window Id: {}", id).as_str());
-
+                    
                     match id {
                         id if id == *MEMORY_SETTINGS_WINDOW_ID => {
                             form.values = MemorySettings::from(&self.configuration.memory);

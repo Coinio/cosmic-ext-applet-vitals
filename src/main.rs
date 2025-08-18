@@ -8,6 +8,7 @@ mod core;
 mod ui;
 mod sensors;
 mod monitors;
+mod configuration;
 
 /// The `cosmic::app::run()` function is the starting point of your application.
 /// It takes two arguments:
