@@ -3,13 +3,14 @@
 use crate::core::app_configuration::{
     AppConfiguration, CpuConfiguration, MemoryConfiguration, CPU_SETTINGS_WINDOW_ID, MEMORY_SETTINGS_WINDOW_ID,
 };
+use crate::fl;
 use crate::monitors::cpu_monitor::{CpuMonitor, CpuStats};
 use crate::monitors::memory_monitor::{MemoryMonitor, MemoryStats};
 use crate::sensors::proc_meminfo_reader::ProcMemInfoSensorReader;
 use crate::sensors::proc_stat_reader::ProcStatSensorReader;
-use crate::ui::cpu_settings::{CpuSettings};
+use crate::ui::cpu_settings::CpuSettings;
 use crate::ui::indicators::IndicatorsUI;
-use crate::ui::memory_settings::{MemorySettings};
+use crate::ui::memory_settings::MemorySettings;
 use crate::ui::settings::{
     SettingsForm, SettingsFormEvent, LABEL_COLOUR_SETTING_KEY, LABEL_TEXT_SETTING_KEY, MAX_SAMPLES_SETTING_KEY,
     UPDATE_INTERVAL_SETTING_KEY,
@@ -19,15 +20,14 @@ use cosmic::app::{Core, Task};
 use cosmic::cosmic_config::{Config, CosmicConfigEntry};
 use cosmic::iced::Limits;
 use cosmic::iced::{window, Subscription};
+use cosmic::iced_widget::row;
 use cosmic::iced_winit::commands::popup::{destroy_popup, get_popup};
 use cosmic::widget::{autosize, container, Id};
 use cosmic::{cosmic_config, Application, Element};
 use log::{error, info};
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
-use cosmic::iced_widget::row;
 use tokio_util::sync::CancellationToken;
-use crate::fl;
 
 static AUTOSIZE_MAIN_ID: Lazy<Id> = Lazy::new(|| Id::new("autosize-main"));
 
@@ -116,7 +116,7 @@ impl Application for AppState {
                 CPU_SETTINGS_WINDOW_ID.clone(),
                 SettingsForm::new(
                     CPU_SETTINGS_WINDOW_ID.clone(),
-                    fl!("settings-cpu-title"),   
+                    fl!("settings-cpu-title"),
                     CpuSettings::from(&configuration.cpu),
                 ),
             ),
@@ -280,10 +280,9 @@ impl Application for AppState {
     }
 
     fn view_window(&'_ self, id: window::Id) -> Element<'_, Self::Message> {
-
         let content = match self.settings_forms.get(&id) {
-            None => { container(row!["No settings window configured."]) }
-            Some(form) => { form.content() }
+            None => container(row!["No settings window configured."]),
+            Some(form) => form.content(),
         };
 
         self.core.applet.popup_container(content).into()
@@ -308,59 +307,19 @@ impl AppState {
 
         info!("Updating configuration: {:?}", configuration);
 
-        // TODO: Temporary unwraps mid refactor
-        configuration.memory = match self.settings_forms.get(&MEMORY_SETTINGS_WINDOW_ID.clone()) {
-            None => self.configuration.memory.clone(),
-            Some(new_settings) => MemoryConfiguration {
-                update_interval: FormInputValidation::sanitise_interval_input(
-                    new_settings
-                        .values
-                        .get(UPDATE_INTERVAL_SETTING_KEY)
-                        .unwrap()
-                        .value
-                        .clone(),
-                    configuration.memory.update_interval,
-                ),
-                max_samples: FormInputValidation::sanitise_max_samples(
-                    new_settings.values.get(MAX_SAMPLES_SETTING_KEY).unwrap().value.clone(),
-                    configuration.memory.max_samples,
-                ),
-                label_text: FormInputValidation::sanitise_label_text(
-                    new_settings.values.get(LABEL_TEXT_SETTING_KEY).unwrap().value.clone(),
-                ),
-                label_colour: FormInputValidation::sanitise_label_colour(
-                    new_settings.values.get(LABEL_COLOUR_SETTING_KEY).unwrap().value.clone(),
-                    configuration.memory.label_colour,
-                ),
-            },
-        };
+        let memory_settings_form = self
+            .settings_forms
+            .get(&MEMORY_SETTINGS_WINDOW_ID.clone())
+            .expect("No memory settings form configured.");
 
-        // TODO: Temporary unwraps mid refactor
-        configuration.cpu = match self.settings_forms.get(&CPU_SETTINGS_WINDOW_ID.clone()) {
-            None => self.configuration.cpu.clone(),
-            Some(new_settings) => CpuConfiguration {
-                update_interval: FormInputValidation::sanitise_interval_input(
-                    new_settings
-                        .values
-                        .get(UPDATE_INTERVAL_SETTING_KEY)
-                        .unwrap()
-                        .value
-                        .clone(),
-                    configuration.cpu.update_interval,
-                ),
-                max_samples: FormInputValidation::sanitise_max_samples(
-                    new_settings.values.get(MAX_SAMPLES_SETTING_KEY).unwrap().value.clone(),
-                    configuration.cpu.max_samples,
-                ),
-                label_text: FormInputValidation::sanitise_label_text(
-                    new_settings.values.get(LABEL_TEXT_SETTING_KEY).unwrap().value.clone(),
-                ),
-                label_colour: FormInputValidation::sanitise_label_colour(
-                    new_settings.values.get(LABEL_COLOUR_SETTING_KEY).unwrap().value.clone(),
-                    configuration.cpu.label_colour,
-                ),
-            },
-        };
+        configuration.memory = configuration.memory.from(memory_settings_form);
+
+        let cpu_settings_form = self
+            .settings_forms
+            .get(&CPU_SETTINGS_WINDOW_ID.clone())
+            .expect("No cpu settings form configured.");
+
+        configuration.cpu = configuration.cpu.from(cpu_settings_form);
 
         self.configuration = AppConfiguration {
             memory: configuration.memory,
