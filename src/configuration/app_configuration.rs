@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use crate::ui::settings::{
     SettingsForm, LABEL_COLOUR_SETTING_KEY, LABEL_TEXT_SETTING_KEY, MAX_SAMPLES_SETTING_KEY,
     UPDATE_INTERVAL_SETTING_KEY,
@@ -7,7 +8,10 @@ use hex_color::HexColor;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
+use cosmic::iced::window;
 use crate::configuration::validation::ConfigurationValidation;
+use crate::ui::cpu_settings::CpuSettings;
+use crate::ui::memory_settings::MemorySettings;
 
 pub static CPU_SETTINGS_WINDOW_ID: Lazy<cosmic::iced::window::Id> = Lazy::new(|| cosmic::iced::window::Id::unique());
 pub static MEMORY_SETTINGS_WINDOW_ID: Lazy<cosmic::iced::window::Id> = Lazy::new(|| cosmic::iced::window::Id::unique());
@@ -141,4 +145,19 @@ impl MemoryConfiguration {
 pub struct AppConfiguration {
     pub cpu: CpuConfiguration,
     pub memory: MemoryConfiguration,
+}
+
+impl AppConfiguration {
+
+    pub fn settings_form_options(&self) -> HashMap<window::Id,
+        SettingsForm> {
+
+        HashMap::from([
+            (
+                MEMORY_SETTINGS_WINDOW_ID.clone(),
+                MemorySettings::from(&self.memory),
+            ),
+            (CPU_SETTINGS_WINDOW_ID.clone(), CpuSettings::from(&self.cpu)),
+        ])
+    }
 }

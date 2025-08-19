@@ -1,14 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
+use crate::configuration::app_configuration::{AppConfiguration, CPU_SETTINGS_WINDOW_ID, MEMORY_SETTINGS_WINDOW_ID};
 use crate::fl;
 use crate::monitors::cpu_monitor::{CpuMonitor, CpuStats};
 use crate::monitors::memory_monitor::{MemoryMonitor, MemoryStats};
 use crate::sensors::proc_meminfo_reader::ProcMemInfoSensorReader;
 use crate::sensors::proc_stat_reader::ProcStatSensorReader;
 use crate::ui::indicators::IndicatorsUI;
-use crate::ui::settings::{
-    SettingsForm, SettingsFormEvent,
-};
+use crate::ui::settings::{SettingsForm, SettingsFormEvent};
 use cosmic::app::{Core, Task};
 use cosmic::cosmic_config::{Config, CosmicConfigEntry};
 use cosmic::iced::Limits;
@@ -21,9 +20,6 @@ use log::{error, info};
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
 use tokio_util::sync::CancellationToken;
-use crate::configuration::app_configuration::{AppConfiguration, CPU_SETTINGS_WINDOW_ID, MEMORY_SETTINGS_WINDOW_ID};
-use crate::ui::cpu_settings::CpuSettings;
-use crate::ui::memory_settings::MemorySettings;
 
 static AUTOSIZE_MAIN_ID: Lazy<Id> = Lazy::new(|| Id::new("autosize-main"));
 
@@ -99,25 +95,8 @@ impl Application for AppState {
             })
             .unwrap_or_default();
 
-        let settings_forms = HashMap::from([
-            (
-                MEMORY_SETTINGS_WINDOW_ID.clone(),
-                SettingsForm::new(
-                    MEMORY_SETTINGS_WINDOW_ID.clone(),
-                    fl!("settings-memory-title"),
-                    MemorySettings::from(&configuration.memory),
-                ),
-            ),
-            (
-                CPU_SETTINGS_WINDOW_ID.clone(),
-                SettingsForm::new(
-                    CPU_SETTINGS_WINDOW_ID.clone(),
-                    fl!("settings-cpu-title"),
-                    CpuSettings::from(&configuration.cpu),
-                ),
-            ),
-        ]);
-
+        let settings_forms = configuration.settings_form_options();  
+        
         let app = AppState {
             core,
             settings_forms,
@@ -148,24 +127,8 @@ impl Application for AppState {
                     destroy_popup(p)
                 } else {
                     self.popup.replace(id);
-
-                    let form = self
-                        .settings_forms
-                        .get_mut(&id)
-                        .expect(format!("No settings form configured with window Id: {}", id).as_str());
                     
-                    match id {
-                        id if id == *MEMORY_SETTINGS_WINDOW_ID => {
-                            form.values = MemorySettings::from(&self.configuration.memory);
-                        }
-                        id if id == *CPU_SETTINGS_WINDOW_ID => {
-                            form.values = CpuSettings::from(&self.configuration.cpu);
-                        }
-                        _ => {
-                            error!("Unknown window id: {}", id);
-                            panic!("Unknown window id: {}", id)
-                        }
-                    };
+                    self.settings_forms = self.configuration.settings_form_options();
 
                     let mut popup_settings =
                         self.core
