@@ -56,6 +56,7 @@ impl SettingsForm {
         let mut column = widget::list_column()
             .padding(5)
             .spacing(0)
+            .divider_padding(2)
             .add(widget::text(&self.title).font(cosmic::iced::Font {
                 weight: cosmic::iced::font::Weight::ExtraBold,
                 ..Default::default()
@@ -74,7 +75,7 @@ impl SettingsForm {
 
                 let validator = settings_form.validator.unwrap_or(|_| Ok(()));
 
-                column = column.add(settings::item(
+                column = column.add(settings::flex_item(
                     settings_form.label.clone(),
                     match validator(&settings_form.value) {
                         Ok(_) => text_input,

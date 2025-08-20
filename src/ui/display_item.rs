@@ -17,13 +17,12 @@ impl DisplayItem for MemoryStats {
     }
 
     fn label(&self, app_config: &AppConfiguration) -> String {
-        // TODO: Can we get away from this clone?
         app_config.memory.label_text.clone()
     }
 
     fn label_color(&self, app_config: &AppConfiguration) -> cosmic::iced_core::Color {
-        let hex = app_config.memory.label_colour;
-        
+        let hex = app_config.memory.label_colour;      
+                
         cosmic::iced_core::Color::from_rgba(
             hex.r as f32 / 255.0,
             hex.g as f32 / 255.0,
@@ -45,7 +44,6 @@ impl DisplayItem for CpuStats {
     }
 
     fn label(&self, app_config: &AppConfiguration) -> String {
-        // TODO: Can we get away from this clone?
         app_config.cpu.label_text.to_string()
     }
 

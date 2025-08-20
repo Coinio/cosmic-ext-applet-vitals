@@ -31,7 +31,7 @@ impl IndicatorsUI {
 
         let text_container = container(core.applet.text(display_item.text(&configuration)).font(
             cosmic::iced::Font {
-                weight: cosmic::iced::font::Weight::Bold,
+                weight: cosmic::iced::font::Weight::Medium,
                 ..Default::default()
             },
         ))
