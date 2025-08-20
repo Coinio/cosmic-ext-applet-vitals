@@ -102,3 +102,184 @@ impl ConfigurationValidation {
         new_input.trim().to_string()
     }
 }
+
+#[cfg(test)]
+mod label_colour_tests {
+    use super::ConfigurationValidation;
+    use hex_color::HexColor;
+
+    #[test]
+    fn is_valid_colour_accepts_valid_hex() {
+        assert!(ConfigurationValidation::is_valid_colour("#029BAC").is_ok());
+        assert!(ConfigurationValidation::is_valid_colour("#ffffff").is_ok());
+        assert!(ConfigurationValidation::is_valid_colour("#ABCDEF").is_ok());
+    }
+
+    #[test]
+    fn is_valid_colour_rejects_invalid_hex() {
+        assert!(ConfigurationValidation::is_valid_colour("not-a-colour").is_err());
+        assert!(ConfigurationValidation::is_valid_colour("").is_err());
+        assert!(ConfigurationValidation::is_valid_colour("#12345").is_err());
+    }
+
+    #[test]
+    fn sanitise_label_colour_returns_new_when_valid() {
+        let previous = HexColor::parse("#111111").unwrap();
+        let result = ConfigurationValidation::sanitise_label_colour("#222222".to_string(), previous);
+        assert_eq!(result, HexColor::parse("#222222").unwrap());
+    }
+
+    #[test]
+    fn sanitise_label_colour_returns_previous_when_invalid() {
+        let previous = HexColor::parse("#111111").unwrap();
+        let result = ConfigurationValidation::sanitise_label_colour("bad-colour".to_string(), previous);
+        assert_eq!(result, HexColor::parse("#111111").unwrap());
+    }
+}
+
+#[cfg(test)]
+mod interval_tests {
+    use crate::configuration::app_configuration::SENSOR_INTERVAL_MINIMUM_IN_MS;
+    use crate::configuration::validation::ConfigurationValidation;
+    use std::time::Duration;
+
+    #[test]
+    fn is_valid_interval_accepts_min_and_above() {
+        let min = SENSOR_INTERVAL_MINIMUM_IN_MS;
+        assert!(ConfigurationValidation::is_valid_interval(&min.to_string()).is_ok());
+        assert!(ConfigurationValidation::is_valid_interval(&(min + 1).to_string()).is_ok());
+    }
+
+    #[test]
+    fn is_valid_interval_rejects_below_min_or_non_numeric() {
+        let min = SENSOR_INTERVAL_MINIMUM_IN_MS;
+        assert!(ConfigurationValidation::is_valid_interval("-10").is_err());
+        assert!(ConfigurationValidation::is_valid_interval(&(min - 1).to_string()).is_err());
+        assert!(ConfigurationValidation::is_valid_interval("abc").is_err());
+        assert!(ConfigurationValidation::is_valid_interval("").is_err());
+        assert!(ConfigurationValidation::is_valid_interval("  ").is_err());
+    }
+
+    #[test]
+    fn sanitise_interval_input_returns_previous_when_not_numeric() {
+        let previous = Duration::from_millis(1_000);
+        let result = ConfigurationValidation::sanitise_interval_input("abc".to_string(), previous);
+        assert_eq!(result, previous);
+    }
+
+    #[test]
+    fn sanitise_interval_input_returns_previous_when_below_minimum() {
+        let previous = Duration::from_millis(1_000);
+        let min = SENSOR_INTERVAL_MINIMUM_IN_MS;
+        let below = (min - 1).to_string();
+        let result = ConfigurationValidation::sanitise_interval_input(below, previous);
+        assert_eq!(result, previous);
+    }
+
+    #[test]
+    fn sanitise_interval_input_returns_min_when_min() {
+        let previous = Duration::from_millis(1_000);
+        let min = SENSOR_INTERVAL_MINIMUM_IN_MS;
+        let res_min = ConfigurationValidation::sanitise_interval_input(min.to_string(), previous);
+        assert_eq!(res_min, Duration::from_millis(min));
+    }
+
+    #[test]
+    fn sanitise_interval_input_returns_value_when_above_min() {
+        let previous = Duration::from_millis(1_000);
+        let min = SENSOR_INTERVAL_MINIMUM_IN_MS;
+        let val = min + 1;
+        let res_above = ConfigurationValidation::sanitise_interval_input(val.to_string(), previous);
+        assert_eq!(res_above, Duration::from_millis(val));
+    }
+}
+
+#[cfg(test)]
+mod max_samples_tests {
+    use crate::configuration::app_configuration::SENSOR_MAX_SAMPLES_MINIMUM;
+    use crate::configuration::validation::ConfigurationValidation;
+
+    #[test]
+    fn is_valid_max_samples_accepts_min_and_above() {
+        let min = SENSOR_MAX_SAMPLES_MINIMUM;
+        assert!(ConfigurationValidation::is_valid_max_samples(&min.to_string()).is_ok());
+        assert!(ConfigurationValidation::is_valid_max_samples(&(min + 3).to_string()).is_ok());
+    }
+
+    #[test]
+    fn is_valid_max_samples_rejects_below_min_or_non_numeric() {
+        let min = SENSOR_MAX_SAMPLES_MINIMUM;
+        assert!(ConfigurationValidation::is_valid_max_samples(&(min - 1).to_string()).is_err());
+        assert!(ConfigurationValidation::is_valid_max_samples("abc").is_err());
+        assert!(ConfigurationValidation::is_valid_max_samples("").is_err());
+        assert!(ConfigurationValidation::is_valid_max_samples("  ").is_err());
+    }
+
+    #[test]
+    fn sanitise_max_samples_returns_old_when_non_numeric() {
+        let old_value = 10;
+        let result = ConfigurationValidation::sanitise_max_samples("notnum".to_string(), old_value);
+        assert_eq!(result, old_value);
+    }
+
+    #[test]
+    fn sanitise_max_samples_returns_old_when_below_minimum() {
+        let old_value = 10;
+        let below = (SENSOR_MAX_SAMPLES_MINIMUM - 1).to_string();
+        let result = ConfigurationValidation::sanitise_max_samples(below, old_value);
+        assert_eq!(result, old_value);
+    }
+
+    #[test]
+    fn sanitise_max_samples_returns_min_when_exact_minimum() {
+        let old_value = 3;
+        let min = SENSOR_MAX_SAMPLES_MINIMUM;
+        let result = ConfigurationValidation::sanitise_max_samples(min.to_string(), old_value);
+        assert_eq!(result, min);
+    }
+
+    #[test]
+    fn sanitise_max_samples_returns_value_when_above_minimum() {
+        let old_value = 3;
+        let min = SENSOR_MAX_SAMPLES_MINIMUM;
+        let test_value = min + 5;
+        let result = ConfigurationValidation::sanitise_max_samples(test_value.to_string(), old_value);
+        assert_eq!(result, test_value);
+    }
+}
+
+#[cfg(test)]
+mod label_text_tests {
+    use super::ConfigurationValidation;
+    use crate::configuration::app_configuration::SENSOR_MAX_LABEL_LENGTH;
+
+    #[test]
+    fn is_valid_label_text_accepts_max_length() {
+        let max = SENSOR_MAX_LABEL_LENGTH;
+        let max_length_string = "X".repeat(max);
+        assert!(ConfigurationValidation::is_valid_label_text(&max_length_string).is_ok());
+    }
+
+    #[test]
+    fn is_valid_label_text_rejects_over_max_length() {
+        let max = SENSOR_MAX_LABEL_LENGTH;
+        let too_long_string = "Y".repeat(max + 1);
+        assert!(ConfigurationValidation::is_valid_label_text(&too_long_string).is_err());
+    }
+
+    #[test]
+    fn sanitise_label_text_truncates_over_length() {
+        let max = SENSOR_MAX_LABEL_LENGTH;
+        let too_long = "Z".repeat(max + 5);
+        let truncated = ConfigurationValidation::sanitise_label_text(too_long.clone());
+        assert_eq!(truncated.len(), max);
+        assert_eq!(truncated, "Z".repeat(max));
+    }
+
+    #[test]
+    fn sanitise_label_text_trims_whitespace() {
+        let spaced = "   Hello  ".to_string();
+        let trimmed = ConfigurationValidation::sanitise_label_text(spaced);
+        assert_eq!(trimmed, "Hello");
+    }
+}
