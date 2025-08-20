@@ -5,6 +5,7 @@ use crate::ui::settings::{
     UPDATE_INTERVAL_SETTING_KEY,
 };
 use std::collections::HashMap;
+use crate::configuration::validation::ConfigurationValidation;
 
 #[derive(Debug, Clone, Default)]
 pub struct MemorySettings;
@@ -20,6 +21,7 @@ impl MemorySettings {
                     SettingsFormItem {
                         label: fl!("settings-label-text"),
                         value: configuration.label_text.clone(),
+                        validator: Some(ConfigurationValidation::is_valid_label_text)
                     },
                 ),
                 (
@@ -27,6 +29,7 @@ impl MemorySettings {
                     SettingsFormItem {
                         label: fl!("settings-label-colour"),
                         value: configuration.label_colour.display_rgba().to_string(),
+                        validator: Some(ConfigurationValidation::is_valid_colour)
                     },
                 ),
                 (
@@ -34,6 +37,7 @@ impl MemorySettings {
                     SettingsFormItem {
                         label: fl!("settings-update-interval"),
                         value: configuration.update_interval.as_millis().to_string(),
+                        validator: Some(ConfigurationValidation::is_valid_interval)
                     },
                 ),
                 (
@@ -41,6 +45,7 @@ impl MemorySettings {
                     SettingsFormItem {
                         label: fl!("settings-max-samples"),
                         value: configuration.max_samples.to_string(),
+                        validator: Some(ConfigurationValidation::is_valid_max_samples)
                     },
                 ),
             ]),

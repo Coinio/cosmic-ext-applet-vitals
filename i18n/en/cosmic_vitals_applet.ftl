@@ -6,3 +6,7 @@ settings-empty = <empty>
 settings-max-samples = Max Samples
 settings-label-text = Label Text
 settings-label-colour = Label Colour
+settings-interval-error = Must be an integer greater than { $min }
+settings-colour-error = Must be a valid hex colour code
+settings-max-samples-error = Must be an integer greater than { $min }
+settings-label-text-error = Must be a string shorter than { $max_length }

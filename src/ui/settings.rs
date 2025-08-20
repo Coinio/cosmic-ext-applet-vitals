@@ -34,6 +34,7 @@ pub struct SettingsFormEventValue {
 pub struct SettingsFormItem {
     pub label: String,
     pub value: String,
+    pub validator: Option<fn(&str) -> Result<(), String>>,
 }
 
 pub struct SettingsForm {
@@ -62,15 +63,23 @@ impl SettingsForm {
 
         for &form_value_key in ORDERED_KEYS.iter() {
             if let Some(settings_form) = self.values.get(form_value_key) {
-                column = column.add(settings::item(
-                    settings_form.label.clone(),
+                let text_input =
                     widget::text_input(fl!("settings-empty"), &settings_form.value).on_input(|new_value| {
                         Message::SettingsFormUpdate(SettingsFormEvent::StringFieldUpdated(SettingsFormEventValue {
                             settings_window_id: self.settings_window_id,
                             form_value_key,
                             value: new_value,
                         }))
-                    }),
+                    });
+
+                let validator = settings_form.validator.unwrap_or(|_| Ok(()));
+
+                column = column.add(settings::item(
+                    settings_form.label.clone(),
+                    match validator(&settings_form.value) {
+                        Ok(_) => text_input,
+                        Err(error_text) => text_input.error(error_text.clone()).helper_text(error_text.clone()),
+                    },
                 ));
             }
         }
