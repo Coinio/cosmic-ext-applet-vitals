@@ -44,23 +44,16 @@ pub struct SettingsForm {
 }
 
 impl SettingsForm {
-    pub fn new(settings_window_id: window::Id, title: String, values: HashMap<&'static str, SettingsFormItem>) -> Self {
-        Self {
-            settings_window_id,
-            title,
-            values,
-        }
-    }
-
     pub fn content(&self) -> Container<'_, Message, Theme> {
-        let mut column = widget::list_column()
-            .padding(5)
-            .spacing(0)
-            .divider_padding(2)
-            .add(widget::text(&self.title).font(cosmic::iced::Font {
-                weight: cosmic::iced::font::Weight::ExtraBold,
-                ..Default::default()
-            }));
+        let mut column =
+            widget::list_column()
+                .padding(2)
+                .spacing(0)
+                .divider_padding(2)
+                .add(widget::text(&self.title).font(cosmic::iced::Font {
+                    weight: cosmic::iced::font::Weight::ExtraBold,
+                    ..Default::default()
+                }));
 
         for &form_value_key in ORDERED_KEYS.iter() {
             if let Some(settings_form) = self.values.get(form_value_key) {
@@ -75,11 +68,14 @@ impl SettingsForm {
 
                 let validator = settings_form.validator.unwrap_or(|_| Ok(()));
 
-                column = column.add(settings::flex_item(
+                column = column.add(settings::item(
                     settings_form.label.clone(),
                     match validator(&settings_form.value) {
-                        Ok(_) => text_input,
-                        Err(error_text) => text_input.error(error_text.clone()).helper_text(error_text.clone()),
+                        Ok(_) => text_input.width(150),
+                        Err(error_text) => text_input
+                            .width(150)
+                            .error(error_text.clone())
+                            .helper_text(error_text.clone()),
                     },
                 ));
             }

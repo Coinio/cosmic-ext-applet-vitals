@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use crate::ui::settings::{
+use crate::ui::settings_form::{
     SettingsForm, LABEL_COLOUR_SETTING_KEY, LABEL_TEXT_SETTING_KEY, MAX_SAMPLES_SETTING_KEY,
     UPDATE_INTERVAL_SETTING_KEY,
 };

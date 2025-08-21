@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use crate::configuration::app_configuration::{CpuConfiguration, CPU_SETTINGS_WINDOW_ID};
 use crate::configuration::validation::ConfigurationValidation;
 use crate::fl;
-use crate::ui::settings::{SettingsForm, SettingsFormItem, LABEL_COLOUR_SETTING_KEY, LABEL_TEXT_SETTING_KEY, MAX_SAMPLES_SETTING_KEY, UPDATE_INTERVAL_SETTING_KEY};
+use crate::ui::settings_form::{SettingsForm, SettingsFormItem, LABEL_COLOUR_SETTING_KEY, LABEL_TEXT_SETTING_KEY, MAX_SAMPLES_SETTING_KEY, UPDATE_INTERVAL_SETTING_KEY};
 
 #[derive(Debug, Clone, Default)]
 pub struct CpuSettings;

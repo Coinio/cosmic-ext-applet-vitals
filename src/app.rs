@@ -7,7 +7,7 @@ use crate::monitors::memory_monitor::{MemoryMonitor, MemoryStats};
 use crate::sensors::proc_meminfo_reader::ProcMemInfoSensorReader;
 use crate::sensors::proc_stat_reader::ProcStatSensorReader;
 use crate::ui::indicators::IndicatorsUI;
-use crate::ui::settings::{SettingsForm, SettingsFormEvent};
+use crate::ui::settings_form::{SettingsForm, SettingsFormEvent};
 use cosmic::app::{Core, Task};
 use cosmic::cosmic_config::{Config, CosmicConfigEntry};
 use cosmic::iced::Limits;

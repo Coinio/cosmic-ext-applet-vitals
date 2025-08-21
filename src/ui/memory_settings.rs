@@ -1,6 +1,6 @@
 use crate::configuration::app_configuration::{MemoryConfiguration, MEMORY_SETTINGS_WINDOW_ID};
 use crate::fl;
-use crate::ui::settings::{
+use crate::ui::settings_form::{
     SettingsForm, SettingsFormItem, LABEL_COLOUR_SETTING_KEY, LABEL_TEXT_SETTING_KEY, MAX_SAMPLES_SETTING_KEY,
     UPDATE_INTERVAL_SETTING_KEY,
 };
