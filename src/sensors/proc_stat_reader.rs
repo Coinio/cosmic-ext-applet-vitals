@@ -10,7 +10,7 @@ const PROC_STAT_IDLE_INDEX: usize = 3;
 const PROC_STAT_IOWAIT_INDEX: usize = 4;
 
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct ProcStatStatus {
     pub idle: u64,
     pub iowait: u64,

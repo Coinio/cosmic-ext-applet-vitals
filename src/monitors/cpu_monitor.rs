@@ -61,3 +61,97 @@ impl<S: SensorReader<Output = ProcStatStatus>> CpuMonitor<S> {
         Ok(CpuStats::new(average_cpu_usage))
     }
 }
+
+#[cfg(test)]
+mod cpu_monitor_tests {
+    use super::*;
+    use std::cell::Cell;
+
+    struct MockProcStatReader {
+        // Fix set of readings to return from the reader.
+        readings: Vec<Result<ProcStatStatus, String>>,
+        // Tracks the index of the next reading to return.
+        index: Cell<usize>,
+    }
+
+    impl MockProcStatReader {
+        fn new(readings: Vec<Result<ProcStatStatus, String>>) -> Self {
+            Self {
+                readings,
+                index: Cell::new(0),
+            }
+        }
+    }
+
+    impl SensorReader for MockProcStatReader {
+        type Output = ProcStatStatus;
+
+        fn read(&self) -> Result<Self::Output, String> {
+            let read_index = self.index.get();
+            let reading = self.readings[read_index].clone();
+
+            self.index.set(read_index + 1);
+            reading
+        }
+    }
+
+    fn make_config(max_samples: usize) -> AppConfiguration {
+        let mut cfg = AppConfiguration::default();
+        cfg.cpu.max_samples = max_samples;
+        cfg
+    }
+
+    #[test]
+    fn single_poll_computes_expected_usage() {
+
+        let reader = MockProcStatReader::new(vec![Ok(ProcStatStatus::new(100, 50, 500))]);
+        let mut monitor = CpuMonitor::new(reader, &make_config(4));
+
+        let stats = monitor.poll().expect("poll should succeed");
+
+        assert_eq!(format!("{:.1}", stats.cpu_usage_percent), "70.0");
+    }
+
+    #[test]
+    fn multiple_polls_average_and_buffering() {
+        let reader = MockProcStatReader::new(vec![
+            Ok(ProcStatStatus::new(100, 50, 500)),
+            Ok(ProcStatStatus::new(200, 60, 700)),
+        ]);
+        let mut monitor = CpuMonitor::new(reader, &make_config(4));
+
+        let reading1 = monitor.poll().unwrap();
+        assert_eq!(format!("{:.1}", reading1.cpu_usage_percent), "70.0");
+
+        let reading2 = monitor.poll().unwrap();
+        assert_eq!(format!("{:.1}", reading2.cpu_usage_percent), "57.5");
+    }
+
+    #[test]
+    fn buffer_trims_to_max_samples() {
+        let reader = MockProcStatReader::new(vec![
+            Ok(ProcStatStatus::new(0, 0, 100)),
+            Ok(ProcStatStatus::new(50, 0, 200)),
+            Ok(ProcStatStatus::new(100, 0, 300)),
+        ]);
+        let mut monitor = CpuMonitor::new(reader, &make_config(2));
+
+        // Throw away first reading, now buffer contains [50,100]
+        let _ = monitor.poll().unwrap();
+                 
+        let reading2 = monitor.poll().unwrap();
+        assert_eq!(format!("{:.1}", reading2.cpu_usage_percent), "75.0");
+
+        let reading3 = monitor.poll().unwrap(); 
+        assert_eq!(format!("{:.1}", reading3.cpu_usage_percent), "50.0");
+    }
+
+    #[test]
+    fn error_is_propagated() {
+        let reader = MockProcStatReader::new(vec![Err("boom".to_string())]);
+        let mut monitor = CpuMonitor::new(reader, &make_config(1));
+
+        let err = monitor.poll().unwrap_err();
+        assert_eq!(err, "boom");
+    }
+}
