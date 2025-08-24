@@ -1,9 +1,7 @@
 use crate::app::{AppState, Message};
 use crate::ui::display_item::DisplayItem;
 use cosmic::applet::cosmic_panel_config::PanelSize;
-use cosmic::{widget, Element};
-use cosmic::iced::alignment::Vertical;
-use cosmic::widget::{button, container, row};
+use cosmic::Element;
 
 const DEFAULT_INDICATOR_FONT_SIZE: u16 = 14;
 
@@ -44,10 +42,6 @@ impl IndicatorsUI {
         content.push(Element::from(value_text));
 
         content
-    }
-
-    fn horizontal_font_size() -> u16 {
-        DEFAULT_INDICATOR_FONT_SIZE
     }
 
     fn vertical_font_size(app_state: &AppState) -> u16 {

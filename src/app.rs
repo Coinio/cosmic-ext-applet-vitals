@@ -2,7 +2,6 @@
 
 use cosmic::widget;
 use crate::configuration::app_configuration::{AppConfiguration, CPU_SETTINGS_WINDOW_ID, MEMORY_SETTINGS_WINDOW_ID};
-use crate::fl;
 use crate::monitors::cpu_monitor::{CpuMonitor, CpuStats};
 use crate::monitors::memory_monitor::{MemoryMonitor, MemoryStats};
 use crate::sensors::proc_meminfo_reader::ProcMemInfoSensorReader;
