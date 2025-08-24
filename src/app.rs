@@ -1,18 +1,19 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
+use cosmic::widget;
 use crate::configuration::app_configuration::{AppConfiguration, CPU_SETTINGS_WINDOW_ID, MEMORY_SETTINGS_WINDOW_ID};
 use crate::fl;
 use crate::monitors::cpu_monitor::{CpuMonitor, CpuStats};
 use crate::monitors::memory_monitor::{MemoryMonitor, MemoryStats};
 use crate::sensors::proc_meminfo_reader::ProcMemInfoSensorReader;
 use crate::sensors::proc_stat_reader::ProcStatSensorReader;
-use crate::ui::indicators::IndicatorsUI;
 use crate::ui::settings_form::{SettingsForm, SettingsFormEvent};
 use cosmic::app::{Core, Task};
+use cosmic::applet::cosmic_panel_config::PanelAnchor;
 use cosmic::cosmic_config::{Config, CosmicConfigEntry};
-use cosmic::iced::Limits;
+use cosmic::iced::{Alignment, Limits};
 use cosmic::iced::{window, Subscription};
-use cosmic::iced_widget::row;
+use cosmic::iced_widget::{row, Column, Row};
 use cosmic::iced_winit::commands::popup::{destroy_popup, get_popup};
 use cosmic::widget::{autosize, container, Id};
 use cosmic::{cosmic_config, Application, Element};
@@ -20,6 +21,7 @@ use log::{error, info};
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
 use tokio_util::sync::CancellationToken;
+use crate::ui::indicators::IndicatorsUI;
 
 static AUTOSIZE_MAIN_ID: Lazy<Id> = Lazy::new(|| Id::new("autosize-main"));
 
@@ -85,8 +87,8 @@ impl Application for AppState {
             })
             .unwrap_or_default();
 
-        let settings_forms = configuration.settings_form_options();  
-        
+        let settings_forms = configuration.settings_form_options();
+
         let app = AppState {
             core,
             settings_forms,
@@ -114,7 +116,7 @@ impl Application for AppState {
                     destroy_popup(p)
                 } else {
                     self.popup.replace(id);
-                    
+
                     self.settings_forms = self.configuration.settings_form_options();
 
                     let mut popup_settings =
@@ -206,17 +208,37 @@ impl Application for AppState {
     }
 
     fn view(&self) -> Element<'_, Self::Message> {
-        // TODO: Handle horizontal / vertical layout
-        //let horizontal = matches!(self.core.applet.anchor, PanelAnchor::Top |
-        // PanelAnchor::Bottom);
+        let horizontal = matches!(self.core.applet.anchor, PanelAnchor::Top | PanelAnchor::Bottom);
 
-        let container = container(
-            cosmic::widget::row()
-                .push(IndicatorsUI::content(&self, &self.cpu))
-                .push(IndicatorsUI::content(&self, &self.memory)),
-        );
+        let mut elements = Vec::new();
 
-        autosize::autosize(container, AUTOSIZE_MAIN_ID.clone()).into()
+        elements.extend(IndicatorsUI::content(&self, &self.cpu, horizontal));
+        elements.extend(IndicatorsUI::content(&self, &self.memory, horizontal));
+
+        let wrapper: Element<Message> = if horizontal {
+            Row::from_vec(elements)
+                .align_y(Alignment::Center)
+                .spacing(self.core.applet.suggested_padding(true))
+                .into()
+        } else {
+            Column::from_vec(elements)
+                .align_x(Alignment::Center)
+                .into()
+        };
+
+        let padding = if horizontal {
+            [0, self.core.applet.suggested_padding(true)]
+        } else {
+            [self.core.applet.suggested_padding(true), 1]
+        };
+
+        let button = widget::button::custom(wrapper)
+            .class(cosmic::theme::Button::AppletIcon)
+            .padding(padding);
+            //.on_press(Message::ToggleSettingsPopup(MEMORY_SETTINGS_WINDOW_ID.clone()));
+
+        autosize::autosize(container(button), AUTOSIZE_MAIN_ID.clone()).into()
+
     }
 
     fn view_window(&'_ self, id: window::Id) -> Element<'_, Self::Message> {
