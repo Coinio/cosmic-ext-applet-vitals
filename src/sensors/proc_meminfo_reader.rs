@@ -7,16 +7,17 @@ const MEMORY_INFO_FILE: &str = "/proc/meminfo";
 const MEMORY_INFO_TOTAL_KEY: &str = "MemTotal";
 const MEMORY_INFO_AVAILABLE_KEY: &str = "MemAvailable";
 
+#[derive(Clone)]
 pub struct ProcMemInfoStatus {
-    pub total: u64,
-    pub available: u64,
+    pub total_kib: u64,
+    pub available_kib: u64,
 }
 
 impl ProcMemInfoStatus {
-    fn new (total: u64, available: u64) -> Self {
+    pub fn new (total_kib: u64, available_kib: u64) -> Self {
         Self {
-            total,
-            available,
+            total_kib,
+            available_kib,
         }
     }   
 }

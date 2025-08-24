@@ -32,7 +32,7 @@ impl DisplayItem for MemoryStats {
     }
 
     fn text(&self, app_config: &AppConfiguration) -> String {
-        let used_gb = self.used_kibibytes as f64 * 1024.0 / 1_000_000_000.0;
+        let used_gb = self.used_kib as f64 * 1024.0 / 1_000_000_000.0;
         
         format!("{:.1}GB", used_gb)
     }

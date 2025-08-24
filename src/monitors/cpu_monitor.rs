@@ -109,7 +109,7 @@ mod cpu_monitor_tests {
 
         let stats = monitor.poll().expect("poll should succeed");
 
-        assert_eq!(format!("{:.1}", stats.cpu_usage_percent), "70.0");
+        assert!(eq_to_three_decimal_places(stats.cpu_usage_percent, 70.000));
     }
 
     #[test]
@@ -121,14 +121,14 @@ mod cpu_monitor_tests {
         let mut monitor = CpuMonitor::new(reader, &make_config(4));
 
         let reading1 = monitor.poll().unwrap();
-        assert_eq!(format!("{:.1}", reading1.cpu_usage_percent), "70.0");
+        assert!(eq_to_three_decimal_places(reading1.cpu_usage_percent, 70.000));
 
         let reading2 = monitor.poll().unwrap();
-        assert_eq!(format!("{:.1}", reading2.cpu_usage_percent), "57.5");
+        assert!(eq_to_three_decimal_places(reading2.cpu_usage_percent, 57.500));
     }
 
     #[test]
-    fn buffer_trims_to_max_samples() {
+    fn sample_buffer_trims_to_max_samples() {
         let reader = MockProcStatReader::new(vec![
             Ok(ProcStatStatus::new(0, 0, 100)),
             Ok(ProcStatStatus::new(50, 0, 200)),
@@ -140,10 +140,10 @@ mod cpu_monitor_tests {
         let _ = monitor.poll().unwrap();
                  
         let reading2 = monitor.poll().unwrap();
-        assert_eq!(format!("{:.1}", reading2.cpu_usage_percent), "75.0");
+        assert!(eq_to_three_decimal_places(reading2.cpu_usage_percent, 75.000));
 
         let reading3 = monitor.poll().unwrap(); 
-        assert_eq!(format!("{:.1}", reading3.cpu_usage_percent), "50.0");
+        assert!(eq_to_three_decimal_places(reading3.cpu_usage_percent, 50.000));
     }
 
     #[test]
@@ -153,5 +153,9 @@ mod cpu_monitor_tests {
 
         let err = monitor.poll().unwrap_err();
         assert_eq!(err, "boom");
+    }
+
+    fn eq_to_three_decimal_places(a: f64, b: f64) -> bool {
+        (a - b).abs() < 0.0005
     }
 }
