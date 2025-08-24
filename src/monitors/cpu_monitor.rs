@@ -63,7 +63,7 @@ impl<S: SensorReader<Output = ProcStatStatus>> CpuMonitor<S> {
 }
 
 #[cfg(test)]
-mod cpu_monitor_tests {
+mod tests {
     use super::*;
     use std::cell::Cell;
 
@@ -136,7 +136,7 @@ mod cpu_monitor_tests {
         ]);
         let mut monitor = CpuMonitor::new(reader, &make_config(2));
 
-        // Throw away first reading, now buffer contains [50,100]
+        // Throw away first reading as should be trimmed from buffer after next two polls.
         let _ = monitor.poll().unwrap();
                  
         let reading2 = monitor.poll().unwrap();
