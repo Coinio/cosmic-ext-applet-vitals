@@ -14,7 +14,7 @@ impl IndicatorsUI {
         horizontal: bool,
     ) -> Vec<Element<'a, Message>> {
         let core = app_state.core();
-        let configuration = app_state.configuration();
+        let configuration = app_state.app_configuration();
 
         let mut content: Vec<Element<Message>> = Vec::new();
 

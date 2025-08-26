@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 use cosmic::widget;
-use crate::configuration::app_configuration::{AppConfiguration, CPU_SETTINGS_WINDOW_ID, MEMORY_SETTINGS_WINDOW_ID};
+use crate::configuration::app_configuration::{AppConfiguration, CPU_SETTINGS_WINDOW_ID, MAIN_SETTINGS_WINDOW_ID, MEMORY_SETTINGS_WINDOW_ID};
 use crate::monitors::cpu_monitor::{CpuMonitor, CpuStats};
 use crate::monitors::memory_monitor::{MemoryMonitor, MemoryStats};
 use crate::sensors::proc_meminfo_reader::ProcMemInfoSensorReader;
@@ -21,6 +21,7 @@ use once_cell::sync::Lazy;
 use std::collections::HashMap;
 use tokio_util::sync::CancellationToken;
 use crate::ui::indicators::IndicatorsUI;
+use crate::ui::main_settings_form::{MainSettingsForm};
 
 static AUTOSIZE_MAIN_ID: Lazy<Id> = Lazy::new(|| Id::new("autosize-main"));
 
@@ -45,9 +46,9 @@ pub struct AppState {
 /// The messages processed by the application update
 #[derive(Debug, Clone)]
 pub enum Message {
-    /// Toggle the settings popup
-    ToggleSettingsPopup(window::Id),
-    /// The settings popup was closed
+    /// Toggle the main settings popup
+    ToggleMainSettingsPopup(window::Id),
+    /// A settings popup was closed
     SettingsPopupClosed(window::Id),
     /// Start monitoring the system resources
     StartMonitoring,
@@ -110,25 +111,46 @@ impl Application for AppState {
 
     fn update(&mut self, message: Self::Message) -> Task<Self::Message> {
         match message {
-            Message::ToggleSettingsPopup(id) => {
-                return if let Some(p) = self.popup.take() {
-                    destroy_popup(p)
-                } else {
-                    self.popup.replace(id);
+            Message::ToggleMainSettingsPopup(target_id) => {
+                info!("Opening settings popup with id: {}", target_id);
+                if let Some(current_id) = self.popup.take() {
+                    if current_id == target_id {
+                        return destroy_popup(current_id);
+                    } else {
+                        self.popup = Some(target_id);
 
-                    self.settings_forms = self.configuration.settings_form_options();
+                        let mut popup_settings = self.core.applet.get_popup_settings(
+                            self.core.main_window_id().unwrap(),
+                            target_id,
+                            None,
+                            None,
+                            None,
+                        );
+                        popup_settings.positioner.size_limits = Limits::NONE
+                            .max_width(372.0)
+                            .min_width(300.0)
+                            .min_height(200.0)
+                            .max_height(1080.0);
+
+                        return Task::batch(vec![
+                            destroy_popup(current_id),
+                            get_popup(popup_settings),
+                        ]);
+                    }
+                } else {
+                    self.popup = Some(target_id);
 
                     let mut popup_settings =
                         self.core
                             .applet
-                            .get_popup_settings(self.core.main_window_id().unwrap(), id, None, None, None);
+                            .get_popup_settings(self.core.main_window_id().unwrap(), target_id, None, None, None);
                     popup_settings.positioner.size_limits = Limits::NONE
                         .max_width(372.0)
                         .min_width(300.0)
                         .min_height(200.0)
                         .max_height(1080.0);
-                    get_popup(popup_settings)
-                };
+                    return get_popup(popup_settings);
+                }
             }
             Message::SettingsPopupClosed(id) => {
                 if self.popup.as_ref() == Some(&id) {
@@ -233,19 +255,24 @@ impl Application for AppState {
 
         let button = widget::button::custom(wrapper)
             .class(cosmic::theme::Button::AppletIcon)
-            .padding(padding);
-            //.on_press(Message::ToggleSettingsPopup(MEMORY_SETTINGS_WINDOW_ID.clone()));
+            .padding(padding)
+            .on_press(Message::ToggleMainSettingsPopup(MAIN_SETTINGS_WINDOW_ID.clone()));
 
         autosize::autosize(container(button), AUTOSIZE_MAIN_ID.clone()).into()
 
     }
 
     fn view_window(&'_ self, id: window::Id) -> Element<'_, Self::Message> {
-        let content = match self.settings_forms.get(&id) {
-            None => container(row!["No settings window configured."]),
-            Some(form) => form.content(),
+        info!("Popup with id: '{}' opened", id);
+        let content = if id == MAIN_SETTINGS_WINDOW_ID.clone() {
+            MainSettingsForm::content(self.app_configuration())
+        } else {
+            match self.settings_forms.get(&id) {
+                None => container(row!["No settings window configured."]),
+                Some(form) => form.content(),
+            }
         };
-
+        
         self.core.applet.popup_container(content).into()
     }
 
@@ -259,7 +286,7 @@ impl AppState {
         &self.core
     }
 
-    pub fn configuration(&self) -> &AppConfiguration {
+    pub fn app_configuration(&self) -> &AppConfiguration {
         &self.configuration
     }
 

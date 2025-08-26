@@ -11,7 +11,7 @@ pub struct ConfigurationValidation;
 impl ConfigurationValidation {
     pub fn is_valid_colour(input: &str) -> Result<(), String> {
         match HexColor::parse(input) {
-            Ok(value) => Ok(()),
+            Ok(_) => Ok(()),
             Err(_) => Err(fl!("settings-colour-error")),
         }
     }
