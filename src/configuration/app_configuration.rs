@@ -1,17 +1,16 @@
-use std::collections::HashMap;
+use crate::configuration::validation::ConfigurationValidation;
+use crate::fl;
 use crate::ui::settings_form::{
-    SettingsForm, LABEL_COLOUR_SETTING_KEY, LABEL_TEXT_SETTING_KEY, MAX_SAMPLES_SETTING_KEY,
+    SettingsForm, SettingsFormItem, LABEL_COLOUR_SETTING_KEY, LABEL_TEXT_SETTING_KEY, MAX_SAMPLES_SETTING_KEY,
     UPDATE_INTERVAL_SETTING_KEY,
 };
 use cosmic::cosmic_config::{self, cosmic_config_derive::CosmicConfigEntry, CosmicConfigEntry};
+use cosmic::iced::window;
 use hex_color::HexColor;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::time::Duration;
-use cosmic::iced::window;
-use crate::configuration::validation::ConfigurationValidation;
-use crate::ui::cpu_settings::CpuSettings;
-use crate::ui::memory_settings::MemorySettings;
 
 pub static MAIN_SETTINGS_WINDOW_ID: Lazy<cosmic::iced::window::Id> = Lazy::new(|| cosmic::iced::window::Id::unique());
 pub static CPU_SETTINGS_WINDOW_ID: Lazy<cosmic::iced::window::Id> = Lazy::new(|| cosmic::iced::window::Id::unique());
@@ -79,6 +78,47 @@ impl CpuConfiguration {
             ),
         }
     }
+
+    pub fn to_settings_form(&self) -> SettingsForm {
+        SettingsForm {
+            settings_window_id: CPU_SETTINGS_WINDOW_ID.clone(),
+            title: fl!("settings-cpu-title"),
+            values: HashMap::from([
+                (
+                    LABEL_TEXT_SETTING_KEY,
+                    SettingsFormItem {
+                        label: fl!("settings-label-text"),
+                        value: self.label_text.clone(),
+                        validator: Some(ConfigurationValidation::is_valid_label_text),
+                    },
+                ),
+                (
+                    LABEL_COLOUR_SETTING_KEY,
+                    SettingsFormItem {
+                        label: fl!("settings-label-colour"),
+                        value: self.label_colour.display_rgba().to_string(),
+                        validator: Some(ConfigurationValidation::is_valid_colour),
+                    },
+                ),
+                (
+                    UPDATE_INTERVAL_SETTING_KEY,
+                    SettingsFormItem {
+                        label: fl!("settings-update-interval"),
+                        value: self.update_interval.as_millis().to_string(),
+                        validator: Some(ConfigurationValidation::is_valid_interval),
+                    },
+                ),
+                (
+                    MAX_SAMPLES_SETTING_KEY,
+                    SettingsFormItem {
+                        label: fl!("settings-max-samples"),
+                        value: self.max_samples.to_string(),
+                        validator: Some(ConfigurationValidation::is_valid_max_samples),
+                    },
+                ),
+            ]),
+        }
+    }
 }
 
 /// The configuration for the memory monitor
@@ -139,6 +179,47 @@ impl MemoryConfiguration {
             ),
         }
     }
+
+    pub fn to_settings_form(&self) -> SettingsForm {
+        SettingsForm {
+            settings_window_id: MEMORY_SETTINGS_WINDOW_ID.clone(),
+            title: fl!("settings-memory-title"),
+            values: HashMap::from([
+                (
+                    LABEL_TEXT_SETTING_KEY,
+                    SettingsFormItem {
+                        label: fl!("settings-label-text"),
+                        value: self.label_text.clone(),
+                        validator: Some(ConfigurationValidation::is_valid_label_text),
+                    },
+                ),
+                (
+                    LABEL_COLOUR_SETTING_KEY,
+                    SettingsFormItem {
+                        label: fl!("settings-label-colour"),
+                        value: self.label_colour.display_rgba().to_string(),
+                        validator: Some(ConfigurationValidation::is_valid_colour),
+                    },
+                ),
+                (
+                    UPDATE_INTERVAL_SETTING_KEY,
+                    SettingsFormItem {
+                        label: fl!("settings-update-interval"),
+                        value: self.update_interval.as_millis().to_string(),
+                        validator: Some(ConfigurationValidation::is_valid_interval),
+                    },
+                ),
+                (
+                    MAX_SAMPLES_SETTING_KEY,
+                    SettingsFormItem {
+                        label: fl!("settings-max-samples"),
+                        value: self.max_samples.to_string(),
+                        validator: Some(ConfigurationValidation::is_valid_max_samples),
+                    },
+                ),
+            ]),
+        }
+    }
 }
 
 #[derive(Debug, Default, Clone, CosmicConfigEntry, Eq, PartialEq)]
@@ -149,16 +230,10 @@ pub struct AppConfiguration {
 }
 
 impl AppConfiguration {
-
-    pub fn settings_form_options(&self) -> HashMap<window::Id,
-        SettingsForm> {
-
+    pub fn settings_form_options(&self) -> HashMap<window::Id, SettingsForm> {
         HashMap::from([
-            (
-                MEMORY_SETTINGS_WINDOW_ID.clone(),
-                MemorySettings::from(&self.memory),
-            ),
-            (CPU_SETTINGS_WINDOW_ID.clone(), CpuSettings::from(&self.cpu)),
+            (MEMORY_SETTINGS_WINDOW_ID.clone(), self.memory.to_settings_form()),
+            (CPU_SETTINGS_WINDOW_ID.clone(), self.cpu.to_settings_form()),
         ])
     }
 }
