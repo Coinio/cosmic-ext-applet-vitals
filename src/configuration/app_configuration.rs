@@ -15,6 +15,7 @@ use std::time::Duration;
 pub static MAIN_SETTINGS_WINDOW_ID: Lazy<cosmic::iced::window::Id> = Lazy::new(|| cosmic::iced::window::Id::unique());
 pub static CPU_SETTINGS_WINDOW_ID: Lazy<cosmic::iced::window::Id> = Lazy::new(|| cosmic::iced::window::Id::unique());
 pub static MEMORY_SETTINGS_WINDOW_ID: Lazy<cosmic::iced::window::Id> = Lazy::new(|| cosmic::iced::window::Id::unique());
+pub static NETWORK_SETTINGS_WINDOW_ID: Lazy<cosmic::iced::window::Id> = Lazy::new(|| cosmic::iced::window::Id::unique());
 
 pub static SENSOR_INTERVAL_MINIMUM_IN_MS: u64 = 250;
 pub static SENSOR_MAX_SAMPLES_MINIMUM: usize = 1;
@@ -222,11 +223,36 @@ impl MemoryConfiguration {
     }
 }
 
+/// The configuration for the network monitor
+#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
+pub struct NetworkConfiguration {
+    /// The duration between each update interval, i.e. 5 seconds
+    pub update_interval: Duration,
+    /// The number of samples to keep and average for the final result
+    pub max_samples: usize,
+    /// The label text
+    pub label_text: String,
+    /// The label colour in hex format
+    pub label_colour: HexColor,
+}
+
+impl Default for NetworkConfiguration {
+    fn default() -> Self {
+        NetworkConfiguration {
+            update_interval: Duration::from_secs(1),
+            max_samples: 4,
+            label_text: "NET".to_string(),
+            label_colour: "#029BAC".parse().unwrap(),
+        }
+    }
+}
+
 #[derive(Debug, Default, Clone, CosmicConfigEntry, Eq, PartialEq)]
 #[version = 1]
 pub struct AppConfiguration {
     pub cpu: CpuConfiguration,
     pub memory: MemoryConfiguration,
+    pub network: NetworkConfiguration
 }
 
 impl AppConfiguration {

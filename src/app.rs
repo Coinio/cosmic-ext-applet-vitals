@@ -20,6 +20,8 @@ use log::{error, info};
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
 use tokio_util::sync::CancellationToken;
+use crate::monitors::network_monitor::{NetworkMonitor, NetworkStats};
+use crate::sensors::proc_net_dev_reader::ProcNetDevReader;
 use crate::ui::indicators::IndicatorsUI;
 use crate::ui::main_settings_form::{MainSettingsForm};
 
@@ -39,6 +41,8 @@ pub struct AppState {
     memory: MemoryStats,
     /// The current cpu usage stats
     cpu: CpuStats,
+    /// The current network usage stats
+    network: NetworkStats,
     /// The popup id.
     popup: Option<window::Id>,
 }
@@ -58,6 +62,8 @@ pub enum Message {
     MemoryUpdate(MemoryStats),
     /// The cpu usage stats were updated
     CpuUpdate(CpuStats),
+    /// The network usage stats were updated
+    NetworkUpdate(NetworkStats),
     /// The settings form was updated by the user
     SettingsFormUpdate(SettingsFormEvent),
 }
@@ -175,9 +181,11 @@ impl Application for AppState {
                 return cosmic::Task::stream(async_stream::stream! {
                     let mut memory_update_interval = tokio::time::interval(config.memory.update_interval);
                     let mut cpu_update_interval = tokio::time::interval(config.cpu.update_interval);
+                    let mut network_update_interval = tokio::time::interval(config.network.update_interval);
 
                     let mut memory_monitor = MemoryMonitor::new(ProcMemInfoSensorReader, &config);
                     let mut cpuinfo_reader = CpuMonitor::new(ProcStatSensorReader, &config);
+                    let mut network_monitor = NetworkMonitor::new(ProcNetDevReader, &config);
 
                     loop {
                         tokio::select! {
@@ -186,6 +194,9 @@ impl Application for AppState {
                             },
                             _ = cpu_update_interval.tick() => {
                                 yield Message::CpuUpdate(cpuinfo_reader.poll().unwrap_or_default())
+                            },
+                            _ = network_update_interval.tick() => {
+                                yield Message::NetworkUpdate(network_monitor.poll().unwrap_or_default());
                             },
                             _ = cancellation_token.cancelled() => {
                                 break;
@@ -201,6 +212,9 @@ impl Application for AppState {
             }
             Message::CpuUpdate(cpu_usage) => {
                 self.cpu = cpu_usage;
+            }
+            Message::NetworkUpdate(network_usage) => {
+                self.network = network_usage;
             }
             Message::ConfigFileChanged(configuration) => {
                 self.configuration = configuration;
@@ -223,7 +237,8 @@ impl Application for AppState {
                 }
 
                 self.update_configuration();
-            }
+            },
+
         }
         Task::none()
     }
@@ -235,6 +250,7 @@ impl Application for AppState {
 
         elements.extend(IndicatorsUI::content(&self, &self.cpu, horizontal));
         elements.extend(IndicatorsUI::content(&self, &self.memory, horizontal));
+        elements.extend(IndicatorsUI::content(&self, &self.network, horizontal));
 
         let wrapper: Element<Message> = if horizontal {
             Row::from_vec(elements)
@@ -263,7 +279,6 @@ impl Application for AppState {
     }
 
     fn view_window(&'_ self, id: window::Id) -> Element<'_, Self::Message> {
-        info!("Popup with id: '{}' opened", id);
         let content = if id == MAIN_SETTINGS_WINDOW_ID.clone() {
             MainSettingsForm::content(self.app_configuration())
         } else {
@@ -312,6 +327,7 @@ impl AppState {
         self.configuration = AppConfiguration {
             memory: configuration.memory,
             cpu: configuration.cpu,
+            ..Default::default()
         }
     }
 

@@ -1,10 +1,14 @@
-use crate::configuration::app_configuration::{AppConfiguration, CPU_SETTINGS_WINDOW_ID, MEMORY_SETTINGS_WINDOW_ID};
+use crate::configuration::app_configuration::{
+    AppConfiguration, CPU_SETTINGS_WINDOW_ID, MEMORY_SETTINGS_WINDOW_ID, NETWORK_SETTINGS_WINDOW_ID,
+};
 use crate::monitors::cpu_monitor::CpuStats;
 use crate::monitors::memory_monitor::MemoryStats;
+use cosmic::iced::window::Id;
+use cosmic::iced::Color;
+use crate::monitors::network_monitor::NetworkStats;
 
 /// This trait defines what will display for each resource, i.e. CPU, RAM, etc, on the panel
-pub trait DisplayItem
-{
+pub trait DisplayItem {
     fn settings_window_id(&self) -> cosmic::iced::window::Id;
     fn label(&self, app_config: &AppConfiguration) -> String;
     fn label_color(&self, app_config: &AppConfiguration) -> cosmic::iced_core::Color;
@@ -21,8 +25,8 @@ impl DisplayItem for MemoryStats {
     }
 
     fn label_color(&self, app_config: &AppConfiguration) -> cosmic::iced_core::Color {
-        let hex = app_config.memory.label_colour;      
-                
+        let hex = app_config.memory.label_colour;
+
         cosmic::iced_core::Color::from_rgba(
             hex.r as f32 / 255.0,
             hex.g as f32 / 255.0,
@@ -33,7 +37,7 @@ impl DisplayItem for MemoryStats {
 
     fn text(&self, app_config: &AppConfiguration) -> String {
         let used_gb = self.used_kib as f64 * 1024.0 / 1_000_000_000.0;
-        
+
         format!("{:.1}GB", used_gb)
     }
 }
@@ -61,5 +65,31 @@ impl DisplayItem for CpuStats {
     fn text(&self, app_config: &AppConfiguration) -> String {
         format!("{:.1}%", self.cpu_usage_percent)
     }
+}
 
+impl DisplayItem for NetworkStats {
+    fn settings_window_id(&self) -> Id {
+        NETWORK_SETTINGS_WINDOW_ID.clone()
+    }
+
+    fn label(&self, app_config: &AppConfiguration) -> String {
+        app_config.network.label_text.clone()
+    }
+
+    fn label_color(&self, app_config: &AppConfiguration) -> Color {
+        let hex = app_config.memory.label_colour;
+
+        cosmic::iced_core::Color::from_rgba(
+            hex.r as f32 / 255.0,
+            hex.g as f32 / 255.0,
+            hex.b as f32 / 255.0,
+            hex.a as f32 / 255.0,
+        )
+    }
+
+    fn text(&self, app_config: &AppConfiguration) -> String {
+        let rx_mib = self.rx_bytes as f64 / (1024.0 * 1024.0);
+        let tx_mib = self.tx_bytes as f64 / (1024.0 * 1024.0);
+        format!("{:.1}MiB / {:.1}MiB", rx_mib, tx_mib)
+    }
 }
