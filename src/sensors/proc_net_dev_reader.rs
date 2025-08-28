@@ -29,7 +29,7 @@ pub struct ProcNetDevDeviceStatus {
 }
 
 impl ProcNetDevDeviceStatus {
-    pub fn new(device_name: String, tx_bytes: u64, rx_bytes: u64) -> Self {
+    pub fn new(device_name: String, rx_bytes: u64, tx_bytes: u64) -> Self {
         Self {
             device_name,
             tx_bytes,
