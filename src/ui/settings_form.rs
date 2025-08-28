@@ -1,4 +1,11 @@
 use crate::app::Message;
+use crate::configuration::app_configuration::{
+    LABEL_COLOUR_SETTING_KEY, LABEL_TEXT_SETTING_KEY, MAX_SAMPLES_SETTING_KEY, UPDATE_INTERVAL_SETTING_KEY,
+};
+use crate::configuration::network::{
+    NETWORK_RX_LABEL_COLOUR_SETTING_KEY, NETWORK_RX_LABEL_TEXT_SETTING_KEY, NETWORK_TX_LABEL_COLOUR_SETTING_KEY,
+    NETWORK_TX_LABEL_TEXT_SETTING_KEY,
+};
 use crate::fl;
 use cosmic::iced::window;
 use cosmic::iced_widget::{container, Container};
@@ -6,14 +13,13 @@ use cosmic::widget::settings;
 use cosmic::{widget, Theme};
 use std::collections::HashMap;
 
-pub const LABEL_TEXT_SETTING_KEY: &'static str = "settings-label-text";
-pub const LABEL_COLOUR_SETTING_KEY: &'static str = "settings-label-colour";
-pub const UPDATE_INTERVAL_SETTING_KEY: &'static str = "settings-update-interval";
-pub const MAX_SAMPLES_SETTING_KEY: &'static str = "settings-max-samples";
-
 // Define the explicit UI order for settings
-const ORDERED_KEYS: [&'static str; 4] = [
+const ORDERED_KEYS: [&'static str; 8] = [
     LABEL_TEXT_SETTING_KEY,
+    NETWORK_RX_LABEL_TEXT_SETTING_KEY,
+    NETWORK_RX_LABEL_COLOUR_SETTING_KEY,
+    NETWORK_TX_LABEL_TEXT_SETTING_KEY,
+    NETWORK_TX_LABEL_COLOUR_SETTING_KEY,
     LABEL_COLOUR_SETTING_KEY,
     UPDATE_INTERVAL_SETTING_KEY,
     MAX_SAMPLES_SETTING_KEY,

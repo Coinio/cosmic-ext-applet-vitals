@@ -5,7 +5,7 @@ use crate::monitors::cpu_monitor::CpuStats;
 use crate::monitors::memory_monitor::MemoryStats;
 use cosmic::iced::window::Id;
 use cosmic::iced::Color;
-use crate::monitors::network_monitor::NetworkStats;
+use crate::monitors::network_monitor::{NetworkDirection, NetworkStats};
 
 /// This trait defines what will display for each resource, i.e. CPU, RAM, etc, on the panel
 pub trait DisplayItem {
@@ -73,11 +73,17 @@ impl DisplayItem for NetworkStats {
     }
 
     fn label(&self, app_config: &AppConfiguration) -> String {
-        app_config.network.label_text.clone()
+        match self.direction {
+            NetworkDirection::Download => app_config.network.rx_label_text.clone(),
+            NetworkDirection::Upload => app_config.network.tx_label_text.clone()
+        }        
     }
 
     fn label_color(&self, app_config: &AppConfiguration) -> Color {
-        let hex = app_config.memory.label_colour;
+        let hex = match self.direction {
+            NetworkDirection::Download => app_config.network.rx_label_colour,
+            NetworkDirection::Upload => app_config.network.tx_label_colour,       
+        };
 
         cosmic::iced_core::Color::from_rgba(
             hex.r as f32 / 255.0,
@@ -87,9 +93,8 @@ impl DisplayItem for NetworkStats {
         )
     }
 
-    fn text(&self, app_config: &AppConfiguration) -> String {
-        let rx_mib = self.rx_bytes as f64 / (1024.0 * 1024.0);
-        let tx_mib = self.tx_bytes as f64 / (1024.0 * 1024.0);
-        format!("{:.1}MiB / {:.1}MiB", rx_mib, tx_mib)
+    fn text(&self, app_config: &AppConfiguration) -> String {        
+        let mib = self.bytes as f64 / (1024.0 * 1024.0);
+        format!("{:.1}MiB", mib)
     }
 }

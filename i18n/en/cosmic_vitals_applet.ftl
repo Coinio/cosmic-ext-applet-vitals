@@ -1,5 +1,10 @@
 example-row = Example row
 settings-cpu-title = CPU Settings
+settings-network-title = Network Settings
+settings-network-rx-label-text = Label Text (Rx)
+settings-network-tx-label-text = Label Text (Tx)
+settings-network-rx-label-colour = Label Colour (Rx)
+settings-network-tx-label-colour = Label Colour (Tx)
 settings-memory-title = Memory Settings
 settings-update-interval = Update Interval (ms)
 settings-empty = <empty>

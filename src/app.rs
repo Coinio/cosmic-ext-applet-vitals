@@ -1,29 +1,31 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
-use cosmic::widget;
-use crate::configuration::app_configuration::{AppConfiguration, CPU_SETTINGS_WINDOW_ID, MAIN_SETTINGS_WINDOW_ID, MEMORY_SETTINGS_WINDOW_ID};
+use crate::configuration::app_configuration::{AppConfiguration, CPU_SETTINGS_WINDOW_ID, MAIN_SETTINGS_WINDOW_ID, MEMORY_SETTINGS_WINDOW_ID, NETWORK_SETTINGS_WINDOW_ID};
 use crate::monitors::cpu_monitor::{CpuMonitor, CpuStats};
 use crate::monitors::memory_monitor::{MemoryMonitor, MemoryStats};
+use crate::monitors::network_monitor::{
+    NetworkMonitor, NetworkStats, NETWORK_STAT_RX_INDEX, NETWORK_STAT_TX_INDEX,
+};
 use crate::sensors::proc_meminfo_reader::ProcMemInfoSensorReader;
+use crate::sensors::proc_net_dev_reader::ProcNetDevReader;
 use crate::sensors::proc_stat_reader::ProcStatSensorReader;
+use crate::ui::indicators::IndicatorsUI;
+use crate::ui::main_settings_form::MainSettingsForm;
 use crate::ui::settings_form::{SettingsForm, SettingsFormEvent};
 use cosmic::app::{Core, Task};
 use cosmic::applet::cosmic_panel_config::PanelAnchor;
 use cosmic::cosmic_config::{Config, CosmicConfigEntry};
-use cosmic::iced::{Alignment, Limits};
 use cosmic::iced::{window, Subscription};
+use cosmic::iced::{Alignment, Limits};
 use cosmic::iced_widget::{row, Column, Row};
 use cosmic::iced_winit::commands::popup::{destroy_popup, get_popup};
+use cosmic::widget;
 use cosmic::widget::{autosize, container, Id};
 use cosmic::{cosmic_config, Application, Element};
 use log::{error, info};
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
 use tokio_util::sync::CancellationToken;
-use crate::monitors::network_monitor::{NetworkMonitor, NetworkStats};
-use crate::sensors::proc_net_dev_reader::ProcNetDevReader;
-use crate::ui::indicators::IndicatorsUI;
-use crate::ui::main_settings_form::{MainSettingsForm};
 
 static AUTOSIZE_MAIN_ID: Lazy<Id> = Lazy::new(|| Id::new("autosize-main"));
 
@@ -42,7 +44,7 @@ pub struct AppState {
     /// The current cpu usage stats
     cpu: CpuStats,
     /// The current network usage stats
-    network: NetworkStats,
+    network: [NetworkStats; 2],
     /// The popup id.
     popup: Option<window::Id>,
 }
@@ -63,7 +65,7 @@ pub enum Message {
     /// The cpu usage stats were updated
     CpuUpdate(CpuStats),
     /// The network usage stats were updated
-    NetworkUpdate(NetworkStats),
+    NetworkUpdate([NetworkStats; 2]),
     /// The settings form was updated by the user
     SettingsFormUpdate(SettingsFormEvent),
 }
@@ -138,18 +140,18 @@ impl Application for AppState {
                             .min_height(200.0)
                             .max_height(1080.0);
 
-                        return Task::batch(vec![
-                            destroy_popup(current_id),
-                            get_popup(popup_settings),
-                        ]);
+                        return Task::batch(vec![destroy_popup(current_id), get_popup(popup_settings)]);
                     }
                 } else {
                     self.popup = Some(target_id);
 
-                    let mut popup_settings =
-                        self.core
-                            .applet
-                            .get_popup_settings(self.core.main_window_id().unwrap(), target_id, None, None, None);
+                    let mut popup_settings = self.core.applet.get_popup_settings(
+                        self.core.main_window_id().unwrap(),
+                        target_id,
+                        None,
+                        None,
+                        None,
+                    );
                     popup_settings.positioner.size_limits = Limits::NONE
                         .max_width(372.0)
                         .min_width(300.0)
@@ -237,8 +239,7 @@ impl Application for AppState {
                 }
 
                 self.update_configuration();
-            },
-
+            }
         }
         Task::none()
     }
@@ -250,7 +251,16 @@ impl Application for AppState {
 
         elements.extend(IndicatorsUI::content(&self, &self.cpu, horizontal));
         elements.extend(IndicatorsUI::content(&self, &self.memory, horizontal));
-        elements.extend(IndicatorsUI::content(&self, &self.network, horizontal));
+        elements.extend(IndicatorsUI::content(
+            &self,
+            &self.network[NETWORK_STAT_RX_INDEX],
+            horizontal,
+        ));
+        elements.extend(IndicatorsUI::content(
+            &self,
+            &self.network[NETWORK_STAT_TX_INDEX],
+            horizontal,
+        ));
 
         let wrapper: Element<Message> = if horizontal {
             Row::from_vec(elements)
@@ -258,9 +268,7 @@ impl Application for AppState {
                 .spacing(self.core.applet.suggested_padding(true))
                 .into()
         } else {
-            Column::from_vec(elements)
-                .align_x(Alignment::Center)
-                .into()
+            Column::from_vec(elements).align_x(Alignment::Center).into()
         };
 
         let padding = if horizontal {
@@ -275,7 +283,6 @@ impl Application for AppState {
             .on_press(Message::ToggleMainSettingsPopup(MAIN_SETTINGS_WINDOW_ID.clone()));
 
         autosize::autosize(container(button), AUTOSIZE_MAIN_ID.clone()).into()
-
     }
 
     fn view_window(&'_ self, id: window::Id) -> Element<'_, Self::Message> {
@@ -287,7 +294,7 @@ impl Application for AppState {
                 Some(form) => form.content(),
             }
         };
-        
+
         self.core.applet.popup_container(content).into()
     }
 
@@ -324,9 +331,17 @@ impl AppState {
 
         configuration.cpu = configuration.cpu.from(cpu_settings_form);
 
+        let network_settings_form = self
+            .settings_forms
+            .get(&NETWORK_SETTINGS_WINDOW_ID.clone())
+            .expect("No network settings form configured.");
+
+        configuration.network = configuration.network.from(network_settings_form);
+
         self.configuration = AppConfiguration {
             memory: configuration.memory,
             cpu: configuration.cpu,
+            network: configuration.network,
             ..Default::default()
         }
     }

@@ -5,23 +5,44 @@ use log::info;
 use std::collections::VecDeque;
 use std::{cmp, fs};
 
+pub const NETWORK_STAT_RX_INDEX: usize = 0;
+pub const NETWORK_STAT_TX_INDEX: usize = 1;
+
 const SYS_CLASS_NET_PATH: &str = "/sys/class/net";
 
 #[derive(Debug, Clone, Default)]
-pub struct NetworkStats {
+struct NetworkSample {
     pub rx_bytes: u64,
     pub tx_bytes: u64,
 }
 
-impl NetworkStats {
+impl NetworkSample {
     pub fn new(rx_bytes: u64, tx_bytes: u64) -> Self {
         Self { rx_bytes, tx_bytes }
     }
 }
 
+#[derive(Debug, Clone,PartialEq)]
+pub enum NetworkDirection {
+    Download,
+    Upload,
+}
+
+impl Default for NetworkDirection {
+    fn default() -> Self {
+        Self::Download
+    }
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct NetworkStats {
+    pub bytes: u64,
+    pub direction: NetworkDirection,
+}
+
 pub struct NetworkMonitor<S: SensorReader<Output = ProcNetDevStatus>> {
     sensor_reader: S,
-    sample_buffer: VecDeque<NetworkStats>,
+    sample_buffer: VecDeque<NetworkSample>,
     previous_rx_bytes: u64,
     previous_tx_bytes: u64,
     max_samples: usize,
@@ -39,7 +60,7 @@ impl<S: SensorReader<Output = ProcNetDevStatus>> NetworkMonitor<S> {
         }
     }
 
-    pub fn poll(&mut self) -> Result<NetworkStats, String> {
+    pub fn poll(&mut self) -> Result<[NetworkStats; 2], String> {
         let current = match self.sensor_reader.read() {
             Ok(value) => value,
             Err(err) => return Err(err),
@@ -73,7 +94,7 @@ impl<S: SensorReader<Output = ProcNetDevStatus>> NetworkMonitor<S> {
         self.previous_tx_bytes = current_tx_total;
 
         self.sample_buffer
-            .push_back(NetworkStats::new(delta_rx, delta_tx));
+            .push_back(NetworkSample::new(delta_rx, delta_tx));
 
         if self.sample_buffer.len() > self.max_samples {
             self.sample_buffer.pop_front();
@@ -87,7 +108,12 @@ impl<S: SensorReader<Output = ProcNetDevStatus>> NetworkMonitor<S> {
             self.sample_buffer.iter()
                 .map(|sample| sample.tx_bytes).sum::<u64>() / self.sample_buffer.len() as u64;
 
-        Ok(NetworkStats::new(average_rx_bytes, average_tx_bytes))
+        let result = [
+            NetworkStats { bytes: average_rx_bytes, direction: NetworkDirection::Download },
+            NetworkStats { bytes: average_tx_bytes, direction: NetworkDirection::Upload },
+        ];
+
+        Ok(result)
 
     }
 }

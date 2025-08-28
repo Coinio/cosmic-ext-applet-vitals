@@ -1,258 +1,34 @@
-use crate::configuration::validation::ConfigurationValidation;
-use crate::fl;
-use crate::ui::settings_form::{
-    SettingsForm, SettingsFormItem, LABEL_COLOUR_SETTING_KEY, LABEL_TEXT_SETTING_KEY, MAX_SAMPLES_SETTING_KEY,
-    UPDATE_INTERVAL_SETTING_KEY,
-};
+use crate::configuration::cpu::CpuConfiguration;
+use crate::configuration::memory::MemoryConfiguration;
+use crate::configuration::network::NetworkConfiguration;
+use crate::ui::settings_form::SettingsForm;
 use cosmic::cosmic_config::{self, cosmic_config_derive::CosmicConfigEntry, CosmicConfigEntry};
 use cosmic::iced::window;
-use hex_color::HexColor;
 use once_cell::sync::Lazy;
-use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::time::Duration;
 
 pub static MAIN_SETTINGS_WINDOW_ID: Lazy<cosmic::iced::window::Id> = Lazy::new(|| cosmic::iced::window::Id::unique());
 pub static CPU_SETTINGS_WINDOW_ID: Lazy<cosmic::iced::window::Id> = Lazy::new(|| cosmic::iced::window::Id::unique());
 pub static MEMORY_SETTINGS_WINDOW_ID: Lazy<cosmic::iced::window::Id> = Lazy::new(|| cosmic::iced::window::Id::unique());
-pub static NETWORK_SETTINGS_WINDOW_ID: Lazy<cosmic::iced::window::Id> = Lazy::new(|| cosmic::iced::window::Id::unique());
+pub static NETWORK_SETTINGS_WINDOW_ID: Lazy<cosmic::iced::window::Id> =
+    Lazy::new(|| cosmic::iced::window::Id::unique());
 
-pub static SENSOR_INTERVAL_MINIMUM_IN_MS: u64 = 250;
-pub static SENSOR_MAX_SAMPLES_MINIMUM: usize = 1;
-pub static SENSOR_MAX_LABEL_LENGTH: usize = 16;
+pub const SENSOR_INTERVAL_MINIMUM_IN_MS: u64 = 250;
+pub const SENSOR_MAX_SAMPLES_MINIMUM: usize = 1;
+pub const SENSOR_MAX_LABEL_LENGTH: usize = 16;
 
-/// The configuration for the CPU monitor
-#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
-pub struct CpuConfiguration {
-    /// The duration between each update interval, i.e. 5 seconds
-    pub update_interval: Duration,
-    /// The number of samples to keep and average for the final result
-    pub max_samples: usize,
-    /// The label text
-    pub label_text: String,
-    /// The label colour in hex format
-    pub label_colour: HexColor,
-}
+pub const LABEL_TEXT_SETTING_KEY: &'static str = "settings-label-text";
+pub const LABEL_COLOUR_SETTING_KEY: &'static str = "settings-label-colour";
+pub const UPDATE_INTERVAL_SETTING_KEY: &'static str = "settings-update-interval";
+pub const MAX_SAMPLES_SETTING_KEY: &'static str = "settings-max-samples";
 
-impl Default for CpuConfiguration {
-    fn default() -> Self {
-        CpuConfiguration {
-            update_interval: Duration::from_secs(1),
-            max_samples: 4,
-            label_text: "CPU".to_string(),
-            label_colour: "#029BAC".parse().unwrap(),
-        }
-    }
-}
-
-impl CpuConfiguration {
-    pub fn from(&self, settings_form: &SettingsForm) -> Self {
-        if settings_form.settings_window_id != CPU_SETTINGS_WINDOW_ID.clone() {
-            panic!("Attempted to update CPU settings from a non-cpu settings window.")
-        }
-
-        CpuConfiguration {
-            update_interval: ConfigurationValidation::sanitise_interval_input(
-                settings_form
-                    .values
-                    .get(UPDATE_INTERVAL_SETTING_KEY)
-                    .unwrap()
-                    .value
-                    .clone(),
-                self.update_interval,
-            ),
-            max_samples: ConfigurationValidation::sanitise_max_samples(
-                settings_form.values.get(MAX_SAMPLES_SETTING_KEY).unwrap().value.clone(),
-                self.max_samples,
-            ),
-            label_text: ConfigurationValidation::sanitise_label_text(
-                settings_form.values.get(LABEL_TEXT_SETTING_KEY).unwrap().value.clone(),
-            ),
-            label_colour: ConfigurationValidation::sanitise_label_colour(
-                settings_form
-                    .values
-                    .get(LABEL_COLOUR_SETTING_KEY)
-                    .unwrap()
-                    .value
-                    .clone(),
-                self.label_colour,
-            ),
-        }
-    }
-
-    pub fn to_settings_form(&self) -> SettingsForm {
-        SettingsForm {
-            settings_window_id: CPU_SETTINGS_WINDOW_ID.clone(),
-            title: fl!("settings-cpu-title"),
-            values: HashMap::from([
-                (
-                    LABEL_TEXT_SETTING_KEY,
-                    SettingsFormItem {
-                        label: fl!("settings-label-text"),
-                        value: self.label_text.clone(),
-                        validator: Some(ConfigurationValidation::is_valid_label_text),
-                    },
-                ),
-                (
-                    LABEL_COLOUR_SETTING_KEY,
-                    SettingsFormItem {
-                        label: fl!("settings-label-colour"),
-                        value: self.label_colour.display_rgba().to_string(),
-                        validator: Some(ConfigurationValidation::is_valid_colour),
-                    },
-                ),
-                (
-                    UPDATE_INTERVAL_SETTING_KEY,
-                    SettingsFormItem {
-                        label: fl!("settings-update-interval"),
-                        value: self.update_interval.as_millis().to_string(),
-                        validator: Some(ConfigurationValidation::is_valid_interval),
-                    },
-                ),
-                (
-                    MAX_SAMPLES_SETTING_KEY,
-                    SettingsFormItem {
-                        label: fl!("settings-max-samples"),
-                        value: self.max_samples.to_string(),
-                        validator: Some(ConfigurationValidation::is_valid_max_samples),
-                    },
-                ),
-            ]),
-        }
-    }
-}
-
-/// The configuration for the memory monitor
-#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
-pub struct MemoryConfiguration {
-    /// The duration between each update interval, i.e. 5 seconds
-    pub update_interval: Duration,
-    /// The number of samples to keep and average for the final result
-    pub max_samples: usize,
-    /// The label text
-    pub label_text: String,
-    /// The label color in hex format
-    pub label_colour: HexColor,
-}
-
-impl Default for MemoryConfiguration {
-    fn default() -> Self {
-        MemoryConfiguration {
-            update_interval: Duration::from_secs(1),
-            max_samples: 2,
-            label_text: "RAM".to_string(),
-            label_colour: "#029BAC".parse().unwrap(),
-        }
-    }
-}
-
-impl MemoryConfiguration {
-    pub fn from(&self, settings_form: &SettingsForm) -> Self {
-        if settings_form.settings_window_id != MEMORY_SETTINGS_WINDOW_ID.clone() {
-            panic!("Attempted to update memory settings from a non-memory settings window.")
-        }
-
-        MemoryConfiguration {
-            update_interval: ConfigurationValidation::sanitise_interval_input(
-                settings_form
-                    .values
-                    .get(UPDATE_INTERVAL_SETTING_KEY)
-                    .unwrap()
-                    .value
-                    .clone(),
-                self.update_interval,
-            ),
-            max_samples: ConfigurationValidation::sanitise_max_samples(
-                settings_form.values.get(MAX_SAMPLES_SETTING_KEY).unwrap().value.clone(),
-                self.max_samples,
-            ),
-            label_text: ConfigurationValidation::sanitise_label_text(
-                settings_form.values.get(LABEL_TEXT_SETTING_KEY).unwrap().value.clone(),
-            ),
-            label_colour: ConfigurationValidation::sanitise_label_colour(
-                settings_form
-                    .values
-                    .get(LABEL_COLOUR_SETTING_KEY)
-                    .unwrap()
-                    .value
-                    .clone(),
-                self.label_colour,
-            ),
-        }
-    }
-
-    pub fn to_settings_form(&self) -> SettingsForm {
-        SettingsForm {
-            settings_window_id: MEMORY_SETTINGS_WINDOW_ID.clone(),
-            title: fl!("settings-memory-title"),
-            values: HashMap::from([
-                (
-                    LABEL_TEXT_SETTING_KEY,
-                    SettingsFormItem {
-                        label: fl!("settings-label-text"),
-                        value: self.label_text.clone(),
-                        validator: Some(ConfigurationValidation::is_valid_label_text),
-                    },
-                ),
-                (
-                    LABEL_COLOUR_SETTING_KEY,
-                    SettingsFormItem {
-                        label: fl!("settings-label-colour"),
-                        value: self.label_colour.display_rgba().to_string(),
-                        validator: Some(ConfigurationValidation::is_valid_colour),
-                    },
-                ),
-                (
-                    UPDATE_INTERVAL_SETTING_KEY,
-                    SettingsFormItem {
-                        label: fl!("settings-update-interval"),
-                        value: self.update_interval.as_millis().to_string(),
-                        validator: Some(ConfigurationValidation::is_valid_interval),
-                    },
-                ),
-                (
-                    MAX_SAMPLES_SETTING_KEY,
-                    SettingsFormItem {
-                        label: fl!("settings-max-samples"),
-                        value: self.max_samples.to_string(),
-                        validator: Some(ConfigurationValidation::is_valid_max_samples),
-                    },
-                ),
-            ]),
-        }
-    }
-}
-
-/// The configuration for the network monitor
-#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
-pub struct NetworkConfiguration {
-    /// The duration between each update interval, i.e. 5 seconds
-    pub update_interval: Duration,
-    /// The number of samples to keep and average for the final result
-    pub max_samples: usize,
-    /// The label text
-    pub label_text: String,
-    /// The label colour in hex format
-    pub label_colour: HexColor,
-}
-
-impl Default for NetworkConfiguration {
-    fn default() -> Self {
-        NetworkConfiguration {
-            update_interval: Duration::from_secs(1),
-            max_samples: 4,
-            label_text: "NET".to_string(),
-            label_colour: "#029BAC".parse().unwrap(),
-        }
-    }
-}
 
 #[derive(Debug, Default, Clone, CosmicConfigEntry, Eq, PartialEq)]
 #[version = 1]
 pub struct AppConfiguration {
     pub cpu: CpuConfiguration,
     pub memory: MemoryConfiguration,
-    pub network: NetworkConfiguration
+    pub network: NetworkConfiguration,
 }
 
 impl AppConfiguration {
@@ -260,6 +36,7 @@ impl AppConfiguration {
         HashMap::from([
             (MEMORY_SETTINGS_WINDOW_ID.clone(), self.memory.to_settings_form()),
             (CPU_SETTINGS_WINDOW_ID.clone(), self.cpu.to_settings_form()),
+            (NETWORK_SETTINGS_WINDOW_ID.clone(), self.network.to_settings_form()),
         ])
     }
 }
