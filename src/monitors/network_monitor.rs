@@ -76,6 +76,12 @@ impl<S: SensorReader<Output = ProcNetDevStatus>> NetworkMonitor<S> {
             current_tx_total += device_status.tx_bytes;
         }
 
+        // If no previous samples, use current values as previous to prevent big deltas
+        if (self.previous_rx_bytes == 0) && (self.previous_tx_bytes == 0) {
+            self.previous_rx_bytes = current_rx_total;
+            self.previous_tx_bytes = current_tx_total;
+        }
+
         let delta_rx = cmp::max(current_rx_total - self.previous_rx_bytes, 0);
         let delta_tx = cmp::max(current_tx_total - self.previous_tx_bytes, 0);
 

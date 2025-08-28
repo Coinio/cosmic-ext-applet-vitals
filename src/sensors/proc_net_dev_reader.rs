@@ -23,23 +23,23 @@ impl ProcNetDevStatus {
 #[derive(Clone, Debug)]
 pub struct ProcNetDevDeviceStatus {
     pub device_name: String,
-    pub tx_bytes: u64,
     pub rx_bytes: u64,
+    pub tx_bytes: u64,
     pub is_physical_device: bool,
 }
 
 struct ProcNetDevLine {
     device_name: String,
-    tx_bytes: u64,
     rx_bytes: u64,
+    tx_bytes: u64,
 }
 
 impl ProcNetDevDeviceStatus {
     pub fn new(device_name: String, rx_bytes: u64, tx_bytes: u64, is_physical_device: bool) -> Self {
         Self {
             device_name,
-            tx_bytes,
             rx_bytes,
+            tx_bytes,
             is_physical_device,
         }
     }
@@ -91,8 +91,8 @@ impl ProcNetDevReader {
 
         let device_name = parts[PROC_NET_DEV_DEVICE_NAME_INDEX].replace(":", "");
 
-        let rx_bytes = parts[PROC_NET_DEV_TX_BYTES_INDEX].parse::<u64>().unwrap_or_default();
-        let tx_bytes = parts[PROC_NET_DEV_RX_BYTES_INDEX].parse::<u64>().unwrap_or_default();
+        let rx_bytes = parts[PROC_NET_DEV_RX_BYTES_INDEX].parse::<u64>().unwrap_or_default();
+        let tx_bytes = parts[PROC_NET_DEV_TX_BYTES_INDEX].parse::<u64>().unwrap_or_default();
 
         Ok(ProcNetDevLine {
             device_name,
