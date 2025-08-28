@@ -22,7 +22,6 @@ impl ProcNetDevStatus {
 
 #[derive(Clone, Debug)]
 pub struct ProcNetDevDeviceStatus {
-    pub device_name: String,
     pub rx_bytes: u64,
     pub tx_bytes: u64,
     pub is_physical_device: bool,
@@ -35,9 +34,8 @@ struct ProcNetDevLine {
 }
 
 impl ProcNetDevDeviceStatus {
-    pub fn new(device_name: String, rx_bytes: u64, tx_bytes: u64, is_physical_device: bool) -> Self {
+    pub fn new(rx_bytes: u64, tx_bytes: u64, is_physical_device: bool) -> Self {
         Self {
-            device_name,
             rx_bytes,
             tx_bytes,
             is_physical_device,
@@ -70,7 +68,6 @@ impl SensorReader for ProcNetDevReader {
             let device_status = self.parse_proc_file_line(line)?;
 
             statuses.push(ProcNetDevDeviceStatus::new(
-                device_status.device_name.clone(),
                 device_status.rx_bytes,
                 device_status.tx_bytes,
                 is_physical_interface(device_status.device_name.as_str()),
