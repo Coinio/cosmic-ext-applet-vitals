@@ -67,18 +67,14 @@ impl SensorReader for ProcNetDevReader {
         let mut statuses = Vec::new();
 
         for line in contents.lines().skip(2) {
-            let result = self.parse_proc_file_line(line);
+            let device_status = self.parse_proc_file_line(line)?;
 
-            if let Ok(device_status) = result {
-                statuses.push(ProcNetDevDeviceStatus::new(
-                    device_status.device_name.clone(),
-                    device_status.rx_bytes,
-                    device_status.tx_bytes,
-                    is_physical_interface(device_status.device_name.as_str()),
-                ));
-            } else {
-                return Err(result.err().unwrap());
-            }
+            statuses.push(ProcNetDevDeviceStatus::new(
+                device_status.device_name.clone(),
+                device_status.rx_bytes,
+                device_status.tx_bytes,
+                is_physical_interface(device_status.device_name.as_str()),
+            ));
         }
 
         Ok(ProcNetDevStatus::new(statuses))
