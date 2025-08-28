@@ -1,10 +1,9 @@
 use crate::configuration::app_configuration::AppConfiguration;
-use crate::sensors::network_utilities::{NetworkUtils, NetworkUtilsTrait};
-use crate::sensors::proc_net_dev_reader::{ProcNetDevStatus};
+use crate::sensors::proc_net_dev_reader::ProcNetDevStatus;
 use crate::sensors::sensor_traits::SensorReader;
 use log::info;
+use std::cmp;
 use std::collections::VecDeque;
-use std::{cmp};
 
 pub const NETWORK_STAT_RX_INDEX: usize = 0;
 pub const NETWORK_STAT_TX_INDEX: usize = 1;
@@ -39,21 +38,19 @@ pub struct NetworkStats {
     pub direction: NetworkDirection,
 }
 
-pub struct NetworkMonitor<S: SensorReader<Output = ProcNetDevStatus>, U: NetworkUtilsTrait> {
+pub struct NetworkMonitor<S: SensorReader<Output = ProcNetDevStatus>> {
     sensor_reader: S,
-    network_device: U,
     sample_buffer: VecDeque<NetworkSample>,
     previous_rx_bytes: u64,
     previous_tx_bytes: u64,
     max_samples: usize,
 }
 
-impl<S: SensorReader<Output = ProcNetDevStatus>, U: NetworkUtilsTrait> NetworkMonitor<S, U> {
-    pub fn new(sensor_reader: S, network_device: U, configuration: &AppConfiguration) -> Self {
+impl<S: SensorReader<Output = ProcNetDevStatus>> NetworkMonitor<S> {
+    pub fn new(sensor_reader: S, configuration: &AppConfiguration) -> Self {
         info!("Creating new network monitor {:?}", configuration);
         Self {
             sensor_reader,
-            network_device,
             sample_buffer: VecDeque::with_capacity(configuration.memory.max_samples),
             previous_rx_bytes: 0,
             previous_tx_bytes: 0,
@@ -71,7 +68,7 @@ impl<S: SensorReader<Output = ProcNetDevStatus>, U: NetworkUtilsTrait> NetworkMo
         let mut current_tx_total = 0u64;
 
         for device_status in current.device_statuses {
-            if !self.network_device.is_physical_interface(&device_status.device_name) {
+            if !device_status.is_physical_device {
                 continue;
             }
 
@@ -114,9 +111,9 @@ impl<S: SensorReader<Output = ProcNetDevStatus>, U: NetworkUtilsTrait> NetworkMo
 
 #[cfg(test)]
 mod tests {
-    use std::cell::Cell;
     use super::*;
-    use crate::sensors::proc_net_dev_reader::{ProcNetDevStatus, ProcNetDevDeviceStatus};
+    use crate::sensors::proc_net_dev_reader::{ProcNetDevDeviceStatus, ProcNetDevStatus};
+    use std::cell::Cell;
 
     struct MockProcNetDevReader {
         readings: Vec<Result<ProcNetDevStatus, String>>,
@@ -125,7 +122,10 @@ mod tests {
 
     impl MockProcNetDevReader {
         fn new(readings: Vec<Result<ProcNetDevStatus, String>>) -> Self {
-            Self { readings, index: Cell::new(0) }
+            Self {
+                readings,
+                index: Cell::new(0),
+            }
         }
     }
 
@@ -145,13 +145,9 @@ mod tests {
 
     impl MockNetworkUtilities {
         fn new<T: Into<String>>(physical_devices: Vec<T>) -> Self {
-            Self { physical_devices: physical_devices.into_iter().map(|s| s.into()).collect() }
-        }
-    }
-
-    impl NetworkUtilsTrait for MockNetworkUtilities {
-        fn is_physical_interface(&self, device_name: &str) -> bool {
-            self.physical_devices.iter().any(|d| d == device_name)
+            Self {
+                physical_devices: physical_devices.into_iter().map(|s| s.into()).collect(),
+            }
         }
     }
 
@@ -161,22 +157,22 @@ mod tests {
         cfg
     }
 
-    fn create_device_status(name: &str, rx: u64, tx: u64) -> ProcNetDevDeviceStatus {
-        ProcNetDevDeviceStatus::new(name.to_string(), rx, tx)
+    fn create_device_status(name: &str, rx: u64, tx: u64, is_physical_device: bool) -> ProcNetDevDeviceStatus {
+        ProcNetDevDeviceStatus::new(name.to_string(), rx, tx, is_physical_device)
     }
 
     #[test]
     fn single_poll_gives_expected_result() {
         // Add a physical and a virtual interface to the status. Virtual should be ignored.
         let status = ProcNetDevStatus::new(vec![
-            create_device_status("eth0", 2000, 1000), // physical
-            create_device_status("lo", 7000, 5000),   // virtual, ignored
+            create_device_status("eth0", 2000, 1000, true), // physical
+            create_device_status("lo", 7000, 5000, false),   // virtual, ignored
         ]);
 
         let reader = MockProcNetDevReader::new(vec![Ok(status)]);
         let utils = MockNetworkUtilities::new(vec!["eth0"]);
 
-        let mut monitor = NetworkMonitor::new(reader, utils, &make_config(3));
+        let mut monitor = NetworkMonitor::new(reader, &make_config(3));
         let result = monitor.poll();
 
         assert!(result.is_ok());
@@ -191,17 +187,23 @@ mod tests {
     #[test]
     fn multiple_poll_gives_expected_result() {
         // Add a physical and a virtual interface to the status. Virtual should be ignored.
-        let sample1 = ProcNetDevStatus::new(vec![create_device_status("eth0", 2000, 1000),
-                                            create_device_status("lo", 10, 10)]);
-        let sample2 = ProcNetDevStatus::new(vec![create_device_status("eth0", 6000, 3000),
-                                            create_device_status("lo", 20, 40)]);
-        let sample3 = ProcNetDevStatus::new(vec![create_device_status("eth0", 9000, 6000),
-                                            create_device_status("lo", 30, 70)]);
+        let sample1 = ProcNetDevStatus::new(vec![
+            create_device_status("eth0", 2000, 1000, true),
+            create_device_status("lo", 10, 10, false),
+        ]);
+        let sample2 = ProcNetDevStatus::new(vec![
+            create_device_status("eth0", 6000, 3000, true),
+            create_device_status("lo", 20, 40, false),
+        ]);
+        let sample3 = ProcNetDevStatus::new(vec![
+            create_device_status("eth0", 9000, 6000, true),
+            create_device_status("lo", 30, 70, false),
+        ]);
 
         let reader = MockProcNetDevReader::new(vec![Ok(sample1), Ok(sample2), Ok(sample3)]);
         let utils = MockNetworkUtilities::new(vec!["eth0"]);
 
-        let mut monitor = NetworkMonitor::new(reader, utils, &make_config(3));
+        let mut monitor = NetworkMonitor::new(reader, &make_config(3));
 
         let result1 = monitor.poll().unwrap();
         assert_eq!(result1[NETWORK_STAT_RX_INDEX].bytes, 2000);
@@ -218,15 +220,15 @@ mod tests {
 
     #[test]
     fn samples_buffer_trims_to_max_size() {
-        let sample1 = ProcNetDevStatus::new(vec![create_device_status("eth0", 2000, 1000)]);
-        let sample2 = ProcNetDevStatus::new(vec![create_device_status("eth0", 5000, 3000)]);
-        let sample3 = ProcNetDevStatus::new(vec![create_device_status("eth0", 9000, 4000)]);
-        let sample4 = ProcNetDevStatus::new(vec![create_device_status("eth0", 12000, 6000)]);
+        let sample1 = ProcNetDevStatus::new(vec![create_device_status("eth0", 2000, 1000, true)]);
+        let sample2 = ProcNetDevStatus::new(vec![create_device_status("eth0", 5000, 3000, true)]);
+        let sample3 = ProcNetDevStatus::new(vec![create_device_status("eth0", 9000, 4000, true)]);
+        let sample4 = ProcNetDevStatus::new(vec![create_device_status("eth0", 12000, 6000, true)]);
 
         let reader = MockProcNetDevReader::new(vec![Ok(sample1), Ok(sample2), Ok(sample3), Ok(sample4)]);
         let utils = MockNetworkUtilities::new(vec!["eth0"]);
 
-        let mut monitor = NetworkMonitor::new(reader, utils, &make_config(2));
+        let mut monitor = NetworkMonitor::new(reader, &make_config(2));
 
         // Throw away first two samples
         let _ = monitor.poll().unwrap();
@@ -245,7 +247,7 @@ mod tests {
     fn error_is_propagated() {
         let reader = MockProcNetDevReader::new(vec![Err("boom".to_string())]);
         let utils = MockNetworkUtilities::new(vec!["eth0"]);
-        let mut monitor = NetworkMonitor::new(reader, utils, &make_config(1));
+        let mut monitor = NetworkMonitor::new(reader, &make_config(1));
 
         let err = monitor.poll().unwrap_err();
         assert_eq!(err, "boom");

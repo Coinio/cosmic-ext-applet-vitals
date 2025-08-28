@@ -7,7 +7,6 @@ use crate::configuration::app_configuration::{
 use crate::monitors::cpu_monitor::{CpuMonitor, CpuStats};
 use crate::monitors::memory_monitor::{MemoryMonitor, MemoryStats};
 use crate::monitors::network_monitor::{NetworkMonitor, NetworkStats, NETWORK_STAT_RX_INDEX, NETWORK_STAT_TX_INDEX};
-use crate::sensors::network_utilities::NetworkUtils;
 use crate::sensors::proc_meminfo_reader::ProcMemInfoSensorReader;
 use crate::sensors::proc_net_dev_reader::ProcNetDevReader;
 use crate::sensors::proc_stat_reader::ProcStatSensorReader;
@@ -189,8 +188,7 @@ impl Application for AppState {
 
                     let mut memory_monitor = MemoryMonitor::new(ProcMemInfoSensorReader, &config);
                     let mut cpuinfo_reader = CpuMonitor::new(ProcStatSensorReader, &config);
-                    let mut network_monitor = NetworkMonitor::new(ProcNetDevReader,
-                        NetworkUtils::new(), &config);
+                    let mut network_monitor = NetworkMonitor::new(ProcNetDevReader, &config);
 
                     loop {
                         tokio::select! {
