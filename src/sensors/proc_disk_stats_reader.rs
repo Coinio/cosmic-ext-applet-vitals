@@ -10,7 +10,7 @@ const READS_COMPLETED_INDEX: usize = 3;
 const WRITES_COMPLETED_INDEX: usize = 7;
 
 #[derive(Clone, Debug, Default)]
-struct ProcDiskStatsStatus {
+pub struct ProcDiskStatsStatus {
     pub device_name: String,
     pub reads_completed: u64,
     pub writes_completed: u64,
@@ -26,9 +26,9 @@ impl ProcDiskStatsStatus {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ProcDiskStats {
-    device_statuses: Vec<ProcDiskStatsStatus>
+    pub device_statuses: Vec<ProcDiskStatsStatus>
 }
 
 impl ProcDiskStats {
@@ -61,7 +61,8 @@ impl SensorReader for ProcDiskStatsReader {
 
         let mut statuses = Vec::new();
 
-        for line in contents.lines().skip(2) {
+        for line in contents.lines() {
+            if line.trim().is_empty() { continue; }
             let device_status = self.parse_disk_stats_line(line)?;
 
             statuses.push(device_status);

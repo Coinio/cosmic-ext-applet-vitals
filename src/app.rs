@@ -26,7 +26,10 @@ use cosmic::{cosmic_config, Application, Element};
 use log::{error, info};
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
+use std::time::Duration;
 use tokio_util::sync::CancellationToken;
+use crate::monitors::disk_monitor::DiskMonitor;
+use crate::sensors::proc_disk_stats_reader::ProcDiskStatsReader;
 
 static AUTOSIZE_MAIN_ID: Lazy<Id> = Lazy::new(|| Id::new("autosize-main"));
 
@@ -185,11 +188,14 @@ impl Application for AppState {
                     let mut memory_update_interval = tokio::time::interval(config.memory.update_interval);
                     let mut cpu_update_interval = tokio::time::interval(config.cpu.update_interval);
                     let mut network_update_interval = tokio::time::interval(config.network.update_interval);
+                    // TODO : USE CONFIG
+                    let mut disk_update_interval = tokio::time::interval(Duration::from_secs(1));
 
                     let mut memory_monitor = MemoryMonitor::new(ProcMemInfoSensorReader, &config);
                     let mut cpuinfo_reader = CpuMonitor::new(ProcStatSensorReader, &config);
                     let mut network_monitor = NetworkMonitor::new(ProcNetDevReader, &config);
-
+                    let mut disk_monitor = DiskMonitor::new(ProcDiskStatsReader, &config);
+                    
                     loop {
                         tokio::select! {
                             _ = memory_update_interval.tick() => {
@@ -200,6 +206,11 @@ impl Application for AppState {
                             },
                             _ = network_update_interval.tick() => {
                                 yield Message::NetworkUpdate(network_monitor.poll().unwrap_or_default());
+                            },
+                            _ = disk_update_interval.tick() => {
+                                let test = disk_monitor.poll();
+                                
+                                println!("{:?}", test);
                             },
                             _ = cancellation_token.cancelled() => {
                                 break;

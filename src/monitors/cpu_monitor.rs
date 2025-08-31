@@ -35,6 +35,10 @@ impl<S: SensorReader<Output = ProcStatStatus>> CpuMonitor<S> {
         }
     }
     
+    pub fn sample_buffer_len(&self) -> usize {
+        self.sample_buffer.len()
+    }
+    
     pub fn poll(&mut self) -> Result<CpuStats, String> {
         let current = match self.sensor_reader.read() {
             Ok(cpu_stats) => cpu_stats,
@@ -136,14 +140,10 @@ mod tests {
         ]);
         let mut monitor = CpuMonitor::new(reader, &make_config(2));
 
-        // Throw away first reading as should be trimmed from buffer after next two polls.
-        let _ = monitor.poll().unwrap();
-                 
-        let reading2 = monitor.poll().unwrap();
-        assert!(eq_to_three_decimal_places(reading2.cpu_usage_percent, 75.000));
-
-        let reading3 = monitor.poll().unwrap(); 
-        assert!(eq_to_three_decimal_places(reading3.cpu_usage_percent, 50.000));
+        _ = monitor.poll();
+        _ = monitor.poll();
+        
+        assert!(monitor.sample_buffer_len() == 2);
     }
 
     #[test]

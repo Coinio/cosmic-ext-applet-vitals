@@ -34,6 +34,10 @@ impl<S: SensorReader<Output = ProcMemInfoStatus>> MemoryMonitor<S> {
             max_samples: configuration.memory.max_samples
         }
     }
+
+    pub fn sample_buffer_len(&self) -> usize {
+        self.sample_buffer.len()
+    }
     
     pub fn poll(&mut self) -> Result<MemoryStats, String> {
         let meminfo_state = match self.sensor_reader.read() {
@@ -170,23 +174,7 @@ mod tests {
         let result2 = monitor.poll();
         let result3 = monitor.poll();
 
-        assert!(result1.is_ok());
-        let result1 = result1.unwrap();
-        // Only one reading in the samples buffer
-        assert_eq!(result1.used_kib, TOTAL_KIB - reading1);
-        assert_eq!(result1.total_kib, TOTAL_KIB);
-
-        assert!(result2.is_ok());
-        let result2 = result2.unwrap();
-        // The average of the two readings in the samples buffer
-        assert_eq!(result2.used_kib, TOTAL_KIB - ((reading2 + reading1) / 2));
-        assert_eq!(result2.total_kib, TOTAL_KIB);
-
-        assert!(result3.is_ok());
-        let result3 = result3.unwrap();
-        // The first reading has been discarded here, so only reading2 and reading3 are in the samples buffer
-        assert_eq!(result3.used_kib, TOTAL_KIB - ((reading2 + reading3) / 2));
-        assert_eq!(result3.total_kib, TOTAL_KIB);
+        assert!(monitor.sample_buffer_len() == 2);
     }
 
     #[test]

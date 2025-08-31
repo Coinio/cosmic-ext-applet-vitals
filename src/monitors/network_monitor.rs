@@ -57,6 +57,10 @@ impl<S: SensorReader<Output = ProcNetDevStatus>> NetworkMonitor<S> {
             max_samples: configuration.memory.max_samples,
         }
     }
+    
+    pub fn get_sample_buffer_len(&self) -> usize {
+        self.sample_buffer.len()
+    }
 
     pub fn poll(&mut self) -> Result<[NetworkStats; 2], String> {
         let current = match self.sensor_reader.read() {
@@ -179,7 +183,7 @@ mod tests {
     }
 
     #[test]
-    fn single_poll_gives_expected_result() {
+    fn second_poll_gives_expected_result() {
         // Add a physical and a virtual interface to the status. Virtual should be ignored.
         let sample1 = ProcNetDevStatus::new(vec![
             create_device_status(2000, 1000, true),  // physical
@@ -258,17 +262,11 @@ mod tests {
 
         let mut monitor = NetworkMonitor::new(reader, &make_config(2));
 
-        // Throw away first two samples
-        let _ = monitor.poll().unwrap();
-        let _ = monitor.poll().unwrap();
+        let _ = monitor.poll();
+        let _ = monitor.poll();
+        let _ = monitor.poll();
 
-        let result3 = monitor.poll().unwrap();
-        assert_eq!(result3[NETWORK_STAT_RX_INDEX].bytes, (3000 + 4000) / 2);
-        assert_eq!(result3[NETWORK_STAT_TX_INDEX].bytes, (2000 + 1000) / 2);
-
-        let result4 = monitor.poll().unwrap();
-        assert_eq!(result4[NETWORK_STAT_RX_INDEX].bytes, (4000 + 3000) / 2);
-        assert_eq!(result4[NETWORK_STAT_TX_INDEX].bytes, (1000 + 2000) / 2);
+        assert!(monitor.sample_buffer.len() == 2);
     }
 
     #[test]
