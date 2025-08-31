@@ -6,7 +6,7 @@ use crate::ui::settings_form::{
 };
 use hex_color::HexColor;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::time::Duration;
 
 pub const NETWORK_RX_LABEL_TEXT_SETTING_KEY: &'static str = "settings-network-rx-label-text";
@@ -105,13 +105,24 @@ impl NetworkConfiguration {
         SettingsForm {
             settings_window_id: NETWORK_SETTINGS_WINDOW_ID.clone(),
             title: fl!("settings-network-title"),
-            values: HashMap::from([
+            values: BTreeMap::from([
                 (
                     NETWORK_RX_LABEL_TEXT_SETTING_KEY,
                     SettingsFormItem {
                         label: fl!("settings-network-rx-label-text"),
                         value: self.rx_label_text.clone(),
                         validator: Some(ConfigurationValidation::is_valid_label_text),
+                        order: Some(10),
+                    },
+                ),
+
+                (
+                    NETWORK_RX_LABEL_COLOUR_SETTING_KEY,
+                    SettingsFormItem {
+                        label: fl!("settings-network-rx-label-colour"),
+                        value: self.rx_label_colour.display_rgba().to_string(),
+                        validator: Some(ConfigurationValidation::is_valid_colour),
+                        order: Some(20),
                     },
                 ),
                 (
@@ -120,14 +131,7 @@ impl NetworkConfiguration {
                         label: fl!("settings-network-tx-label-text"),
                         value: self.tx_label_text.clone(),
                         validator: Some(ConfigurationValidation::is_valid_label_text),
-                    },
-                ),
-                (
-                    NETWORK_RX_LABEL_COLOUR_SETTING_KEY,
-                    SettingsFormItem {
-                        label: fl!("settings-network-rx-label-colour"),
-                        value: self.rx_label_colour.display_rgba().to_string(),
-                        validator: Some(ConfigurationValidation::is_valid_colour),
+                        order: Some(30),
                     },
                 ),
                 (
@@ -136,6 +140,7 @@ impl NetworkConfiguration {
                         label: fl!("settings-network-tx-label-colour"),
                         value: self.tx_label_colour.display_rgba().to_string(),
                         validator: Some(ConfigurationValidation::is_valid_colour),
+                        order: Some(40),
                     },
                 ),
                 (
@@ -144,6 +149,7 @@ impl NetworkConfiguration {
                         label: fl!("settings-update-interval"),
                         value: self.update_interval.as_millis().to_string(),
                         validator: Some(ConfigurationValidation::is_valid_interval),
+                        order: Some(50),
                     },
                 ),
                 (
@@ -152,6 +158,7 @@ impl NetworkConfiguration {
                         label: fl!("settings-max-samples"),
                         value: self.max_samples.to_string(),
                         validator: Some(ConfigurationValidation::is_valid_max_samples),
+                        order: Some(60),
                     },
                 ),
             ]),

@@ -7,7 +7,7 @@ use crate::fl;
 use crate::ui::settings_form::{SettingsForm, SettingsFormItem};
 use hex_color::HexColor;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::time::Duration;
 
 /// The configuration for the memory monitor
@@ -73,13 +73,14 @@ impl MemoryConfiguration {
         SettingsForm {
             settings_window_id: MEMORY_SETTINGS_WINDOW_ID.clone(),
             title: fl!("settings-memory-title"),
-            values: HashMap::from([
+            values: BTreeMap::from([
                 (
                     LABEL_TEXT_SETTING_KEY,
                     SettingsFormItem {
                         label: fl!("settings-label-text"),
                         value: self.label_text.clone(),
                         validator: Some(ConfigurationValidation::is_valid_label_text),
+                        order: Some(10),
                     },
                 ),
                 (
@@ -88,6 +89,7 @@ impl MemoryConfiguration {
                         label: fl!("settings-label-colour"),
                         value: self.label_colour.display_rgba().to_string(),
                         validator: Some(ConfigurationValidation::is_valid_colour),
+                        order: Some(20),
                     },
                 ),
                 (
@@ -96,6 +98,7 @@ impl MemoryConfiguration {
                         label: fl!("settings-update-interval"),
                         value: self.update_interval.as_millis().to_string(),
                         validator: Some(ConfigurationValidation::is_valid_interval),
+                        order: Some(30),
                     },
                 ),
                 (
@@ -104,6 +107,7 @@ impl MemoryConfiguration {
                         label: fl!("settings-max-samples"),
                         value: self.max_samples.to_string(),
                         validator: Some(ConfigurationValidation::is_valid_max_samples),
+                        order: Some(40),
                     },
                 ),
             ]),

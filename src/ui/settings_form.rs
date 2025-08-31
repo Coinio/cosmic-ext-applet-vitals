@@ -1,34 +1,10 @@
 use crate::app::Message;
-use crate::configuration::app_configuration::{
-    LABEL_COLOUR_SETTING_KEY, LABEL_TEXT_SETTING_KEY, MAX_SAMPLES_SETTING_KEY, UPDATE_INTERVAL_SETTING_KEY,
-};
-use crate::configuration::network::{
-    NETWORK_RX_LABEL_COLOUR_SETTING_KEY, NETWORK_RX_LABEL_TEXT_SETTING_KEY, NETWORK_TX_LABEL_COLOUR_SETTING_KEY,
-    NETWORK_TX_LABEL_TEXT_SETTING_KEY,
-};
 use crate::fl;
 use cosmic::iced::window;
 use cosmic::iced_widget::{container, Container};
 use cosmic::widget::settings;
 use cosmic::{widget, Theme};
-use std::collections::HashMap;
-use crate::configuration::disk::{DISK_READ_LABEL_COLOUR_SETTING_KEY, DISK_READ_LABEL_TEXT_SETTING_KEY, DISK_WRITE_LABEL_COLOUR_SETTING_KEY, DISK_WRITE_LABEL_TEXT_SETTING_KEY};
-
-// Define the explicit UI order for settings
-const ORDERED_KEYS: [&'static str; 12] = [
-    LABEL_TEXT_SETTING_KEY,
-    NETWORK_RX_LABEL_TEXT_SETTING_KEY,
-    NETWORK_RX_LABEL_COLOUR_SETTING_KEY,
-    NETWORK_TX_LABEL_TEXT_SETTING_KEY,
-    NETWORK_TX_LABEL_COLOUR_SETTING_KEY,
-    DISK_READ_LABEL_TEXT_SETTING_KEY,
-    DISK_READ_LABEL_COLOUR_SETTING_KEY,
-    DISK_WRITE_LABEL_TEXT_SETTING_KEY,
-    DISK_WRITE_LABEL_COLOUR_SETTING_KEY,
-    LABEL_COLOUR_SETTING_KEY,
-    UPDATE_INTERVAL_SETTING_KEY,
-    MAX_SAMPLES_SETTING_KEY,
-];
+use std::collections::BTreeMap;
 
 #[derive(Debug, Clone)]
 pub enum SettingsFormEvent {
@@ -46,12 +22,13 @@ pub struct SettingsFormItem {
     pub label: String,
     pub value: String,
     pub validator: Option<fn(&str) -> Result<(), String>>,
+    pub order: Option<u32>,
 }
 
 pub struct SettingsForm {
     pub settings_window_id: window::Id,
     pub title: String,
-    pub values: HashMap<&'static str, SettingsFormItem>,
+    pub values: BTreeMap<&'static str, SettingsFormItem>,
 }
 
 impl SettingsForm {
@@ -66,30 +43,35 @@ impl SettingsForm {
                     ..Default::default()
                 }));
 
-        for &form_value_key in ORDERED_KEYS.iter() {
-            if let Some(settings_form) = self.values.get(form_value_key) {
-                let text_input =
-                    widget::text_input(fl!("settings-empty"), &settings_form.value).on_input(|new_value| {
-                        Message::SettingsFormUpdate(SettingsFormEvent::StringFieldUpdated(SettingsFormEventValue {
-                            settings_window_id: self.settings_window_id,
-                            form_value_key,
-                            value: new_value,
-                        }))
-                    });
+        let mut items: Vec<(&'static str, &SettingsFormItem)> = self.values.iter().map(|(k, v)| (*k, v)).collect();
 
-                let validator = settings_form.validator.unwrap_or(|_| Ok(()));
+        items.sort_by(|a, b| match (a.1.order, b.1.order) {
+            (Some(oa), Some(ob)) => oa.cmp(&ob).then_with(|| a.0.cmp(&b.0)),
+            (Some(_), None) => std::cmp::Ordering::Less,
+            (None, Some(_)) => std::cmp::Ordering::Greater,
+            _ => a.0.cmp(&b.0),
+        });
 
-                column = column.add(settings::item(
-                    settings_form.label.clone(),
-                    match validator(&settings_form.value) {
-                        Ok(_) => text_input.width(150),
-                        Err(error_text) => text_input
-                            .width(150)
-                            .error(error_text.clone())
-                            .helper_text(error_text.clone()),
-                    },
-                ));
-            }
+        for (form_value_key, settings_form) in items.into_iter() {
+            let text_input = widget::text_input(fl!("settings-empty"), &settings_form.value).on_input(|new_value| {
+                Message::SettingsFormUpdate(SettingsFormEvent::StringFieldUpdated(SettingsFormEventValue {
+                    settings_window_id: self.settings_window_id,
+                    form_value_key,
+                    value: new_value,
+                }))
+            });
+
+            let validator = settings_form.validator.unwrap_or(|_| Ok(()));
+
+            let field = match validator(&settings_form.value) {
+                Ok(_) => text_input.width(150),
+                Err(error_text) => text_input
+                    .width(150)
+                    .error(error_text.clone())
+                    .helper_text(error_text.clone()),
+            };
+
+            column = column.add(settings::item(settings_form.label.clone(), field));
         }
 
         container(column)
