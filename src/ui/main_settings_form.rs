@@ -1,7 +1,5 @@
 use crate::app::Message;
-use crate::configuration::app_configuration::{
-    AppConfiguration, CPU_SETTINGS_WINDOW_ID, MEMORY_SETTINGS_WINDOW_ID, NETWORK_SETTINGS_WINDOW_ID,
-};
+use crate::configuration::app_configuration::{AppConfiguration, CPU_SETTINGS_WINDOW_ID, DISK_SETTINGS_WINDOW_ID, MEMORY_SETTINGS_WINDOW_ID, NETWORK_SETTINGS_WINDOW_ID};
 use crate::fl;
 use cosmic::iced_widget::Container;
 use cosmic::widget::{container, settings};
@@ -16,7 +14,6 @@ impl MainSettingsForm {
             .padding(2)
             .spacing(0)
             .divider_padding(2)
-            // TODO: Move to localisation file
             .add(widget::text(fl!("settings-title")).font(cosmic::iced::Font {
                 weight: cosmic::iced::font::Weight::ExtraBold,
                 ..Default::default()
@@ -29,6 +26,7 @@ impl MainSettingsForm {
             CPU_SETTINGS_WINDOW_ID.clone(),
             MEMORY_SETTINGS_WINDOW_ID.clone(),
             NETWORK_SETTINGS_WINDOW_ID.clone(),
+            DISK_SETTINGS_WINDOW_ID.clone()
         ];
 
         for window_id in ordered_window_ids {

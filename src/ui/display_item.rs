@@ -1,11 +1,13 @@
 use crate::configuration::app_configuration::{
-    AppConfiguration, CPU_SETTINGS_WINDOW_ID, MEMORY_SETTINGS_WINDOW_ID, NETWORK_SETTINGS_WINDOW_ID,
+    AppConfiguration, CPU_SETTINGS_WINDOW_ID, DISK_SETTINGS_WINDOW_ID, MEMORY_SETTINGS_WINDOW_ID,
+    NETWORK_SETTINGS_WINDOW_ID,
 };
 use crate::monitors::cpu_monitor::CpuStats;
+use crate::monitors::disk_monitor::{DiskDirection, DiskStats};
 use crate::monitors::memory_monitor::MemoryStats;
+use crate::monitors::network_monitor::{NetworkDirection, NetworkStats};
 use cosmic::iced::window::Id;
 use cosmic::iced::Color;
-use crate::monitors::network_monitor::{NetworkDirection, NetworkStats};
 
 /// This trait defines what will display for each resource, i.e. CPU, RAM, etc, on the panel
 pub trait DisplayItem {
@@ -75,14 +77,14 @@ impl DisplayItem for NetworkStats {
     fn label(&self, app_config: &AppConfiguration) -> String {
         match self.direction {
             NetworkDirection::Download => app_config.network.rx_label_text.clone(),
-            NetworkDirection::Upload => app_config.network.tx_label_text.clone()
-        }        
+            NetworkDirection::Upload => app_config.network.tx_label_text.clone(),
+        }
     }
 
     fn label_color(&self, app_config: &AppConfiguration) -> Color {
         let hex = match self.direction {
             NetworkDirection::Download => app_config.network.rx_label_colour,
-            NetworkDirection::Upload => app_config.network.tx_label_colour,       
+            NetworkDirection::Upload => app_config.network.tx_label_colour,
         };
 
         cosmic::iced_core::Color::from_rgba(
@@ -93,8 +95,39 @@ impl DisplayItem for NetworkStats {
         )
     }
 
-    fn text(&self, app_config: &AppConfiguration) -> String {        
+    fn text(&self, app_config: &AppConfiguration) -> String {
         let mib = self.bytes as f64 / (1024.0 * 1024.0);
         format!("{:.1}MiB", mib)
+    }
+}
+
+impl DisplayItem for DiskStats {
+    fn settings_window_id(&self) -> Id {
+        DISK_SETTINGS_WINDOW_ID.clone()
+    }
+
+    fn label(&self, app_config: &AppConfiguration) -> String {
+        match self.direction {
+            DiskDirection::Read => app_config.disk.read_label_text.clone(),
+            DiskDirection::Write => app_config.disk.write_label_text.clone(),
+        }
+    }
+
+    fn label_color(&self, app_config: &AppConfiguration) -> Color {
+        let hex = match self.direction {
+            DiskDirection::Read => app_config.disk.read_label_colour,
+            DiskDirection::Write => app_config.disk.write_label_colour,
+        };
+
+        cosmic::iced_core::Color::from_rgba(
+            hex.r as f32 / 255.0,
+            hex.g as f32 / 255.0,
+            hex.b as f32 / 255.0,
+            hex.a as f32 / 255.0,
+        )
+    }
+
+    fn text(&self, app_config: &AppConfiguration) -> String {
+       todo!()
     }
 }

@@ -58,10 +58,6 @@ impl<S: SensorReader<Output = ProcDiskStats>> DiskMonitor<S> {
         }
     }
 
-    pub fn sample_buffer_len(&self) -> usize {
-        self.sample_buffer.len()
-    }
-
     pub fn poll(&mut self) -> Result<[DiskStats; 2], String> {
         let current = match self.sensor_reader.read() {
             Ok(value) => value,
@@ -131,7 +127,6 @@ mod test {
     use super::*;
     use crate::sensors::proc_disk_stats_reader::ProcDiskStatsStatus;
     use std::cell::Cell;
-    use crate::monitors::network_monitor::NetworkMonitor;
 
     struct MockProcDiskStatsReader {
         pub samples: VecDeque<Result<ProcDiskStats, String>>,
@@ -253,7 +248,7 @@ mod test {
         _ = monitor.poll();
         _ = monitor.poll();
 
-        assert!(monitor.sample_buffer_len() == 2);
+        assert!(monitor.sample_buffer.len() == 2);
     }
 
     #[test]

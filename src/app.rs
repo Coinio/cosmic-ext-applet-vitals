@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 use crate::configuration::app_configuration::{
-    AppConfiguration, CPU_SETTINGS_WINDOW_ID, MAIN_SETTINGS_WINDOW_ID, MEMORY_SETTINGS_WINDOW_ID,
-    NETWORK_SETTINGS_WINDOW_ID,
+    AppConfiguration, CPU_SETTINGS_WINDOW_ID, DISK_SETTINGS_WINDOW_ID, MAIN_SETTINGS_WINDOW_ID,
+    MEMORY_SETTINGS_WINDOW_ID, NETWORK_SETTINGS_WINDOW_ID,
 };
 use crate::monitors::cpu_monitor::{CpuMonitor, CpuStats};
+use crate::monitors::disk_monitor::{DiskMonitor, DiskStats};
 use crate::monitors::memory_monitor::{MemoryMonitor, MemoryStats};
 use crate::monitors::network_monitor::{NetworkMonitor, NetworkStats, NETWORK_STAT_RX_INDEX, NETWORK_STAT_TX_INDEX};
+use crate::sensors::proc_disk_stats_reader::ProcDiskStatsReader;
 use crate::sensors::proc_meminfo_reader::ProcMemInfoSensorReader;
 use crate::sensors::proc_net_dev_reader::ProcNetDevReader;
 use crate::sensors::proc_stat_reader::ProcStatSensorReader;
@@ -26,10 +28,7 @@ use cosmic::{cosmic_config, Application, Element};
 use log::{error, info};
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
-use std::time::Duration;
 use tokio_util::sync::CancellationToken;
-use crate::monitors::disk_monitor::DiskMonitor;
-use crate::sensors::proc_disk_stats_reader::ProcDiskStatsReader;
 
 static AUTOSIZE_MAIN_ID: Lazy<Id> = Lazy::new(|| Id::new("autosize-main"));
 
@@ -49,6 +48,8 @@ pub struct AppState {
     cpu: CpuStats,
     /// The current network usage stats
     network: [NetworkStats; 2],
+    /// The current disk usage stats   
+    disk: [DiskStats; 2],
     /// The popup id.
     popup: Option<window::Id>,
 }
@@ -62,16 +63,18 @@ pub enum Message {
     SettingsPopupClosed(window::Id),
     /// Start monitoring the system resources
     StartMonitoring,
-    /// The configuration file was changed externally
-    ConfigFileChanged(AppConfiguration),
     /// The memory usage stats were updated
     MemoryUpdate(MemoryStats),
     /// The cpu usage stats were updated
     CpuUpdate(CpuStats),
     /// The network usage stats were updated
     NetworkUpdate([NetworkStats; 2]),
-    /// The settings form was updated by the user
+    /// The disk usage stats were updated
+    DiskUpdate([DiskStats; 2]),
+    /// The user has updated the settings form
     SettingsFormUpdate(SettingsFormEvent),
+    /// The configuration file was changed externally
+    ConfigFileChanged(AppConfiguration),
 }
 
 impl Application for AppState {
@@ -188,14 +191,13 @@ impl Application for AppState {
                     let mut memory_update_interval = tokio::time::interval(config.memory.update_interval);
                     let mut cpu_update_interval = tokio::time::interval(config.cpu.update_interval);
                     let mut network_update_interval = tokio::time::interval(config.network.update_interval);
-                    // TODO : USE CONFIG
-                    let mut disk_update_interval = tokio::time::interval(Duration::from_secs(1));
+                    let mut disk_update_interval = tokio::time::interval(config.disk.update_interval);
 
                     let mut memory_monitor = MemoryMonitor::new(ProcMemInfoSensorReader, &config);
                     let mut cpuinfo_reader = CpuMonitor::new(ProcStatSensorReader, &config);
                     let mut network_monitor = NetworkMonitor::new(ProcNetDevReader, &config);
                     let mut disk_monitor = DiskMonitor::new(ProcDiskStatsReader, &config);
-                    
+
                     loop {
                         tokio::select! {
                             _ = memory_update_interval.tick() => {
@@ -208,9 +210,7 @@ impl Application for AppState {
                                 yield Message::NetworkUpdate(network_monitor.poll().unwrap_or_default());
                             },
                             _ = disk_update_interval.tick() => {
-                                let test = disk_monitor.poll();
-                                
-                                println!("{:?}", test);
+                                yield Message::DiskUpdate(disk_monitor.poll().unwrap_or_default());
                             },
                             _ = cancellation_token.cancelled() => {
                                 break;
@@ -229,6 +229,9 @@ impl Application for AppState {
             }
             Message::NetworkUpdate(network_usage) => {
                 self.network = network_usage;
+            }
+            Message::DiskUpdate(disk_usage) => {
+                self.disk = disk_usage;
             }
             Message::ConfigFileChanged(configuration) => {
                 self.configuration = configuration;
@@ -325,35 +328,33 @@ impl AppState {
     }
 
     fn update_configuration(&mut self) {
-        let mut configuration = self.configuration.clone();
-
-        info!("Updating configuration: {:?}", configuration);
+        info!("Updating configuration: {:?}", self.configuration);
 
         let memory_settings_form = self
             .settings_forms
             .get(&MEMORY_SETTINGS_WINDOW_ID.clone())
             .expect("No memory settings form configured.");
 
-        configuration.memory = configuration.memory.from(memory_settings_form);
-
         let cpu_settings_form = self
             .settings_forms
             .get(&CPU_SETTINGS_WINDOW_ID.clone())
             .expect("No cpu settings form configured.");
-
-        configuration.cpu = configuration.cpu.from(cpu_settings_form);
 
         let network_settings_form = self
             .settings_forms
             .get(&NETWORK_SETTINGS_WINDOW_ID.clone())
             .expect("No network settings form configured.");
 
-        configuration.network = configuration.network.from(network_settings_form);
+        let disk_settings_form = self
+            .settings_forms
+            .get(&DISK_SETTINGS_WINDOW_ID.clone())
+            .expect("No disk settings form configured.");
 
         self.configuration = AppConfiguration {
-            memory: configuration.memory,
-            cpu: configuration.cpu,
-            network: configuration.network,
+            memory: self.configuration.memory.from(memory_settings_form),
+            cpu: self.configuration.cpu.from(cpu_settings_form),
+            network: self.configuration.network.from(network_settings_form),
+            disk: self.configuration.disk.from(disk_settings_form),
             ..Default::default()
         }
     }

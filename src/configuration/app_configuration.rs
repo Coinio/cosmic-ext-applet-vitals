@@ -6,12 +6,14 @@ use cosmic::cosmic_config::{self, cosmic_config_derive::CosmicConfigEntry, Cosmi
 use cosmic::iced::window;
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
+use crate::configuration::disk::DiskConfiguration;
 
 pub static MAIN_SETTINGS_WINDOW_ID: Lazy<cosmic::iced::window::Id> = Lazy::new(|| cosmic::iced::window::Id::unique());
 pub static CPU_SETTINGS_WINDOW_ID: Lazy<cosmic::iced::window::Id> = Lazy::new(|| cosmic::iced::window::Id::unique());
 pub static MEMORY_SETTINGS_WINDOW_ID: Lazy<cosmic::iced::window::Id> = Lazy::new(|| cosmic::iced::window::Id::unique());
 pub static NETWORK_SETTINGS_WINDOW_ID: Lazy<cosmic::iced::window::Id> =
     Lazy::new(|| cosmic::iced::window::Id::unique());
+pub static DISK_SETTINGS_WINDOW_ID: Lazy<cosmic::iced::window::Id> = Lazy::new(|| cosmic::iced::window::Id::unique());
 
 pub const SENSOR_INTERVAL_MINIMUM_IN_MS: u64 = 250;
 pub const SENSOR_MAX_SAMPLES_MINIMUM: usize = 1;
@@ -29,6 +31,7 @@ pub struct AppConfiguration {
     pub cpu: CpuConfiguration,
     pub memory: MemoryConfiguration,
     pub network: NetworkConfiguration,
+    pub disk: DiskConfiguration
 }
 
 impl AppConfiguration {
@@ -37,6 +40,7 @@ impl AppConfiguration {
             (MEMORY_SETTINGS_WINDOW_ID.clone(), self.memory.to_settings_form()),
             (CPU_SETTINGS_WINDOW_ID.clone(), self.cpu.to_settings_form()),
             (NETWORK_SETTINGS_WINDOW_ID.clone(), self.network.to_settings_form()),
+            (DISK_SETTINGS_WINDOW_ID.clone(), self.disk.to_settings_form())
         ])
     }
 }

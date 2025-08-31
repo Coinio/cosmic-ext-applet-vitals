@@ -35,10 +35,6 @@ impl<S: SensorReader<Output = ProcStatStatus>> CpuMonitor<S> {
         }
     }
     
-    pub fn sample_buffer_len(&self) -> usize {
-        self.sample_buffer.len()
-    }
-    
     pub fn poll(&mut self) -> Result<CpuStats, String> {
         let current = match self.sensor_reader.read() {
             Ok(cpu_stats) => cpu_stats,
@@ -143,7 +139,7 @@ mod tests {
         _ = monitor.poll();
         _ = monitor.poll();
         
-        assert!(monitor.sample_buffer_len() == 2);
+        assert!(monitor.sample_buffer.len() == 2);
     }
 
     #[test]

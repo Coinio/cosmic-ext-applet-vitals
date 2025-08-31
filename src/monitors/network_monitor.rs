@@ -58,10 +58,6 @@ impl<S: SensorReader<Output = ProcNetDevStatus>> NetworkMonitor<S> {
         }
     }
     
-    pub fn get_sample_buffer_len(&self) -> usize {
-        self.sample_buffer.len()
-    }
-
     pub fn poll(&mut self) -> Result<[NetworkStats; 2], String> {
         let current = match self.sensor_reader.read() {
             Ok(value) => value,

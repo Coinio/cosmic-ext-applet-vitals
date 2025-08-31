@@ -34,10 +34,6 @@ impl<S: SensorReader<Output = ProcMemInfoStatus>> MemoryMonitor<S> {
             max_samples: configuration.memory.max_samples
         }
     }
-
-    pub fn sample_buffer_len(&self) -> usize {
-        self.sample_buffer.len()
-    }
     
     pub fn poll(&mut self) -> Result<MemoryStats, String> {
         let meminfo_state = match self.sensor_reader.read() {
@@ -62,7 +58,6 @@ impl<S: SensorReader<Output = ProcMemInfoStatus>> MemoryMonitor<S> {
 #[cfg(test)]
 mod tests {
     use std::cell::Cell;
-    use crate::monitors::cpu_monitor::CpuMonitor;
     use super::*;
 
     const TOTAL_KIB: u64 = 31934904;
@@ -170,11 +165,11 @@ mod tests {
 
         let mut monitor = MemoryMonitor::new(mock_memory_reader, &make_config(2));
 
-        let result1 = monitor.poll();
-        let result2 = monitor.poll();
-        let result3 = monitor.poll();
+        _ = monitor.poll();
+        _ = monitor.poll();
+        _ = monitor.poll();
 
-        assert!(monitor.sample_buffer_len() == 2);
+        assert!(monitor.sample_buffer.len() == 2);
     }
 
     #[test]
