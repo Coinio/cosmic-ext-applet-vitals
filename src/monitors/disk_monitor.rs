@@ -8,15 +8,17 @@ use std::collections::VecDeque;
 pub const DISK_STAT_READ_INDEX: usize = 0;
 pub const DISK_STAT_WRITE_INDEX: usize = 1;
 
+const SECTOR_SIZE_BYTES: u64 = 512;
+
 #[derive(Debug, Clone, Default)]
 struct DiskSample {
-    pub reads: u64,
-    pub writes: u64,
+    pub bytes_read: u64,
+    pub bytes_written: u64,
 }
 
 impl DiskSample {
-    pub fn new(reads: u64, writes: u64) -> Self {
-        Self { reads, writes }
+    pub fn new(bytes_read: u64, bytes_written: u64) -> Self {
+        Self { bytes_read, bytes_written }
     }
 }
 
@@ -34,15 +36,15 @@ impl Default for DiskDirection {
 
 #[derive(Debug, Clone, Default)]
 pub struct DiskStats {
-    pub ops: u64,
+    pub bytes: u64,
     pub direction: DiskDirection,
 }
 
 pub struct DiskMonitor<S: SensorReader<Output = ProcDiskStats>> {
     sensor_reader: S,
     sample_buffer: VecDeque<DiskSample>,
-    previous_reads: u64,
-    previous_writes: u64,
+    previous_sectors_read: u64,
+    previous_sectors_written: u64,
     max_samples: usize,
 }
 
@@ -52,8 +54,8 @@ impl<S: SensorReader<Output = ProcDiskStats>> DiskMonitor<S> {
         Self {
             sensor_reader,
             sample_buffer: VecDeque::with_capacity(configuration.memory.max_samples),
-            previous_reads: 0,
-            previous_writes: 0,
+            previous_sectors_read: 0,
+            previous_sectors_written: 0,
             max_samples: configuration.memory.max_samples,
         }
     }
@@ -64,44 +66,47 @@ impl<S: SensorReader<Output = ProcDiskStats>> DiskMonitor<S> {
             Err(err) => return Err(err),
         };
 
-        let mut current_read_total = 0u64;
-        let mut current_write_total = 0u64;
+        let mut current_sectors_read_total = 0u64;
+        let mut current_sectors_written_total = 0u64;
 
         for device_status in current.device_statuses {
             if !is_logical_disk(&device_status.device_name) {
                 continue;
             }
 
-            current_read_total += device_status.reads_completed;
-            current_write_total += device_status.writes_completed;
+            current_sectors_read_total += device_status.sectors_read;
+            current_sectors_written_total += device_status.sectors_written;
         }
 
-        if (self.previous_reads == 0) && (self.previous_writes == 0) {
-            self.previous_reads = current_read_total;
-            self.previous_writes = current_write_total;
+        if (self.previous_sectors_read == 0) && (self.previous_sectors_written == 0) {
+            self.previous_sectors_read = current_sectors_read_total;
+            self.previous_sectors_written = current_sectors_written_total;
         }
 
-        let delta_reads = cmp::max(current_read_total - self.previous_reads, 0);
-        let delta_writes = cmp::max(current_write_total - self.previous_writes, 0);
+        let delta_sectors_read = cmp::max(current_sectors_read_total - self.previous_sectors_read, 0);
+        let delta_sectors_written = cmp::max(current_sectors_written_total - self.previous_sectors_written, 0);
 
-        self.previous_reads = current_read_total;
-        self.previous_writes = current_write_total;
+        self.previous_sectors_read = current_sectors_read_total;
+        self.previous_sectors_written = current_sectors_written_total;
 
-        self.sample_buffer.push_back(DiskSample::new(delta_reads, delta_writes));
+        let delta_bytes_read = delta_sectors_read.saturating_mul(SECTOR_SIZE_BYTES);
+        let delta_bytes_written = delta_sectors_written.saturating_mul(SECTOR_SIZE_BYTES);
+
+        self.sample_buffer.push_back(DiskSample::new(delta_bytes_read, delta_bytes_written));
         if self.sample_buffer.len() > self.max_samples {
             self.sample_buffer.pop_front();
         }
 
-        let avg_reads = self.sample_buffer.iter().map(|s| s.reads).sum::<u64>() / self.sample_buffer.len() as u64;
-        let avg_writes = self.sample_buffer.iter().map(|s| s.writes).sum::<u64>() / self.sample_buffer.len() as u64;
+        let avg_bytes_read = self.sample_buffer.iter().map(|s| s.bytes_read).sum::<u64>() / self.sample_buffer.len() as u64;
+        let avg_bytes_written = self.sample_buffer.iter().map(|s| s.bytes_written).sum::<u64>() / self.sample_buffer.len() as u64;
 
         Ok([
             DiskStats {
-                ops: avg_reads,
+                bytes: avg_bytes_read,
                 direction: DiskDirection::Read,
             },
             DiskStats {
-                ops: avg_writes,
+                bytes: avg_bytes_written,
                 direction: DiskDirection::Write,
             },
         ])
@@ -159,8 +164,8 @@ mod test {
         cfg
     }
 
-    fn make_sensor_sample(device_name: String, reads: u64, writes: u64) -> ProcDiskStats {
-        ProcDiskStats::new(vec![ProcDiskStatsStatus::new(device_name, reads, writes)])
+    fn make_sensor_sample(device_name: String, sectors_read: u64, sectors_written: u64) -> ProcDiskStats {
+        ProcDiskStats::new(vec![ProcDiskStatsStatus::new(device_name, sectors_read, sectors_written)])
     }
 
     #[test]
@@ -177,8 +182,8 @@ mod test {
 
         let result = result.unwrap();
 
-        assert_eq!(result[DISK_STAT_READ_INDEX].ops, 0);
-        assert_eq!(result[DISK_STAT_WRITE_INDEX].ops, 0);
+        assert_eq!(result[DISK_STAT_READ_INDEX].bytes, 0);
+        assert_eq!(result[DISK_STAT_WRITE_INDEX].bytes, 0);
     }
 
     #[test]
@@ -198,8 +203,8 @@ mod test {
 
         let result = result.unwrap();
 
-        assert_eq!(result[DISK_STAT_READ_INDEX].ops, (2000 - 1000) / 2);
-        assert_eq!(result[DISK_STAT_WRITE_INDEX].ops, (2000 - 1000) / 2);
+        assert_eq!(result[DISK_STAT_READ_INDEX].bytes, ((2000 - 1000) * 512) / 2);
+        assert_eq!(result[DISK_STAT_WRITE_INDEX].bytes, ((2000 - 1000) * 512) / 2);
     }
 
     #[test]
@@ -222,15 +227,15 @@ mod test {
 
         let result1 = result1.unwrap();
 
-        assert_eq!(result1[DISK_STAT_READ_INDEX].ops, (2000 - 1000) / 2);
-        assert_eq!(result1[DISK_STAT_WRITE_INDEX].ops, (2000 - 1000) / 2);
+        assert_eq!(result1[DISK_STAT_READ_INDEX].bytes, ((2000 - 1000) * 512) / 2);
+        assert_eq!(result1[DISK_STAT_WRITE_INDEX].bytes, ((2000 - 1000) * 512) / 2);
 
         assert!(result2.is_ok());
 
         let result2 = result2.unwrap();
 
-        assert_eq!(result2[DISK_STAT_READ_INDEX].ops, (3000 - 1000) / 3);
-        assert_eq!(result2[DISK_STAT_WRITE_INDEX].ops, (3000 - 1000) / 3);
+        assert_eq!(result2[DISK_STAT_READ_INDEX].bytes, ((3000 - 1000) * 512) / 3);
+        assert_eq!(result2[DISK_STAT_WRITE_INDEX].bytes, ((3000 - 1000) * 512) / 3);
     }
 
     #[test]
@@ -292,8 +297,8 @@ mod test {
 
         let result = result.unwrap();
 
-        assert_eq!(result[DISK_STAT_READ_INDEX].ops, ((2000 + 2000) - (1000 + 1000)) / 2);
-        assert_eq!(result[DISK_STAT_WRITE_INDEX].ops, ((2000 + 2000) - (1000 + 1000)) / 2);
+        assert_eq!(result[DISK_STAT_READ_INDEX].bytes, (((2000 + 2000) - (1000 + 1000)) * 512) / 2);
+        assert_eq!(result[DISK_STAT_WRITE_INDEX].bytes, (((2000 + 2000) - (1000 + 1000)) * 512) / 2);
     }
 
     #[test]

@@ -128,6 +128,8 @@ impl DisplayItem for DiskStats {
     }
 
     fn text(&self, app_config: &AppConfiguration) -> String {
-       todo!()
+        let mib_per_second = self.bytes as f64 / (1024.0 * 1024.0);
+        format!("{:.1}MiB/s", mib_per_second)
+
     }
 }

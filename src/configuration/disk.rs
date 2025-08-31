@@ -84,7 +84,7 @@ impl DiskConfiguration {
             write_label_text: ConfigurationValidation::sanitise_label_text(
                 settings_form
                     .values
-                    .get(DISK_READ_LABEL_TEXT_SETTING_KEY)
+                    .get(DISK_WRITE_LABEL_TEXT_SETTING_KEY)
                     .unwrap()
                     .value
                     .clone(),
@@ -92,7 +92,7 @@ impl DiskConfiguration {
             write_label_colour: ConfigurationValidation::sanitise_label_colour(
                 settings_form
                     .values
-                    .get(DISK_READ_LABEL_COLOUR_SETTING_KEY)
+                    .get(DISK_WRITE_LABEL_COLOUR_SETTING_KEY)
                     .unwrap()
                     .value
                     .clone(),

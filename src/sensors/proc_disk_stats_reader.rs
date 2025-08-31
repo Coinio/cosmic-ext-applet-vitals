@@ -6,22 +6,22 @@ use std::path::Path;
 const PROC_DISK_STATS_FILE: &str = "/proc/diskstats";
 
 const DISK_NAME_INDEX: usize = 2;
-const READS_COMPLETED_INDEX: usize = 3;
-const WRITES_COMPLETED_INDEX: usize = 7;
+const SECTORS_READ_INDEX: usize = 5;
+const SECTORS_WRITTEN_INDEX: usize = 9;
 
 #[derive(Clone, Debug, Default)]
 pub struct ProcDiskStatsStatus {
     pub device_name: String,
-    pub reads_completed: u64,
-    pub writes_completed: u64,
+    pub sectors_read: u64,
+    pub sectors_written: u64,
 }
 
 impl ProcDiskStatsStatus {
-    pub fn new(device_name: String, reads_completed: u64, writes_completed: u64) -> Self {
+    pub fn new(device_name: String, sectors_read: u64, sectors_written: u64) -> Self {
         Self {
             device_name,
-            reads_completed,
-            writes_completed,
+            sectors_read,
+            sectors_written,
         }
     }
 }
@@ -83,9 +83,9 @@ impl ProcDiskStatsReader {
         }
 
         let device_name = values[DISK_NAME_INDEX].to_string();
-        let total_reads = values[READS_COMPLETED_INDEX].parse::<u64>().unwrap_or_default();
-        let total_writes = values[WRITES_COMPLETED_INDEX].parse::<u64>().unwrap_or_default();
+        let sectors_read = values[SECTORS_READ_INDEX].parse::<u64>().unwrap_or_default();
+        let sectors_written = values[SECTORS_WRITTEN_INDEX].parse::<u64>().unwrap_or_default();
 
-        Ok(ProcDiskStatsStatus::new(device_name, total_reads, total_writes))
+        Ok(ProcDiskStatsStatus::new(device_name, sectors_read, sectors_written))
     }
 }

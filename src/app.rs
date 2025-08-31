@@ -260,24 +260,26 @@ impl Application for AppState {
     }
 
     fn view(&self) -> Element<'_, Self::Message> {
-        let horizontal = matches!(self.core.applet.anchor, PanelAnchor::Top | PanelAnchor::Bottom);
+        let is_horizontal = matches!(self.core.applet.anchor, PanelAnchor::Top | PanelAnchor::Bottom);
 
         let mut elements = Vec::new();
 
-        elements.extend(IndicatorsUI::content(&self, &self.cpu, horizontal));
-        elements.extend(IndicatorsUI::content(&self, &self.memory, horizontal));
+        elements.extend(IndicatorsUI::content(&self, &self.cpu, is_horizontal));
+        elements.extend(IndicatorsUI::content(&self, &self.memory, is_horizontal));
         elements.extend(IndicatorsUI::content(
             &self,
             &self.network[NETWORK_STAT_RX_INDEX],
-            horizontal,
+            is_horizontal,
         ));
         elements.extend(IndicatorsUI::content(
             &self,
             &self.network[NETWORK_STAT_TX_INDEX],
-            horizontal,
+            is_horizontal,
         ));
+        elements.extend(IndicatorsUI::content(&self, &self.disk[0], is_horizontal));
+        elements.extend(IndicatorsUI::content(&self, &self.disk[1], is_horizontal));
 
-        let wrapper: Element<Message> = if horizontal {
+        let wrapper: Element<Message> = if is_horizontal {
             Row::from_vec(elements)
                 .align_y(Alignment::Center)
                 .spacing(self.core.applet.suggested_padding(true))
@@ -286,7 +288,7 @@ impl Application for AppState {
             Column::from_vec(elements).align_x(Alignment::Center).into()
         };
 
-        let padding = if horizontal {
+        let padding = if is_horizontal {
             [0, self.core.applet.suggested_padding(true)]
         } else {
             [self.core.applet.suggested_padding(true), 1]
