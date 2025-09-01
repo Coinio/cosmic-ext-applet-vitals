@@ -5,6 +5,7 @@ use cosmic::iced_widget::Container;
 use cosmic::widget::{container, settings};
 use cosmic::{widget, Theme};
 use std::clone::Clone;
+use crate::ui::settings_form;
 
 pub struct MainSettingsForm;
 
@@ -21,16 +22,7 @@ impl MainSettingsForm {
 
         let settings_form_options = app_config.settings_form_options();
 
-        // TODO: Should be moved into the settings related files.
-        let ordered_window_ids = vec![
-            CPU_SETTINGS_WINDOW_ID.clone(),
-            MEMORY_SETTINGS_WINDOW_ID.clone(),
-            NETWORK_SETTINGS_WINDOW_ID.clone(),
-            DISK_SETTINGS_WINDOW_ID.clone()
-        ];
-
-        for window_id in ordered_window_ids {
-            let settings_form = settings_form_options.get(&window_id).unwrap();
+        for settings_form in settings_form_options.values() {           
 
             let next_button = widget::button::custom(widget::icon::from_name("go-next-symbolic").size(16).icon())
                 .on_press(Message::ToggleMainSettingsPopup(settings_form.settings_window_id));

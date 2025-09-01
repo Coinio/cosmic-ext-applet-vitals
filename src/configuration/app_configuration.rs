@@ -5,7 +5,7 @@ use crate::ui::settings_form::SettingsForm;
 use cosmic::cosmic_config::{self, cosmic_config_derive::CosmicConfigEntry, CosmicConfigEntry};
 use cosmic::iced::window;
 use once_cell::sync::Lazy;
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use crate::configuration::disk::DiskConfiguration;
 
 pub static MAIN_SETTINGS_WINDOW_ID: Lazy<cosmic::iced::window::Id> = Lazy::new(|| cosmic::iced::window::Id::unique());
@@ -35,10 +35,10 @@ pub struct AppConfiguration {
 }
 
 impl AppConfiguration {
-    pub fn settings_form_options(&self) -> HashMap<window::Id, SettingsForm> {
-        HashMap::from([
-            (MEMORY_SETTINGS_WINDOW_ID.clone(), self.memory.to_settings_form()),
+    pub fn settings_form_options(&self) -> BTreeMap<window::Id, SettingsForm> {
+        BTreeMap::from([
             (CPU_SETTINGS_WINDOW_ID.clone(), self.cpu.to_settings_form()),
+            (MEMORY_SETTINGS_WINDOW_ID.clone(), self.memory.to_settings_form()),
             (NETWORK_SETTINGS_WINDOW_ID.clone(), self.network.to_settings_form()),
             (DISK_SETTINGS_WINDOW_ID.clone(), self.disk.to_settings_form())
         ])

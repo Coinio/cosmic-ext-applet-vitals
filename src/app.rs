@@ -27,7 +27,7 @@ use cosmic::widget::{autosize, container, Id};
 use cosmic::{cosmic_config, Application, Element};
 use log::{error, info};
 use once_cell::sync::Lazy;
-use std::collections::HashMap;
+use std::collections::{BTreeMap};
 use tokio_util::sync::CancellationToken;
 
 static AUTOSIZE_MAIN_ID: Lazy<Id> = Lazy::new(|| Id::new("autosize-main"));
@@ -41,7 +41,7 @@ pub struct AppState {
     /// The application configuration
     configuration: AppConfiguration,
     /// The settings forms that are available for configuration of the monitors.
-    settings_forms: HashMap<window::Id, SettingsForm>,
+    settings_forms: BTreeMap<window::Id, SettingsForm>,
     /// The current memory usage stats
     memory: MemoryStats,
     /// The current cpu usage stats
