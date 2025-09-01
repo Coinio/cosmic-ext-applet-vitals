@@ -111,8 +111,7 @@ impl NetworkConfiguration {
                     SettingsFormItem {
                         label: fl!("settings-network-rx-label-text"),
                         value: self.rx_label_text.clone(),
-                        validator: Some(ConfigurationValidation::is_valid_label_text),
-                        order: Some(10),
+                        validator: Some(ConfigurationValidation::is_valid_label_text)
                     },
                 ),
 
@@ -121,8 +120,7 @@ impl NetworkConfiguration {
                     SettingsFormItem {
                         label: fl!("settings-network-rx-label-colour"),
                         value: self.rx_label_colour.display_rgba().to_string(),
-                        validator: Some(ConfigurationValidation::is_valid_colour),
-                        order: Some(20),
+                        validator: Some(ConfigurationValidation::is_valid_colour)
                     },
                 ),
                 (
@@ -130,8 +128,7 @@ impl NetworkConfiguration {
                     SettingsFormItem {
                         label: fl!("settings-network-tx-label-text"),
                         value: self.tx_label_text.clone(),
-                        validator: Some(ConfigurationValidation::is_valid_label_text),
-                        order: Some(30),
+                        validator: Some(ConfigurationValidation::is_valid_label_text)
                     },
                 ),
                 (
@@ -139,8 +136,7 @@ impl NetworkConfiguration {
                     SettingsFormItem {
                         label: fl!("settings-network-tx-label-colour"),
                         value: self.tx_label_colour.display_rgba().to_string(),
-                        validator: Some(ConfigurationValidation::is_valid_colour),
-                        order: Some(40),
+                        validator: Some(ConfigurationValidation::is_valid_colour)
                     },
                 ),
                 (
@@ -148,8 +144,7 @@ impl NetworkConfiguration {
                     SettingsFormItem {
                         label: fl!("settings-update-interval"),
                         value: self.update_interval.as_millis().to_string(),
-                        validator: Some(ConfigurationValidation::is_valid_interval),
-                        order: Some(50),
+                        validator: Some(ConfigurationValidation::is_valid_interval)
                     },
                 ),
                 (
@@ -157,8 +152,7 @@ impl NetworkConfiguration {
                     SettingsFormItem {
                         label: fl!("settings-max-samples"),
                         value: self.max_samples.to_string(),
-                        validator: Some(ConfigurationValidation::is_valid_max_samples),
-                        order: Some(60),
+                        validator: Some(ConfigurationValidation::is_valid_max_samples)
                     },
                 ),
             ]),

@@ -111,8 +111,7 @@ impl DiskConfiguration {
                     SettingsFormItem {
                         label: fl!("settings-disk-read-label-text"),
                         value: self.read_label_text.clone(),
-                        validator: Some(ConfigurationValidation::is_valid_label_text),
-                        order: Some(10),
+                        validator: Some(ConfigurationValidation::is_valid_label_text)
                     },
                 ),
                 (
@@ -120,8 +119,7 @@ impl DiskConfiguration {
                     SettingsFormItem {
                         label: fl!("settings-disk-read-label-colour"),
                         value: self.read_label_colour.display_rgba().to_string(),
-                        validator: Some(ConfigurationValidation::is_valid_colour),
-                        order: Some(20),
+                        validator: Some(ConfigurationValidation::is_valid_colour)
                     },
                 ),
                 (
@@ -129,8 +127,7 @@ impl DiskConfiguration {
                     SettingsFormItem {
                         label: fl!("settings-disk-write-label-text"),
                         value: self.write_label_text.clone(),
-                        validator: Some(ConfigurationValidation::is_valid_label_text),
-                        order: Some(30),
+                        validator: Some(ConfigurationValidation::is_valid_label_text)
                     },
                 ),
                 (
@@ -138,8 +135,7 @@ impl DiskConfiguration {
                     SettingsFormItem {
                         label: fl!("settings-disk-write-label-colour"),
                         value: self.write_label_colour.display_rgba().to_string(),
-                        validator: Some(ConfigurationValidation::is_valid_colour),
-                        order: Some(40),
+                        validator: Some(ConfigurationValidation::is_valid_colour)
                     },
                 ),
                 (
@@ -147,8 +143,7 @@ impl DiskConfiguration {
                     SettingsFormItem {
                         label: fl!("settings-update-interval"),
                         value: self.update_interval.as_millis().to_string(),
-                        validator: Some(ConfigurationValidation::is_valid_interval),
-                        order: Some(50),
+                        validator: Some(ConfigurationValidation::is_valid_interval)
                     },
                 ),
                 (
@@ -156,8 +151,7 @@ impl DiskConfiguration {
                     SettingsFormItem {
                         label: fl!("settings-max-samples"),
                         value: self.max_samples.to_string(),
-                        validator: Some(ConfigurationValidation::is_valid_max_samples),
-                        order: Some(60),
+                        validator: Some(ConfigurationValidation::is_valid_max_samples)
                     },
                 ),
             ]),

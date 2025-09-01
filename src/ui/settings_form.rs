@@ -21,8 +21,7 @@ pub struct SettingsFormEventValue {
 pub struct SettingsFormItem {
     pub label: String,
     pub value: String,
-    pub validator: Option<fn(&str) -> Result<(), String>>,
-    pub order: Option<u32>,
+    pub validator: Option<fn(&str) -> Result<(), String>>
 }
 
 pub struct SettingsForm {
@@ -43,16 +42,7 @@ impl SettingsForm {
                     ..Default::default()
                 }));
 
-        let mut items: Vec<(&'static str, &SettingsFormItem)> = self.values.iter().map(|(k, v)| (*k, v)).collect();
-
-        items.sort_by(|a, b| match (a.1.order, b.1.order) {
-            (Some(oa), Some(ob)) => oa.cmp(&ob).then_with(|| a.0.cmp(&b.0)),
-            (Some(_), None) => std::cmp::Ordering::Less,
-            (None, Some(_)) => std::cmp::Ordering::Greater,
-            _ => a.0.cmp(&b.0),
-        });
-
-        for (form_value_key, settings_form) in items.into_iter() {
+        for (form_value_key, settings_form) in self.values.iter() {
             let text_input = widget::text_input(fl!("settings-empty"), &settings_form.value).on_input(|new_value| {
                 Message::SettingsFormUpdate(SettingsFormEvent::StringFieldUpdated(SettingsFormEventValue {
                     settings_window_id: self.settings_window_id,

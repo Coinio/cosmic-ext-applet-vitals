@@ -78,8 +78,7 @@ impl CpuConfiguration {
                     SettingsFormItem {
                         label: fl!("settings-label-text"),
                         value: self.label_text.clone(),
-                        validator: Some(ConfigurationValidation::is_valid_label_text),
-                        order: Some(10),
+                        validator: Some(ConfigurationValidation::is_valid_label_text)
                     },
                 ),
                 (
@@ -87,8 +86,7 @@ impl CpuConfiguration {
                     SettingsFormItem {
                         label: fl!("settings-label-colour"),
                         value: self.label_colour.display_rgba().to_string(),
-                        validator: Some(ConfigurationValidation::is_valid_colour),
-                        order: Some(20),
+                        validator: Some(ConfigurationValidation::is_valid_colour)
                     },
                 ),
                 (
@@ -96,8 +94,7 @@ impl CpuConfiguration {
                     SettingsFormItem {
                         label: fl!("settings-update-interval"),
                         value: self.update_interval.as_millis().to_string(),
-                        validator: Some(ConfigurationValidation::is_valid_interval),
-                        order: Some(30),
+                        validator: Some(ConfigurationValidation::is_valid_interval)
                     },
                 ),
                 (
@@ -105,8 +102,7 @@ impl CpuConfiguration {
                     SettingsFormItem {
                         label: fl!("settings-max-samples"),
                         value: self.max_samples.to_string(),
-                        validator: Some(ConfigurationValidation::is_valid_max_samples),
-                        order: Some(40),
+                        validator: Some(ConfigurationValidation::is_valid_max_samples)
                     },
                 ),
             ]),
