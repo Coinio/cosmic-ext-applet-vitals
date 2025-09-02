@@ -1,11 +1,10 @@
 use crate::app::Message;
-use crate::configuration::app_configuration::{AppConfiguration, CPU_SETTINGS_WINDOW_ID, DISK_SETTINGS_WINDOW_ID, MEMORY_SETTINGS_WINDOW_ID, NETWORK_SETTINGS_WINDOW_ID};
+use crate::configuration::app_configuration::{AppConfiguration};
 use crate::fl;
 use cosmic::iced_widget::Container;
 use cosmic::widget::{container, settings};
 use cosmic::{widget, Theme};
 use std::clone::Clone;
-use crate::ui::settings_form;
 
 pub struct MainSettingsForm;
 
@@ -22,7 +21,7 @@ impl MainSettingsForm {
 
         let settings_form_options = app_config.settings_form_options();
 
-        for settings_form in settings_form_options.values() {           
+        for settings_form in settings_form_options.values() {
 
             let next_button = widget::button::custom(widget::icon::from_name("go-next-symbolic").size(16).icon())
                 .on_press(Message::ToggleMainSettingsPopup(settings_form.settings_window_id));

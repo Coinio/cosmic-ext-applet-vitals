@@ -1,3 +1,4 @@
+use crate::app::{AppState};
 use crate::configuration::app_configuration::{
     AppConfiguration, CPU_SETTINGS_WINDOW_ID, DISK_SETTINGS_WINDOW_ID, MEMORY_SETTINGS_WINDOW_ID,
     NETWORK_SETTINGS_WINDOW_ID,
@@ -8,10 +9,13 @@ use crate::monitors::memory_monitor::MemoryStats;
 use crate::monitors::network_monitor::{NetworkDirection, NetworkStats};
 use cosmic::iced::window::Id;
 use cosmic::iced::Color;
+use cosmic::widget::icon::Handle;
+use crate::ui::icons::*;
 
 /// This trait defines what will display for each resource, i.e. CPU, RAM, etc, on the panel
 pub trait DisplayItem {
     fn settings_window_id(&self) -> cosmic::iced::window::Id;
+    fn label_icon(&self, app_state: &AppState) -> Option<&Handle>;
     fn label(&self, app_config: &AppConfiguration) -> String;
     fn label_color(&self, app_config: &AppConfiguration) -> cosmic::iced_core::Color;
     fn text(&self, app_config: &AppConfiguration) -> String;
@@ -20,6 +24,10 @@ pub trait DisplayItem {
 impl DisplayItem for MemoryStats {
     fn settings_window_id(&self) -> cosmic::iced::window::Id {
         MEMORY_SETTINGS_WINDOW_ID.clone()
+    }
+
+    fn label_icon(&self, app_state: &AppState) -> Option<&Handle> {
+        ICONS.get(MEMORY_USAGE_ICON_DARK_KEY)
     }
 
     fn label(&self, app_config: &AppConfiguration) -> String {
@@ -53,6 +61,10 @@ impl DisplayItem for CpuStats {
         app_config.cpu.label_text.to_string()
     }
 
+    fn label_icon(&self, app_state: &AppState) -> Option<&Handle> {
+        ICONS.get(CPU_USAGE_ICON_DARK_KEY)
+    }
+
     fn label_color(&self, app_config: &AppConfiguration) -> cosmic::iced_core::Color {
         let hex = app_config.cpu.label_colour;
 
@@ -81,6 +93,27 @@ impl DisplayItem for NetworkStats {
         }
     }
 
+    fn label_icon(&self, app_state: &AppState) -> Option<&Handle> {
+        let is_dark = app_state.core().system_theme().theme_type.is_dark();
+
+        match self.direction {
+            NetworkDirection::Download => {
+                if is_dark {
+                    ICONS.get(NETWORK_TX_USAGE_ICON_DARK_KEY)
+                } else {
+                    ICONS.get(NETWORK_TX_USAGE_ICON_LIGHT_KEY)
+                }
+            }
+            NetworkDirection::Upload => {
+                if is_dark {
+                    ICONS.get(NETWORK_TX_USAGE_ICON_DARK_KEY)
+                } else {
+                    ICONS.get(NETWORK_TX_USAGE_ICON_LIGHT_KEY)
+                }
+            }
+        }
+    }
+
     fn label_color(&self, app_config: &AppConfiguration) -> Color {
         let hex = match self.direction {
             NetworkDirection::Download => app_config.network.rx_label_colour,
@@ -97,7 +130,7 @@ impl DisplayItem for NetworkStats {
 
     fn text(&self, app_config: &AppConfiguration) -> String {
         let mib = self.bytes as f64 / (1024.0 * 1024.0);
-        format!("{:.1}MiB", mib)
+        format!("{:.1}MiB/s", mib)
     }
 }
 
@@ -110,6 +143,13 @@ impl DisplayItem for DiskStats {
         match self.direction {
             DiskDirection::Read => app_config.disk.read_label_text.clone(),
             DiskDirection::Write => app_config.disk.write_label_text.clone(),
+        }
+    }
+
+    fn label_icon(&self, app_state: &AppState) -> Option<&Handle> {
+        match self.direction {
+            DiskDirection::Read => ICONS.get(DISK_READ_ICON_DARK_KEY),
+            DiskDirection::Write => ICONS.get(DISK_WRITE_ICON_LIGHT_KEY),
         }
     }
 
@@ -130,6 +170,5 @@ impl DisplayItem for DiskStats {
     fn text(&self, app_config: &AppConfiguration) -> String {
         let mib_per_second = self.bytes as f64 / (1024.0 * 1024.0);
         format!("{:.1}MiB/s", mib_per_second)
-
     }
 }

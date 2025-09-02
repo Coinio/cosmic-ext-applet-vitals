@@ -1,6 +1,7 @@
 use crate::app::{AppState, Message};
 use crate::ui::display_item::DisplayItem;
 use cosmic::applet::cosmic_panel_config::PanelSize;
+use cosmic::widget;
 use cosmic::Element;
 
 const DEFAULT_INDICATOR_FONT_SIZE: u16 = 14;
@@ -18,27 +19,21 @@ impl IndicatorsUI {
 
         let mut content: Vec<Element<Message>> = Vec::new();
 
-        let label_color = display_item.label_color(&configuration);
-        let label_text = core
-            .applet
-            .text(display_item.label(&configuration))
-            .class(cosmic::theme::Text::from(label_color));
-        
-        let value_text = core.applet.text(display_item.text(&configuration));
-        
-        let label_text = if !horizontal {
-            label_text.size(Self::vertical_font_size(app_state))
-        } else { 
-            label_text
+        let _label_color = display_item.label_color(&configuration);
+
+        match display_item.label_icon(app_state).clone() {
+            None => {}
+            Some(handle) => {
+                let label_icon = widget::icon::icon(handle.clone());
+                content.push(Element::from(label_icon));
+            }
         };
-        
-        let value_text = if !horizontal {
-            value_text.size(Self::vertical_font_size(app_state))
-        } else { 
-            value_text
-        };
-        
-        content.push(Element::from(label_text));
+
+        let mut value_text = core.applet.text(display_item.text(&configuration));
+        if !horizontal {
+            value_text = value_text.size(Self::vertical_font_size(app_state));
+        }
+
         content.push(Element::from(value_text));
 
         content

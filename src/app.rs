@@ -219,7 +219,7 @@ impl Application for AppState {
 
                     }
                 })
-                .map(cosmic::Action::App);
+                    .map(cosmic::Action::App);
             }
             Message::MemoryUpdate(memory_usage) => {
                 self.memory = memory_usage;
