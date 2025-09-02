@@ -19,7 +19,7 @@ pub static ICONS: Lazy<HashMap<&'static str, cosmic::widget::icon::Handle>> = La
 
     cache.insert(
         CPU_USAGE_ICON_DARK_KEY,
-        cosmic::widget::icon::from_path("res/icons/arrow-up-svgrepo-com-light.svg".into()).into(),
+        cosmic::widget::icon::from_path("res/icons/cpu-svgrepo-com-dark.svg".into()).into(),
     );
     cache.insert(
         CPU_USAGE_ICON_LIGHT_KEY,

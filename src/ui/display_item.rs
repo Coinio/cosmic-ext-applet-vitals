@@ -27,7 +27,12 @@ impl DisplayItem for MemoryStats {
     }
 
     fn label_icon(&self, app_state: &AppState) -> Option<&Handle> {
-        ICONS.get(MEMORY_USAGE_ICON_DARK_KEY)
+        let is_dark = app_state.core().system_theme().theme_type.is_dark();
+        if is_dark {
+            ICONS.get(MEMORY_USAGE_ICON_DARK_KEY)
+        } else {
+            ICONS.get(MEMORY_USAGE_ICON_LIGHT_KEY)
+        }
     }
 
     fn label(&self, app_config: &AppConfiguration) -> String {
@@ -62,7 +67,12 @@ impl DisplayItem for CpuStats {
     }
 
     fn label_icon(&self, app_state: &AppState) -> Option<&Handle> {
-        ICONS.get(CPU_USAGE_ICON_DARK_KEY)
+        let is_dark = app_state.core().system_theme().theme_type.is_dark();
+        if is_dark {
+            ICONS.get(CPU_USAGE_ICON_DARK_KEY)
+        } else {
+            ICONS.get(CPU_USAGE_ICON_LIGHT_KEY)
+        }
     }
 
     fn label_color(&self, app_config: &AppConfiguration) -> cosmic::iced_core::Color {
@@ -99,9 +109,9 @@ impl DisplayItem for NetworkStats {
         match self.direction {
             NetworkDirection::Download => {
                 if is_dark {
-                    ICONS.get(NETWORK_TX_USAGE_ICON_DARK_KEY)
+                    ICONS.get(NETWORK_RX_USAGE_ICON_DARK_KEY)
                 } else {
-                    ICONS.get(NETWORK_TX_USAGE_ICON_LIGHT_KEY)
+                    ICONS.get(NETWORK_RX_USAGE_ICON_LIGHT_KEY)
                 }
             }
             NetworkDirection::Upload => {
@@ -147,9 +157,22 @@ impl DisplayItem for DiskStats {
     }
 
     fn label_icon(&self, app_state: &AppState) -> Option<&Handle> {
+        let is_dark = app_state.core().system_theme().theme_type.is_dark();
         match self.direction {
-            DiskDirection::Read => ICONS.get(DISK_READ_ICON_DARK_KEY),
-            DiskDirection::Write => ICONS.get(DISK_WRITE_ICON_LIGHT_KEY),
+            DiskDirection::Read => {
+                if is_dark {
+                    ICONS.get(DISK_READ_ICON_DARK_KEY)
+                } else {
+                    ICONS.get(DISK_READ_ICON_LIGHT_KEY)
+                }
+            }
+            DiskDirection::Write => {
+                if is_dark {
+                    ICONS.get(DISK_WRITE_ICON_DARK_KEY)
+                } else {
+                    ICONS.get(DISK_WRITE_ICON_LIGHT_KEY)
+                }
+            }
         }
     }
 
