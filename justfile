@@ -22,8 +22,8 @@ metainfo := APPID + '.metainfo.xml'
 metainfo-src := 'res' / metainfo
 metainfo-dst := clean(rootdir / prefix) / 'share' / 'metainfo' / metainfo
 
-icons-src := 'res' / 'icons' / 'hicolor'
-icons-dst := clean(rootdir / prefix) / 'share' / 'icons' / 'hicolor'
+icons-src := 'res' / 'icons'
+icons-dst := clean(rootdir / prefix) / 'share' / APPID / 'icons'
 
 # Default recipe which runs `just build-release`
 default: build-release
@@ -69,27 +69,23 @@ install:
     install -Dm0755 {{bin-src}} {{bin-dst}}
     install -Dm0644 {{desktop-src}} {{desktop-dst}}
     install -Dm0644 {{metainfo-src}} {{metainfo-dst}}
-    for size in `ls {{icons-src}}`; do \
-        install -Dm0644 "{{icons-src}}/$size/apps/{{APPID}}.svg" "{{icons-dst}}/$size/apps/{{APPID}}.svg"; \
-    done
+    install -d {{icons-dst}}
+    cp -a {{icons-src}}/. {{icons-dst}}/
 
 # Installs files
 flatpak:
     install -Dm0755 {{bin-src}} {{flatpak-bin-dst}}
     install -Dm0644 {{desktop-src}} {{desktop-dst}}
     install -Dm0644 {{metainfo-src}} {{metainfo-dst}}
-    for size in `ls {{icons-src}}`; do \
-        install -Dm0644 "{{icons-src}}/$size/apps/{{APPID}}.svg" "{{icons-dst}}/$size/apps/{{APPID}}.svg"; \
-    done
+    install -d {{icons-dst}}
+    cp -a {{icons-src}}/. {{icons-dst}}/
 
 # Uninstalls installed files
 uninstall:
     rm {{bin-dst}}
     rm {{desktop-dst}}
     rm {{metainfo-dst}}
-    for size in `ls {{icons-src}}`; do \
-        rm "{{icons-dst}}/$size/apps/{{APPID}}.svg"; \
-    done
+    rm -rf {{icons-dst}}
 
 # Vendor dependencies locally
 vendor:

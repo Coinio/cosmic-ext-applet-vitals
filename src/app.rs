@@ -30,6 +30,8 @@ use once_cell::sync::Lazy;
 use std::collections::{BTreeMap};
 use tokio_util::sync::CancellationToken;
 
+pub const GLOBAL_APP_ID: &'static str = "dev.eidolon.cosmic-vitals-applet";
+
 static AUTOSIZE_MAIN_ID: Lazy<Id> = Lazy::new(|| Id::new("autosize-main"));
 
 #[derive(Default)]
@@ -82,7 +84,7 @@ impl Application for AppState {
     type Flags = ();
     type Message = Message;
 
-    const APP_ID: &'static str = "dev.eidolon.cosmic-vitals-applet";
+    const APP_ID: &'static str = GLOBAL_APP_ID;
 
     fn core(&self) -> &Core {
         &self.core
