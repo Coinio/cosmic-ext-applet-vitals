@@ -5,7 +5,7 @@ use cosmic::widget;
 use cosmic::Element;
 use cosmic::iced::Alignment;
 use cosmic::iced_widget::Row;
-use cosmic::widget::{row, Column};
+use cosmic::widget::Column;
 
 const DEFAULT_INDICATOR_FONT_SIZE: u16 = 12;
 const DEFAULT_INDICATOR_ICON_SIZE: u16 = 18;

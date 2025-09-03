@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::env;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use once_cell::sync::Lazy;
 use crate::app::GLOBAL_APP_ID;
 

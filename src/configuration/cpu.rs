@@ -1,10 +1,9 @@
-use crate::configuration::app_configuration::{CPU_SETTINGS_WINDOW_ID, LABEL_COLOUR_SETTING_KEY, LABEL_TEXT_SETTING_KEY, MAX_SAMPLES_SETTING_KEY, UPDATE_INTERVAL_SETTING_KEY};
+use crate::configuration::app_configuration::{CPU_SETTINGS_WINDOW_ID, MAX_SAMPLES_SETTING_KEY, UPDATE_INTERVAL_SETTING_KEY};
 use crate::configuration::validation::ConfigurationValidation;
 use crate::fl;
 use crate::ui::settings_form::{
     SettingsForm, SettingsFormItem
 };
-use hex_color::HexColor;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::time::Duration;

@@ -21,7 +21,7 @@ use cosmic::cosmic_config::{Config, CosmicConfigEntry};
 use cosmic::iced::{window, Subscription};
 use cosmic::iced::{Alignment, Limits};
 use cosmic::iced_widget::{row, Column, Row};
-use cosmic::iced_winit::commands::popup::{destroy_popup, get_popup};
+use cosmic::iced_winit::commands::popup::get_popup;
 use cosmic::widget;
 use cosmic::widget::{autosize, container, Id};
 use cosmic::{cosmic_config, Application, Element};

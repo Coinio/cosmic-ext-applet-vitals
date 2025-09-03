@@ -4,7 +4,6 @@ use crate::configuration::app_configuration::{
 use crate::configuration::validation::ConfigurationValidation;
 use crate::fl;
 use crate::ui::settings_form::{SettingsForm, SettingsFormItem};
-use hex_color::HexColor;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::time::Duration;

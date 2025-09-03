@@ -8,7 +8,6 @@ use crate::monitors::disk_monitor::{DiskDirection, DiskStats};
 use crate::monitors::memory_monitor::MemoryStats;
 use crate::monitors::network_monitor::{NetworkDirection, NetworkStats};
 use cosmic::iced::window::Id;
-use cosmic::iced::Color;
 use cosmic::widget::icon::Handle;
 use crate::ui::icons::*;
 
