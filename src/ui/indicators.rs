@@ -4,8 +4,8 @@ use cosmic::applet::cosmic_panel_config::PanelSize;
 use cosmic::widget;
 use cosmic::Element;
 
-const DEFAULT_INDICATOR_FONT_SIZE: u16 = 14;
-const DEFAULT_INDICATOR_ICON_SIZE: u16 = 14;
+const DEFAULT_INDICATOR_FONT_SIZE: u16 = 12;
+const DEFAULT_INDICATOR_ICON_SIZE: u16 = 18;
 
 pub struct IndicatorsUI;
 
@@ -20,8 +20,6 @@ impl IndicatorsUI {
 
         let mut content: Vec<Element<Message>> = Vec::new();
 
-        let _label_color = display_item.label_color(&configuration);
-
         match display_item.label_icon(app_state).clone() {
             None => {}
             Some(handle) => {
@@ -32,6 +30,8 @@ impl IndicatorsUI {
         };
 
         let mut value_text = core.applet.text(display_item.text(&configuration));
+        //  .class(cosmic::theme::Text::from(_label_color));
+
         if !horizontal {
             value_text = value_text.size(Self::label_text_vertical_font_size(app_state));
         }
@@ -54,8 +54,8 @@ impl IndicatorsUI {
 
     fn label_text_vertical_font_size(app_state: &AppState) -> u16 {
         match app_state.core().applet.size {
-            cosmic::applet::Size::PanelSize(PanelSize::XS) => DEFAULT_INDICATOR_FONT_SIZE - 4,
-            cosmic::applet::Size::PanelSize(PanelSize::S) => DEFAULT_INDICATOR_FONT_SIZE - 2,
+            cosmic::applet::Size::PanelSize(PanelSize::XS) => DEFAULT_INDICATOR_FONT_SIZE - 3,
+            cosmic::applet::Size::PanelSize(PanelSize::S) => DEFAULT_INDICATOR_FONT_SIZE - 1,
             cosmic::applet::Size::PanelSize(PanelSize::M) => DEFAULT_INDICATOR_FONT_SIZE,
             cosmic::applet::Size::PanelSize(PanelSize::L) => DEFAULT_INDICATOR_FONT_SIZE + 2,
             cosmic::applet::Size::PanelSize(PanelSize::XL) => DEFAULT_INDICATOR_FONT_SIZE + 4,
