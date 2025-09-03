@@ -253,20 +253,20 @@ impl Application for AppState {
 
         let mut elements = Vec::new();
 
-        elements.extend(IndicatorsUI::content(&self, &self.cpu, is_horizontal));
-        elements.extend(IndicatorsUI::content(&self, &self.memory, is_horizontal));
-        elements.extend(IndicatorsUI::content(
+        elements.push(IndicatorsUI::content(&self, &self.cpu, is_horizontal));
+        elements.push(IndicatorsUI::content(&self, &self.memory, is_horizontal));
+        elements.push(IndicatorsUI::content(
             &self,
             &self.network[NETWORK_STAT_RX_INDEX],
             is_horizontal,
         ));
-        elements.extend(IndicatorsUI::content(
+        elements.push(IndicatorsUI::content(
             &self,
             &self.network[NETWORK_STAT_TX_INDEX],
             is_horizontal,
         ));
-        elements.extend(IndicatorsUI::content(&self, &self.disk[0], is_horizontal));
-        elements.extend(IndicatorsUI::content(&self, &self.disk[1], is_horizontal));
+        elements.push(IndicatorsUI::content(&self, &self.disk[0], is_horizontal));
+        elements.push(IndicatorsUI::content(&self, &self.disk[1], is_horizontal));
 
         let wrapper: Element<Message> = if is_horizontal {
             Row::from_vec(elements)
