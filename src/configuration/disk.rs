@@ -9,11 +9,6 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::time::Duration;
 
-pub const DISK_READ_LABEL_TEXT_SETTING_KEY: &'static str = "settings-disk-read-label-text";
-pub const DISK_WRITE_LABEL_TEXT_SETTING_KEY: &'static str = "settings-disk-write-label-text";
-pub const DISK_READ_LABEL_COLOUR_SETTING_KEY: &'static str = "settings-disk-read-label-colour";
-pub const DISK_WRITE_LABEL_COLOUR_SETTING_KEY: &'static str = "settings-disk-write-label-colour";
-
 /// The configuration for the memory monitor
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub struct DiskConfiguration {
@@ -21,25 +16,13 @@ pub struct DiskConfiguration {
     pub update_interval: Duration,
     /// The number of samples to keep and average for the final result
     pub max_samples: usize,
-    /// The download label text
-    pub read_label_text: String,
-    /// The download label colour in hex format
-    pub read_label_colour: HexColor,
-    /// The upload label text
-    pub write_label_text: String,
-    /// The upload label colour in hex format
-    pub write_label_colour: HexColor,
 }
 
 impl Default for DiskConfiguration {
     fn default() -> Self {
         Self {
             update_interval: Duration::from_secs(1),
-            max_samples: 3,
-            read_label_text: "R".to_string(),
-            read_label_colour: "#029BAC".parse().unwrap(),
-            write_label_text: "W".to_string(),
-            write_label_colour: "#029BAC".parse().unwrap(),
+            max_samples: 3
         }
     }
 }
@@ -64,40 +47,6 @@ impl DiskConfiguration {
                 settings_form.values.get(MAX_SAMPLES_SETTING_KEY).unwrap().value.clone(),
                 self.max_samples,
             ),
-            read_label_text: ConfigurationValidation::sanitise_label_text(
-                settings_form
-                    .values
-                    .get(DISK_READ_LABEL_TEXT_SETTING_KEY)
-                    .unwrap()
-                    .value
-                    .clone(),
-            ),
-            read_label_colour: ConfigurationValidation::sanitise_label_colour(
-                settings_form
-                    .values
-                    .get(DISK_READ_LABEL_COLOUR_SETTING_KEY)
-                    .unwrap()
-                    .value
-                    .clone(),
-                self.read_label_colour,
-            ),
-            write_label_text: ConfigurationValidation::sanitise_label_text(
-                settings_form
-                    .values
-                    .get(DISK_WRITE_LABEL_TEXT_SETTING_KEY)
-                    .unwrap()
-                    .value
-                    .clone(),
-            ),
-            write_label_colour: ConfigurationValidation::sanitise_label_colour(
-                settings_form
-                    .values
-                    .get(DISK_WRITE_LABEL_COLOUR_SETTING_KEY)
-                    .unwrap()
-                    .value
-                    .clone(),
-                self.write_label_colour,
-            ),
         }
     }
 
@@ -106,38 +55,6 @@ impl DiskConfiguration {
             settings_window_id: DISK_SETTINGS_WINDOW_ID.clone(),
             title: fl!("settings-disk-title"),
             values: BTreeMap::from([
-                (
-                    DISK_READ_LABEL_TEXT_SETTING_KEY,
-                    SettingsFormItem {
-                        label: fl!("settings-disk-read-label-text"),
-                        value: self.read_label_text.clone(),
-                        validator: Some(ConfigurationValidation::is_valid_label_text)
-                    },
-                ),
-                (
-                    DISK_READ_LABEL_COLOUR_SETTING_KEY,
-                    SettingsFormItem {
-                        label: fl!("settings-disk-read-label-colour"),
-                        value: self.read_label_colour.display_rgba().to_string(),
-                        validator: Some(ConfigurationValidation::is_valid_colour)
-                    },
-                ),
-                (
-                    DISK_WRITE_LABEL_TEXT_SETTING_KEY,
-                    SettingsFormItem {
-                        label: fl!("settings-disk-write-label-text"),
-                        value: self.write_label_text.clone(),
-                        validator: Some(ConfigurationValidation::is_valid_label_text)
-                    },
-                ),
-                (
-                    DISK_WRITE_LABEL_COLOUR_SETTING_KEY,
-                    SettingsFormItem {
-                        label: fl!("settings-disk-write-label-colour"),
-                        value: self.write_label_colour.display_rgba().to_string(),
-                        validator: Some(ConfigurationValidation::is_valid_colour)
-                    },
-                ),
                 (
                     UPDATE_INTERVAL_SETTING_KEY,
                     SettingsFormItem {

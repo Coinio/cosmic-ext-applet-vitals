@@ -133,7 +133,7 @@ impl Application for AppState {
 
                 match self.popup {
                     None => self.popup = Some(MAIN_SETTINGS_WINDOW_ID.clone()),
-                    Some(id) => self.popup = Some(target_id)
+                    Some(_) => self.popup = Some(target_id)
                 };
 
                 if target_id != MAIN_SETTINGS_WINDOW_ID.clone() {
@@ -160,6 +160,7 @@ impl Application for AppState {
                 if id == MAIN_SETTINGS_WINDOW_ID.clone() {
                     info!("Closing main settings window");
                     self.popup = None;
+                    self.save_configuration();
                     return cosmic::task::message(Message::StartMonitoring);
                 }
             }
