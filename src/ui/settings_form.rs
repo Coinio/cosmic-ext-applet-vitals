@@ -4,7 +4,7 @@ use crate::configuration::cpu::CpuConfiguration;
 use crate::configuration::validation::ConfigurationValidation;
 use crate::fl;
 use cosmic::iced::window;
-use cosmic::iced_widget::{container, Container};
+use cosmic::iced_widget::{container, row, Container};
 use cosmic::widget::{settings};
 use cosmic::{widget, Theme};
 use std::collections::BTreeMap;
@@ -99,11 +99,13 @@ impl SettingsForm {
             widget::list_column()
                 .padding(2)
                 .spacing(0)
-                .divider_padding(2)
-                .add(widget::text(&self.title).font(cosmic::iced::Font {
-                    weight: cosmic::iced::font::Weight::ExtraBold,
-                    ..Default::default()
-                }));
+                .divider_padding(2);
+
+        let back_button = widget::button::custom(widget::icon::from_name("go-previous-symbolic")
+            .size(16).icon())
+            .on_press(Message::SettingsPopupOpened(MAIN_SETTINGS_WINDOW_ID.clone()));
+
+        column = column.add(settings::item(self.title.clone(), back_button));
 
         for (form_value_key, settings_form_item) in self.values.iter() {
             let input = match settings_form_item.input_type {
