@@ -24,7 +24,7 @@ impl MainSettingsForm {
         for settings_form in settings_form_options.values() {
 
             let next_button = widget::button::custom(widget::icon::from_name("go-next-symbolic").size(16).icon())
-                .on_press(Message::ToggleMainSettingsPopup(settings_form.settings_window_id));
+                .on_press(Message::SettingsPopupOpened(settings_form.settings_window_id));
 
             column = column.add(settings::item(settings_form.title.clone(), next_button));
         }

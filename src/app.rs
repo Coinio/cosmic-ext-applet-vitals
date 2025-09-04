@@ -27,7 +27,7 @@ use cosmic::widget::{autosize, container, Id};
 use cosmic::{cosmic_config, Application, Element};
 use log::{error, info};
 use once_cell::sync::Lazy;
-use std::collections::{BTreeMap};
+use std::collections::BTreeMap;
 use tokio_util::sync::CancellationToken;
 
 pub const GLOBAL_APP_ID: &'static str = "dev.eidolon.cosmic-vitals-applet";
@@ -60,7 +60,7 @@ pub struct AppState {
 #[derive(Debug, Clone)]
 pub enum Message {
     /// Toggle the main settings popup
-    ToggleMainSettingsPopup(window::Id),
+    SettingsPopupOpened(window::Id),
     /// A settings popup was closed
     SettingsPopupClosed(window::Id),
     /// Start monitoring the system resources
@@ -128,51 +128,38 @@ impl Application for AppState {
 
     fn update(&mut self, message: Self::Message) -> Task<Self::Message> {
         match message {
-            Message::ToggleMainSettingsPopup(target_id) => {
+            Message::SettingsPopupOpened(target_id) => {
                 info!("Opening settings popup with id: {}", target_id);
-                if let Some(current_id) = self.popup.take() {
-                    if current_id == target_id {
-                        return destroy_popup(current_id);
-                    } else {
-                        self.popup = Some(target_id);
 
-                        let mut popup_settings = self.core.applet.get_popup_settings(
-                            self.core.main_window_id().unwrap(),
-                            target_id,
-                            None,
-                            None,
-                            None,
-                        );
-                        popup_settings.positioner.size_limits = Limits::NONE
-                            .max_width(372.0)
-                            .min_width(300.0)
-                            .min_height(200.0)
-                            .max_height(1080.0);
+                match self.popup {
+                    None => self.popup = Some(MAIN_SETTINGS_WINDOW_ID.clone()),
+                    Some(id) => self.popup = Some(target_id)
+                };
 
-                        return Task::batch(vec![destroy_popup(current_id), get_popup(popup_settings)]);
-                    }
-                } else {
-                    self.popup = Some(target_id);
-
-                    let mut popup_settings = self.core.applet.get_popup_settings(
-                        self.core.main_window_id().unwrap(),
-                        target_id,
-                        None,
-                        None,
-                        None,
-                    );
-                    popup_settings.positioner.size_limits = Limits::NONE
-                        .max_width(372.0)
-                        .min_width(300.0)
-                        .min_height(200.0)
-                        .max_height(1080.0);
-                    return get_popup(popup_settings);
+                if target_id != MAIN_SETTINGS_WINDOW_ID.clone() {
+                    return Task::none();
                 }
+
+                let mut popup_settings = self.core.applet.get_popup_settings(
+                    self.core.main_window_id().unwrap(),
+                    MAIN_SETTINGS_WINDOW_ID.clone(),
+                    None,
+                    None,
+                    None,
+                );
+
+                popup_settings.positioner.size_limits = Limits::NONE
+                    .max_width(372.0)
+                    .min_width(300.0)
+                    .min_height(200.0)
+                    .max_height(1080.0);
+
+                return get_popup(popup_settings);
             }
             Message::SettingsPopupClosed(id) => {
-                if self.popup.as_ref() == Some(&id) {
+                if id == MAIN_SETTINGS_WINDOW_ID.clone() {
+                    info!("Closing main settings window");
                     self.popup = None;
-                    self.save_configuration();
                     return cosmic::task::message(Message::StartMonitoring);
                 }
             }
@@ -221,7 +208,7 @@ impl Application for AppState {
 
                     }
                 })
-                    .map(cosmic::Action::App);
+                .map(cosmic::Action::App);
             }
             Message::MemoryUpdate(memory_usage) => {
                 self.memory = memory_usage;
@@ -299,16 +286,18 @@ impl Application for AppState {
         let button = widget::button::custom(wrapper)
             .class(cosmic::theme::Button::AppletIcon)
             .padding(padding)
-            .on_press(Message::ToggleMainSettingsPopup(MAIN_SETTINGS_WINDOW_ID.clone()));
+            .on_press(Message::SettingsPopupOpened(MAIN_SETTINGS_WINDOW_ID.clone()));
 
         autosize::autosize(container(button), AUTOSIZE_MAIN_ID.clone()).into()
     }
 
     fn view_window(&'_ self, id: window::Id) -> Element<'_, Self::Message> {
-        let content = if id == MAIN_SETTINGS_WINDOW_ID.clone() {
+        let content_id = self.popup.unwrap_or_else(|| MAIN_SETTINGS_WINDOW_ID.clone());
+
+        let content = if content_id == MAIN_SETTINGS_WINDOW_ID.clone() {
             MainSettingsForm::content(self.app_configuration())
         } else {
-            match self.settings_forms.get(&id) {
+            match self.settings_forms.get(&content_id) {
                 None => container(row!["No settings window configured."]),
                 Some(form) => form.content(),
             }
