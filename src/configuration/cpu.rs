@@ -2,10 +2,8 @@ use crate::configuration::app_configuration::{
     CPU_SETTINGS_WINDOW_ID, HIDE_INDICATOR_SETTING_KEY, MAX_SAMPLES_SETTING_KEY, UPDATE_INTERVAL_SETTING_KEY,
 };
 use crate::configuration::validation::ConfigurationValidation;
-use crate::fl;
-use crate::ui::settings_form::{SettingsForm, SettingsFormInputType, SettingsFormItem};
+use crate::ui::settings_form::SettingsForm;
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
 use std::time::Duration;
 
 /// The configuration for the CPU monitor
@@ -66,39 +64,5 @@ impl CpuConfiguration {
         }
     }
 
-    pub fn to_settings_form(&self) -> SettingsForm {
-        SettingsForm {
-            settings_window_id: CPU_SETTINGS_WINDOW_ID.clone(),
-            title: fl!("settings-cpu-title"),
-            values: BTreeMap::from([
-                (
-                    HIDE_INDICATOR_SETTING_KEY,
-                    SettingsFormItem {
-                        label: fl!("settings-hide-indicator"),
-                        value: self.hide_indicator.to_string(),
-                        input_type: SettingsFormInputType::CheckBox,
-                        validator: Some(ConfigurationValidation::is_valid_boolean),
-                    },
-                ),
-                (
-                    UPDATE_INTERVAL_SETTING_KEY,
-                    SettingsFormItem {
-                        label: fl!("settings-update-interval"),
-                        value: self.update_interval.as_millis().to_string(),
-                        input_type: SettingsFormInputType::String,
-                        validator: Some(ConfigurationValidation::is_valid_interval),
-                    },
-                ),
-                (
-                    MAX_SAMPLES_SETTING_KEY,
-                    SettingsFormItem {
-                        label: fl!("settings-max-samples"),
-                        value: self.max_samples.to_string(),
-                        input_type: SettingsFormInputType::String,
-                        validator: Some(ConfigurationValidation::is_valid_max_samples),
-                    },
-                ),
-            ]),
-        }
-    }
+    
 }

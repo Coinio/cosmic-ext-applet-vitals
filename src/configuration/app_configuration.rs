@@ -38,10 +38,10 @@ pub struct AppConfiguration {
 impl AppConfiguration {
     pub fn settings_form_options(&self) -> BTreeMap<window::Id, SettingsForm> {
         BTreeMap::from([
-            (CPU_SETTINGS_WINDOW_ID.clone(), self.cpu.to_settings_form()),
-            (MEMORY_SETTINGS_WINDOW_ID.clone(), self.memory.to_settings_form()),
-            (NETWORK_SETTINGS_WINDOW_ID.clone(), self.network.to_settings_form()),
-            (DISK_SETTINGS_WINDOW_ID.clone(), self.disk.to_settings_form())
+            (CPU_SETTINGS_WINDOW_ID.clone(), SettingsForm::from_cpu_config(&self.cpu)),
+            (MEMORY_SETTINGS_WINDOW_ID.clone(), SettingsForm::from_memory_config(&self.memory)),
+            (NETWORK_SETTINGS_WINDOW_ID.clone(), SettingsForm::from_network_config(&self.network)),        
+            (DISK_SETTINGS_WINDOW_ID.clone(), SettingsForm::from_disk_config(&self.disk))
         ])
     }
 }

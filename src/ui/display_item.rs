@@ -1,4 +1,4 @@
-use crate::app::{AppState};
+use crate::app::AppState;
 use crate::configuration::app_configuration::{
     AppConfiguration, CPU_SETTINGS_WINDOW_ID, DISK_SETTINGS_WINDOW_ID, MEMORY_SETTINGS_WINDOW_ID,
     NETWORK_SETTINGS_WINDOW_ID,
@@ -7,15 +7,16 @@ use crate::monitors::cpu_monitor::CpuStats;
 use crate::monitors::disk_monitor::{DiskDirection, DiskStats};
 use crate::monitors::memory_monitor::MemoryStats;
 use crate::monitors::network_monitor::{NetworkDirection, NetworkStats};
+use crate::ui::icons::*;
 use cosmic::iced::window::Id;
 use cosmic::widget::icon::Handle;
-use crate::ui::icons::*;
 
 /// This trait defines what will display for each resource, i.e. CPU, RAM, etc, on the panel
 pub trait DisplayItem {
     fn settings_window_id(&self) -> cosmic::iced::window::Id;
     fn label_icon(&self, app_state: &AppState) -> Option<&Handle>;
     fn text(&self, app_config: &AppConfiguration) -> String;
+    fn is_hidden(&self, app_config: &AppConfiguration) -> bool;
 }
 
 impl DisplayItem for MemoryStats {
@@ -31,11 +32,15 @@ impl DisplayItem for MemoryStats {
             ICONS.get(MEMORY_USAGE_ICON_LIGHT_KEY)
         }
     }
-    
+
     fn text(&self, app_config: &AppConfiguration) -> String {
         let used_gb = self.used_kib as f64 * 1024.0 / 1_000_000_000.0;
 
         format!("{:.1}GB", used_gb)
+    }
+
+    fn is_hidden(&self, app_config: &AppConfiguration) -> bool {
+        app_config.memory.hide_indicator
     }
 }
 
@@ -55,6 +60,10 @@ impl DisplayItem for CpuStats {
 
     fn text(&self, app_config: &AppConfiguration) -> String {
         format!("{:.1}%", self.cpu_usage_percent)
+    }
+
+    fn is_hidden(&self, app_config: &AppConfiguration) -> bool {
+        app_config.cpu.hide_indicator
     }
 }
 
@@ -88,6 +97,10 @@ impl DisplayItem for NetworkStats {
         let mib = self.bytes as f64 / (1024.0 * 1024.0);
         format!("{:.1}MiB/s", mib)
     }
+
+    fn is_hidden(&self, app_config: &AppConfiguration) -> bool {
+        app_config.network.hide_indicator
+    }
 }
 
 impl DisplayItem for DiskStats {
@@ -108,5 +121,9 @@ impl DisplayItem for DiskStats {
     fn text(&self, app_config: &AppConfiguration) -> String {
         let mib_per_second = self.bytes as f64 / (1024.0 * 1024.0);
         format!("{:.1}MiB/s", mib_per_second)
+    }
+
+    fn is_hidden(&self, app_config: &AppConfiguration) -> bool {
+        app_config.disk.hide_indicator
     }
 }

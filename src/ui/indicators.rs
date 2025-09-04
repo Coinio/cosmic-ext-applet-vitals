@@ -1,11 +1,11 @@
 use crate::app::{AppState, Message};
 use crate::ui::display_item::DisplayItem;
 use cosmic::applet::cosmic_panel_config::PanelSize;
-use cosmic::widget;
-use cosmic::Element;
 use cosmic::iced::Alignment;
 use cosmic::iced_widget::Row;
+use cosmic::widget;
 use cosmic::widget::Column;
+use cosmic::Element;
 
 const DEFAULT_INDICATOR_FONT_SIZE: u16 = 12;
 const DEFAULT_INDICATOR_ICON_SIZE: u16 = 18;
@@ -17,9 +17,13 @@ impl IndicatorsUI {
         app_state: &'a AppState,
         display_item: &'a impl DisplayItem,
         horizontal: bool,
-    ) -> Element<'a, Message> {
+    ) -> Option<Element<'a, Message>> {
         let core = app_state.core();
         let configuration = app_state.app_configuration();
+
+        if display_item.is_hidden(&configuration) {
+            return None
+        }
 
         let mut content: Vec<Element<Message>> = Vec::new();
 
@@ -43,14 +47,14 @@ impl IndicatorsUI {
         
         let row: Element<Message> = if horizontal {
             Row::from_vec(content)
+                .spacing(app_state.core().applet.suggested_padding(false))
                 .align_y(Alignment::Center)
-                .spacing(app_state.core().applet.suggested_padding(true))
                 .into()
         } else {
             Column::from_vec(content).align_x(Alignment::Center).into()
         };
 
-        Element::from(row)
+        Some(Element::from(row))
     }
 
     fn label_icon_size(app_state: &AppState) -> u16 {

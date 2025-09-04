@@ -184,26 +184,36 @@ impl Application for AppState {
                     let mut network_update_interval = tokio::time::interval(config.network.update_interval);
                     let mut disk_update_interval = tokio::time::interval(config.disk.update_interval);
 
-                    let mut memory_monitor = MemoryMonitor::new(ProcMemInfoSensorReader, &config);
-                    let mut cpuinfo_reader = (!config.cpu.hide_indicator).then(|| CpuMonitor::new(ProcStatSensorReader, &config));
-                    let mut network_monitor = NetworkMonitor::new(ProcNetDevReader, &config);
-                    let mut disk_monitor = DiskMonitor::new(ProcDiskStatsReader, &config);
+                    let mut memory_monitor = (!config.memory.hide_indicator)
+                        .then(|| MemoryMonitor::new(ProcMemInfoSensorReader, &config));
+                    let mut cpuinfo_reader = (!config.cpu.hide_indicator)
+                        .then(|| CpuMonitor::new(ProcStatSensorReader, &config));
+                    let mut network_monitor = (!config.network.hide_indicator)
+                        .then(|| NetworkMonitor::new(ProcNetDevReader, &config));
+                    let mut disk_monitor = (!config.disk.hide_indicator)
+                        .then(|| DiskMonitor::new(ProcDiskStatsReader, &config));
 
                     loop {
                         tokio::select! {
-                            _ = memory_update_interval.tick() => {
-                                yield Message::MemoryUpdate(memory_monitor.poll().unwrap_or_default());
-                            },
-                            _ = cpu_update_interval.tick(), if !config.cpu.hide_indicator => {
-                                if let Some(cpu) = cpuinfo_reader.as_mut() {
-                                    yield Message::CpuUpdate(cpu.poll().unwrap_or_default());
+                            _ = memory_update_interval.tick(), if !config.memory.hide_indicator => {
+                                if let Some(memory_monitor) = memory_monitor.as_mut() {
+                                    yield Message::MemoryUpdate(memory_monitor.poll().unwrap_or_default());
                                 }
                             },
-                            _ = network_update_interval.tick() => {
-                                yield Message::NetworkUpdate(network_monitor.poll().unwrap_or_default());
+                            _ = cpu_update_interval.tick(), if !config.cpu.hide_indicator => {
+                                if let Some(cpu_monitor) = cpuinfo_reader.as_mut() {
+                                    yield Message::CpuUpdate(cpu_monitor.poll().unwrap_or_default());
+                                }
                             },
-                            _ = disk_update_interval.tick() => {
-                                yield Message::DiskUpdate(disk_monitor.poll().unwrap_or_default());
+                            _ = network_update_interval.tick(), if !config.network.hide_indicator => {
+                                if let Some(network_monitor) = network_monitor.as_mut() {
+                                    yield Message::NetworkUpdate(network_monitor.poll().unwrap_or_default());
+                                }
+                            },
+                            _ = disk_update_interval.tick(), if !config.disk.hide_indicator => {
+                                if let Some(disk_monitor) = disk_monitor.as_mut() {
+                                    yield Message::DiskUpdate(disk_monitor.poll().unwrap_or_default());
+                                }
                             },
                             _ = cancellation_token.cancelled() => {
                                 break;
@@ -212,7 +222,7 @@ impl Application for AppState {
 
                     }
                 })
-                    .map(cosmic::Action::App);
+                .map(cosmic::Action::App);
             }
             Message::MemoryUpdate(memory_usage) => {
                 self.memory = memory_usage;
@@ -232,8 +242,7 @@ impl Application for AppState {
             }
             Message::SettingsFormUpdate(settings_form_event) => {
                 match settings_form_event {
-                    SettingsFormEvent::StringFieldUpdated(value) | 
-                    SettingsFormEvent::CheckBoxUpdated(value) => {
+                    SettingsFormEvent::StringFieldUpdated(value) | SettingsFormEvent::CheckBoxUpdated(value) => {
                         let form = self.settings_forms.get_mut(&value.settings_window_id).expect(
                             format!("No settings form configured with key: {}", value.settings_window_id).as_str(),
                         );
@@ -256,24 +265,26 @@ impl Application for AppState {
     fn view(&self) -> Element<'_, Self::Message> {
         let is_horizontal = matches!(self.core.applet.anchor, PanelAnchor::Top | PanelAnchor::Bottom);
 
-        let mut elements = Vec::new();
+        let mut elements: Vec<Element<Message>> = Vec::new();
 
-        if !self.configuration.cpu.hide_indicator {
-            elements.push(IndicatorsUI::content(&self, &self.cpu, is_horizontal));
+        if let Some(element) = IndicatorsUI::content(&self, &self.cpu, is_horizontal) {
+            elements.push(element);
         }
-        elements.push(IndicatorsUI::content(&self, &self.memory, is_horizontal));
-        elements.push(IndicatorsUI::content(
-            &self,
-            &self.network[NETWORK_STAT_RX_INDEX],
-            is_horizontal,
-        ));
-        elements.push(IndicatorsUI::content(
-            &self,
-            &self.network[NETWORK_STAT_TX_INDEX],
-            is_horizontal,
-        ));
-        elements.push(IndicatorsUI::content(&self, &self.disk[0], is_horizontal));
-        elements.push(IndicatorsUI::content(&self, &self.disk[1], is_horizontal));
+        if let Some(element) = IndicatorsUI::content(&self, &self.memory, is_horizontal) {
+            elements.push(element);
+        }
+        if let Some(element) = IndicatorsUI::content(&self, &self.network[NETWORK_STAT_RX_INDEX], is_horizontal) {
+            elements.push(element);
+        }
+        if let Some(element) = IndicatorsUI::content(&self, &self.network[NETWORK_STAT_TX_INDEX], is_horizontal) {
+            elements.push(element);
+        }
+        if let Some(element) = IndicatorsUI::content(&self, &self.disk[0], is_horizontal) {
+            elements.push(element);
+        }
+        if let Some(element) = IndicatorsUI::content(&self, &self.disk[1], is_horizontal) {
+            elements.push(element);
+        }
 
         let wrapper: Element<Message> = if is_horizontal {
             Row::from_vec(elements)

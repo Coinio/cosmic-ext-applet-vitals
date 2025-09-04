@@ -1,10 +1,17 @@
 use crate::app::Message;
+use crate::configuration::app_configuration::*;
+use crate::configuration::cpu::CpuConfiguration;
+use crate::configuration::validation::ConfigurationValidation;
 use crate::fl;
 use cosmic::iced::window;
 use cosmic::iced_widget::{container, Container};
-use cosmic::widget::{settings, Checkbox};
+use cosmic::widget::{settings};
 use cosmic::{widget, Theme};
 use std::collections::BTreeMap;
+use std::time::Duration;
+use crate::configuration::disk::DiskConfiguration;
+use crate::configuration::memory::MemoryConfiguration;
+use crate::configuration::network::NetworkConfiguration;
 
 #[derive(Debug, Clone)]
 pub enum SettingsFormEvent {
@@ -39,6 +46,54 @@ pub struct SettingsForm {
 }
 
 impl SettingsForm {
+    pub fn from_cpu_config(config: &CpuConfiguration) -> SettingsForm {
+        SettingsForm {
+            settings_window_id: CPU_SETTINGS_WINDOW_ID.clone(),
+            title: fl!("settings-cpu-title"),
+            values: build_shared_settings(
+                config.hide_indicator,
+                config.update_interval,
+                config.max_samples,
+            ),
+        }
+    }
+
+    pub fn from_memory_config(config: &MemoryConfiguration) -> SettingsForm {
+        SettingsForm {
+            settings_window_id: MEMORY_SETTINGS_WINDOW_ID.clone(),
+            title: fl!("settings-memory-title"),
+            values: build_shared_settings(
+                config.hide_indicator,
+                config.update_interval,
+                config.max_samples,
+            ),
+        }
+    }
+
+    pub fn from_network_config(config: &NetworkConfiguration) -> SettingsForm {
+        SettingsForm {
+            settings_window_id: NETWORK_SETTINGS_WINDOW_ID.clone(),
+            title: fl!("settings-network-title"),
+            values: build_shared_settings(
+                config.hide_indicator,
+                config.update_interval,
+                config.max_samples,
+            ),
+        }
+    }
+
+    pub fn from_disk_config(config: &DiskConfiguration) -> SettingsForm {
+        SettingsForm {
+            settings_window_id: DISK_SETTINGS_WINDOW_ID.clone(),
+            title: fl!("settings-disk-title"),
+            values: build_shared_settings(
+                config.hide_indicator,
+                config.update_interval,
+                config.max_samples,
+            ),
+        }
+    }
+
     pub fn content(&self) -> Container<'_, Message, Theme> {
         let mut column =
             widget::list_column()
@@ -92,4 +147,42 @@ impl SettingsForm {
 
         container(column)
     }
+}
+
+/// This is used to build the shared settings between all the settings forms.
+/// Extend the BTreeMap returned by this with any sensor-specific settings if required.
+fn build_shared_settings(
+    hide_indicator: bool,
+    update_interval: Duration,
+    max_samples: usize,
+) -> BTreeMap<&'static str, SettingsFormItem> {
+    BTreeMap::from([
+        (
+            HIDE_INDICATOR_SETTING_KEY,
+            SettingsFormItem {
+                label: fl!("settings-hide-indicator"),
+                value: hide_indicator.to_string(),
+                input_type: SettingsFormInputType::CheckBox,
+                validator: Some(ConfigurationValidation::is_valid_boolean),
+            },
+        ),
+        (
+            UPDATE_INTERVAL_SETTING_KEY,
+            SettingsFormItem {
+                label: fl!("settings-update-interval"),
+                value: update_interval.as_millis().to_string(),
+                input_type: SettingsFormInputType::String,
+                validator: Some(ConfigurationValidation::is_valid_interval),
+            },
+        ),
+        (
+            MAX_SAMPLES_SETTING_KEY,
+            SettingsFormItem {
+                label: fl!("settings-max-samples"),
+                value: max_samples.to_string(),
+                input_type: SettingsFormInputType::String,
+                validator: Some(ConfigurationValidation::is_valid_max_samples),
+            },
+        ),
+    ])
 }
