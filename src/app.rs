@@ -28,6 +28,7 @@ use cosmic::{cosmic_config, Application, Element};
 use log::{error, info};
 use once_cell::sync::Lazy;
 use std::collections::BTreeMap;
+use std::time::Duration;
 use tokio_util::sync::CancellationToken;
 
 pub const GLOBAL_APP_ID: &'static str = "dev.eidolon.cosmic-vitals-applet";
@@ -133,7 +134,7 @@ impl Application for AppState {
 
                 match self.popup {
                     None => self.popup = Some(MAIN_SETTINGS_WINDOW_ID.clone()),
-                    Some(_) => self.popup = Some(target_id)
+                    Some(_) => self.popup = Some(target_id),
                 };
 
                 if target_id != MAIN_SETTINGS_WINDOW_ID.clone() {
@@ -184,7 +185,7 @@ impl Application for AppState {
                     let mut disk_update_interval = tokio::time::interval(config.disk.update_interval);
 
                     let mut memory_monitor = MemoryMonitor::new(ProcMemInfoSensorReader, &config);
-                    let mut cpuinfo_reader = CpuMonitor::new(ProcStatSensorReader, &config);
+                    let mut cpuinfo_reader = (!config.cpu.hide_indicator).then(|| CpuMonitor::new(ProcStatSensorReader, &config));
                     let mut network_monitor = NetworkMonitor::new(ProcNetDevReader, &config);
                     let mut disk_monitor = DiskMonitor::new(ProcDiskStatsReader, &config);
 
@@ -193,8 +194,10 @@ impl Application for AppState {
                             _ = memory_update_interval.tick() => {
                                 yield Message::MemoryUpdate(memory_monitor.poll().unwrap_or_default());
                             },
-                            _ = cpu_update_interval.tick() => {
-                                yield Message::CpuUpdate(cpuinfo_reader.poll().unwrap_or_default())
+                            _ = cpu_update_interval.tick(), if !config.cpu.hide_indicator => {
+                                if let Some(cpu) = cpuinfo_reader.as_mut() {
+                                    yield Message::CpuUpdate(cpu.poll().unwrap_or_default());
+                                }
                             },
                             _ = network_update_interval.tick() => {
                                 yield Message::NetworkUpdate(network_monitor.poll().unwrap_or_default());
@@ -209,7 +212,7 @@ impl Application for AppState {
 
                     }
                 })
-                .map(cosmic::Action::App);
+                    .map(cosmic::Action::App);
             }
             Message::MemoryUpdate(memory_usage) => {
                 self.memory = memory_usage;
@@ -229,17 +232,18 @@ impl Application for AppState {
             }
             Message::SettingsFormUpdate(settings_form_event) => {
                 match settings_form_event {
-                    SettingsFormEvent::StringFieldUpdated(value) => {
+                    SettingsFormEvent::StringFieldUpdated(value) | 
+                    SettingsFormEvent::CheckBoxUpdated(value) => {
                         let form = self.settings_forms.get_mut(&value.settings_window_id).expect(
                             format!("No settings form configured with key: {}", value.settings_window_id).as_str(),
                         );
 
-                        let label_text = form
+                        let settings_form_item = form
                             .values
                             .get_mut(value.form_value_key)
                             .expect(format!("No form row with key: {}", value.form_value_key).as_str());
 
-                        label_text.value = value.value;
+                        settings_form_item.value = value.value;
                     }
                 }
 
@@ -254,7 +258,9 @@ impl Application for AppState {
 
         let mut elements = Vec::new();
 
-        elements.push(IndicatorsUI::content(&self, &self.cpu, is_horizontal));
+        if !self.configuration.cpu.hide_indicator {
+            elements.push(IndicatorsUI::content(&self, &self.cpu, is_horizontal));
+        }
         elements.push(IndicatorsUI::content(&self, &self.memory, is_horizontal));
         elements.push(IndicatorsUI::content(
             &self,

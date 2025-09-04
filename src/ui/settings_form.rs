@@ -2,13 +2,20 @@ use crate::app::Message;
 use crate::fl;
 use cosmic::iced::window;
 use cosmic::iced_widget::{container, Container};
-use cosmic::widget::settings;
+use cosmic::widget::{settings, Checkbox};
 use cosmic::{widget, Theme};
 use std::collections::BTreeMap;
 
 #[derive(Debug, Clone)]
 pub enum SettingsFormEvent {
     StringFieldUpdated(SettingsFormEventValue),
+    CheckBoxUpdated(SettingsFormEventValue),
+}
+
+#[derive(Debug, Clone)]
+pub enum SettingsFormInputType {
+    String,
+    CheckBox,
 }
 
 #[derive(Debug, Clone)]
@@ -21,7 +28,8 @@ pub struct SettingsFormEventValue {
 pub struct SettingsFormItem {
     pub label: String,
     pub value: String,
-    pub validator: Option<fn(&str) -> Result<(), String>>
+    pub input_type: SettingsFormInputType,
+    pub validator: Option<fn(&str) -> Result<(), String>>,
 }
 
 pub struct SettingsForm {
@@ -42,26 +50,44 @@ impl SettingsForm {
                     ..Default::default()
                 }));
 
-        for (form_value_key, settings_form) in self.values.iter() {
-            let text_input = widget::text_input(fl!("settings-empty"), &settings_form.value).on_input(|new_value| {
-                Message::SettingsFormUpdate(SettingsFormEvent::StringFieldUpdated(SettingsFormEventValue {
-                    settings_window_id: self.settings_window_id,
-                    form_value_key,
-                    value: new_value,
-                }))
-            });
+        for (form_value_key, settings_form_item) in self.values.iter() {
+            let input = match settings_form_item.input_type {
+                SettingsFormInputType::String => {
+                    let text_input =
+                        widget::text_input(fl!("settings-empty"), &settings_form_item.value).on_input(|new_value| {
+                            Message::SettingsFormUpdate(SettingsFormEvent::StringFieldUpdated(SettingsFormEventValue {
+                                settings_window_id: self.settings_window_id,
+                                form_value_key,
+                                value: new_value,
+                            }))
+                        });
 
-            let validator = settings_form.validator.unwrap_or(|_| Ok(()));
+                    let validator = settings_form_item.validator.unwrap_or(|_| Ok(()));
 
-            let field = match validator(&settings_form.value) {
-                Ok(_) => text_input.width(150),
-                Err(error_text) => text_input
-                    .width(150)
-                    .error(error_text.clone())
-                    .helper_text(error_text.clone()),
+                    let field = match validator(&settings_form_item.value) {
+                        Ok(_) => text_input.width(150),
+                        Err(error_text) => text_input
+                            .width(150)
+                            .error(error_text.clone())
+                            .helper_text(error_text.clone()),
+                    };
+
+                    column = column.add(settings::item(settings_form_item.label.clone(), field));
+                }
+                SettingsFormInputType::CheckBox => {
+                    let converted_value = settings_form_item.value.parse::<bool>().unwrap_or(false);
+
+                    let checkbox_input = widget::checkbox("", converted_value).on_toggle(|new_value| {
+                        Message::SettingsFormUpdate(SettingsFormEvent::CheckBoxUpdated(SettingsFormEventValue {
+                            settings_window_id: self.settings_window_id,
+                            form_value_key,
+                            value: new_value.to_string(),
+                        }))
+                    });
+
+                    column = column.add(settings::item(settings_form_item.label.clone(), checkbox_input));
+                }
             };
-
-            column = column.add(settings::item(settings_form.label.clone(), field));
         }
 
         container(column)

@@ -53,6 +53,27 @@ impl ConfigurationValidation {
 
         Duration::from_millis(cmp::max(value, SENSOR_INTERVAL_MINIMUM_IN_MS))
     }
+    
+    pub fn is_valid_boolean(input: &str) -> Result<(), String> {
+        _ = input.trim().parse::<bool>().map_err(|_| "Not valid boolean".to_string())?;
+        
+        Ok(())
+    }
+    
+    pub fn sanitise_boolean_input(new_input: String, previous_value: bool) -> bool {
+        let validation_result = Self::is_valid_boolean(new_input.as_str());
+        
+        if validation_result.is_err() {
+            return previous_value;
+        }
+        
+        let value = new_input
+            .trim()
+            .parse::<bool>()
+            .expect("Failed to parse. Should always be valid here.");
+        
+        value
+    }
 
     pub fn is_valid_max_samples(input: &str) -> Result<(), String> {
         let error_message = fl!(
@@ -245,6 +266,56 @@ mod max_samples_tests {
         let test_value = min + 5;
         let result = ConfigurationValidation::sanitise_max_samples(test_value.to_string(), old_value);
         assert_eq!(result, test_value);
+    }
+}
+
+#[cfg(test)]
+mod boolean_tests {
+    use super::ConfigurationValidation;
+
+    #[test]
+    fn is_valid_boolean_accepts_true_and_false() {
+        assert!(ConfigurationValidation::is_valid_boolean("true").is_ok());
+        assert!(ConfigurationValidation::is_valid_boolean("false").is_ok());
+        assert!(ConfigurationValidation::is_valid_boolean("  true  ").is_ok());
+        assert!(ConfigurationValidation::is_valid_boolean("\nfalse\t").is_ok());
+    }
+
+    #[test]
+    fn is_valid_boolean_rejects_invalid_inputs() {
+        assert!(ConfigurationValidation::is_valid_boolean("").is_err());
+        assert!(ConfigurationValidation::is_valid_boolean(" ").is_err());
+        assert!(ConfigurationValidation::is_valid_boolean("yes").is_err());
+        assert!(ConfigurationValidation::is_valid_boolean("no").is_err());
+        assert!(ConfigurationValidation::is_valid_boolean("1").is_err());
+        assert!(ConfigurationValidation::is_valid_boolean("0").is_err());
+        assert!(ConfigurationValidation::is_valid_boolean("TRUE").is_err());
+        assert!(ConfigurationValidation::is_valid_boolean("FALSE").is_err());
+    }
+
+    #[test]
+    fn sanitise_boolean_input_returns_previous_when_invalid() {
+        let previous = true;
+        let result = ConfigurationValidation::sanitise_boolean_input("maybe".to_string(), previous);
+        assert_eq!(result, previous);
+    }
+
+    #[test]
+    fn sanitise_boolean_input_parses_and_returns_value_when_valid() {
+        let previous = false;
+        let res_true = ConfigurationValidation::sanitise_boolean_input("true".to_string(), previous);
+        assert_eq!(res_true, true);
+
+        let previous2 = true;
+        let res_false = ConfigurationValidation::sanitise_boolean_input("false".to_string(), previous2);
+        assert_eq!(res_false, false);
+    }
+
+    #[test]
+    fn sanitise_boolean_input_handles_whitespace() {
+        let previous = false;
+        let res = ConfigurationValidation::sanitise_boolean_input("  true  ".to_string(), previous);
+        assert_eq!(res, true);
     }
 }
 
