@@ -12,7 +12,7 @@ use crate::sensors::proc_disk_stats_reader::ProcDiskStatsReader;
 use crate::sensors::proc_meminfo_reader::ProcMemInfoSensorReader;
 use crate::sensors::proc_net_dev_reader::ProcNetDevReader;
 use crate::sensors::proc_stat_reader::ProcStatSensorReader;
-use crate::ui::indicators::IndicatorsUI;
+use crate::ui::indicators::{IndicatorsUI, DEFAULT_INDICATOR_SPACING};
 use crate::ui::main_settings_form::MainSettingsForm;
 use crate::ui::settings_form::{SettingsForm, SettingsFormEvent};
 use cosmic::app::{Core, Task};
@@ -28,7 +28,6 @@ use cosmic::{cosmic_config, Application, Element};
 use log::{error, info};
 use once_cell::sync::Lazy;
 use std::collections::BTreeMap;
-use std::time::Duration;
 use tokio_util::sync::CancellationToken;
 
 pub const GLOBAL_APP_ID: &'static str = "dev.eidolon.cosmic-vitals-applet";
@@ -289,7 +288,7 @@ impl Application for AppState {
         let wrapper: Element<Message> = if is_horizontal {
             Row::from_vec(elements)
                 .align_y(Alignment::Center)
-                .spacing(self.core.applet.suggested_padding(true))
+                .spacing(DEFAULT_INDICATOR_SPACING)
                 .into()
         } else {
             Column::from_vec(elements).align_x(Alignment::Center).into()

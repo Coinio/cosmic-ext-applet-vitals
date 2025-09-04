@@ -8,7 +8,9 @@ use cosmic::widget::Column;
 use cosmic::Element;
 
 const DEFAULT_INDICATOR_FONT_SIZE: u16 = 12;
-const DEFAULT_INDICATOR_ICON_SIZE: u16 = 18;
+const DEFAULT_INDICATOR_ICON_SIZE: u16 = 16;
+
+pub const DEFAULT_INDICATOR_SPACING: u16 = 16;
 
 pub struct IndicatorsUI;
 
