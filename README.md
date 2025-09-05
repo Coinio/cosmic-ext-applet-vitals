@@ -11,17 +11,17 @@ I started building this to learn some Rust and play around with Pop_OS COSMIC. I
 * Show Network upload / download. This filters out virtual devices so won't count upload / download twice when using a VPN, etc.
 * Show Disk upload / down. This counts reads / writes to logical disks, not partitions, etc.
 * Things that can be configured:
-  * Read Intervals - How often each monitor is polled.
+  * Read Intervals - How often each monitor is polled
   * Max Samples - The number of samples to keep to average the readings across
-  * Show / Hide each monitor.
+  * Show / Hide each monitor
 
 ## Things I might fix
 
 * Calculate the maximum width of the labels so the indicators don't expand / contract
 * Improve the vertical layout
 * Dynamically colour the icons based on the theme accent colours
-* Add configurable units KiBs/MiBs/GiBs or progressively change units depending on how large / small reading is.
-* Add option to hide icons.
+* Add configurable units KiBs/MiBs/GiBs or progressively change units depending on how large / small reading is
+* Add option to hide icons
 
 ## Screenshots
 
