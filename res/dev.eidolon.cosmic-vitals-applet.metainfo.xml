@@ -4,16 +4,16 @@
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>GPL-3.0-only</project_license>
   <project_group>COSMIC</project_group>
-  <developer_name>YourName</developer_name>
-  <update_contact>your@email.com</update_contact>
-  <url type="homepage"></url>
+  <developer_name>Coinio</developer_name>
+  <update_contact>jlmygithub@pm.me</update_contact>
+  <url type="homepage">https://github.com/Coinio/cosmic-vitals</url>
   <name>COSMIC Vitals Applet</name>
   <summary>A </summary>
   <description>
     <p>A minimal applet for COSMIC to display basic stats, i.e. cpu/ram usage.</p>
   </description>
   <launchable type="desktop-id">dev.eidolon.cosmic-vitals-applet.desktop</launchable>
-  <icon type="remote" height="256" width="256">https://raw.githubusercontent.com/edfloreshz/cosmic-applet-template/master/res/icons/hicolor/256x256/apps/dev.eidolon.cosmic-vitals-applet.svg</icon>
+  <icon type="remote" height="256" width="256">https://raw.githubusercontent.com/Coinio/cosmic-vitals/refs/heads/main/res/icons/dev.eidolon.cosmic-vitals-applet.svg</icon>
   <screenshots>
   </screenshots>
   <provides>
