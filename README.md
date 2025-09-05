@@ -22,6 +22,7 @@ I started building this to learn some Rust and play around with Pop_OS COSMIC. I
 * Dynamically colour the icons based on the theme accent colours
 * Add configurable units KiBs/MiBs/GiBs or progressively change units depending on how large / small reading is
 * Add option to hide icons
+* Better logging into journalctl
 
 ## Screenshots
 
