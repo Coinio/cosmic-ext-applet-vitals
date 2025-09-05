@@ -1,18 +1,31 @@
-# COSMIC Applet Template
+# COSMIC Vitals
 
-A template for COSMIC applets.
+A minimal applet to display basic system resource usage, i.e. CPU, Memory, Network. 
 
-## Getting Started
+I started building this to learn some Rust and play around with Pop_OS COSMIC. It's definitely a WIP but works pretty well for my needs. Maybe it will be useful to some other somebody else fighting with Rust/Iced/libcosmic, etc.
 
-To get started, click the "Use this template" button above. This will create a new repository in your account with the contents of this template.
+## Features
 
-Once you have created a new repository from this template, you can clone it to your local machine and start developing your COSMIC applet.
+* Show CPU Usage
+* Show RAM Usage
+* Show Network upload / download. This filters out virtual devices so won't count upload / download twice when using a VPN, etc.
+* Show Disk upload / down. This counts reads / writes to logical disks, not partitions, etc.
+* Things that can be configured:
+  * Read Intervals - How often each monitor is polled.
+  * Max Samples - The number of samples to keep to average the readings across
+  * Show / Hide each monitor.
 
-## Development
+## Things I might fix
 
-When you open the repository in your code editor, you will see a lot of comments in the code. These comments are there to help you get a basic understanding of what each part of the code does.
+* Calculate the maximum width of the labels so the indicators don't expand / contract
+* Improve the vertical layout
+* Dynamically colour the icons based on the theme accent colours
+* Add configurable units KiBs/MiBs/GiBs or progressively change units depending on how large / small reading is.
+* Add option to hide icons.
 
-Once you feel comfortable with it, refer back to the [COSMIC documentation](https://pop-os.github.io/libcosmic/cosmic/) for more information on how to build COSMIC applets.
+## Screenshots
+
+
 
 ## Install
 
