@@ -2,7 +2,7 @@
 
 A minimal applet to display basic system resource usage, i.e. CPU, Memory, Network. 
 
-I started building this to learn some Rust and play around with Pop_OS COSMIC. It's definitely a WIP but works pretty well for my needs. Maybe it will be useful to some other somebody else fighting with Rust/Iced/libcosmic, etc.
+I started building this to learn some Rust and play around with Pop_OS COSMIC. It's definitely a WIP but works pretty well for my needs. Hopefully the code will be useful to somebody else fighting with iced/libcosmic, etc.
 
 ## Features
 
@@ -25,7 +25,12 @@ I started building this to learn some Rust and play around with Pop_OS COSMIC. I
 
 ## Screenshots
 
-
+##### Horizontal Layout
+![Horizontal Panel Layout](https://github.com/Coinio/cosmic-vitals/blob/main/res/screenshots/horizontal-layout.png)
+##### Vertical Layout
+![Vertical Panel Layout](https://github.com/Coinio/cosmic-vitals/blob/main/res/screenshots/vertical-layout.jpg)
+##### Main Settings Page
+![Main Settings Page (booooring)](https://github.com/Coinio/cosmic-vitals/blob/main/res/screenshots/main-settings.png)
 
 ## Install
 
