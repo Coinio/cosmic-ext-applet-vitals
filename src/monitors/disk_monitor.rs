@@ -5,8 +5,8 @@ use log::info;
 use std::cmp;
 use std::collections::VecDeque;
 
-pub const DISK_STAT_READ_INDEX: usize = 0;
-pub const DISK_STAT_WRITE_INDEX: usize = 1;
+const DISK_STAT_READ_INDEX: usize = 0;
+const DISK_STAT_WRITE_INDEX: usize = 1;
 
 const SECTOR_SIZE_BYTES: u64 = 512;
 

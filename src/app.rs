@@ -308,7 +308,7 @@ impl Application for AppState {
         autosize::autosize(container(button), AUTOSIZE_MAIN_ID.clone()).into()
     }
 
-    fn view_window(&'_ self, id: window::Id) -> Element<'_, Self::Message> {
+    fn view_window(&'_ self, _id: window::Id) -> Element<'_, Self::Message> {
         let content_id = self.popup.unwrap_or_else(|| MAIN_SETTINGS_WINDOW_ID.clone());
 
         let content = if content_id == MAIN_SETTINGS_WINDOW_ID.clone() {

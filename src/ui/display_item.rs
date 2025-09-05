@@ -1,29 +1,20 @@
 use crate::app::AppState;
-use crate::configuration::app_configuration::{
-    AppConfiguration, CPU_SETTINGS_WINDOW_ID, DISK_SETTINGS_WINDOW_ID, MEMORY_SETTINGS_WINDOW_ID,
-    NETWORK_SETTINGS_WINDOW_ID,
-};
+use crate::configuration::app_configuration::AppConfiguration;
 use crate::monitors::cpu_monitor::CpuStats;
 use crate::monitors::disk_monitor::{DiskDirection, DiskStats};
 use crate::monitors::memory_monitor::MemoryStats;
 use crate::monitors::network_monitor::{NetworkDirection, NetworkStats};
 use crate::ui::icons::*;
-use cosmic::iced::window::Id;
 use cosmic::widget::icon::Handle;
 
 /// This trait defines what will display for each resource, i.e. CPU, RAM, etc, on the panel
 pub trait DisplayItem {
-    fn settings_window_id(&self) -> cosmic::iced::window::Id;
     fn label_icon(&self, app_state: &AppState) -> Option<&Handle>;
     fn text(&self, app_config: &AppConfiguration) -> String;
     fn is_hidden(&self, app_config: &AppConfiguration) -> bool;
 }
 
 impl DisplayItem for MemoryStats {
-    fn settings_window_id(&self) -> cosmic::iced::window::Id {
-        MEMORY_SETTINGS_WINDOW_ID.clone()
-    }
-
     fn label_icon(&self, app_state: &AppState) -> Option<&Handle> {
         let is_dark = app_state.core().system_theme().theme_type.is_dark();
         if is_dark {
@@ -33,7 +24,7 @@ impl DisplayItem for MemoryStats {
         }
     }
 
-    fn text(&self, app_config: &AppConfiguration) -> String {
+    fn text(&self, _app_config: &AppConfiguration) -> String {
         let used_gb = self.used_kib as f64 * 1024.0 / 1_000_000_000.0;
 
         format!("{:.1}GB", used_gb)
@@ -45,10 +36,6 @@ impl DisplayItem for MemoryStats {
 }
 
 impl DisplayItem for CpuStats {
-    fn settings_window_id(&self) -> cosmic::iced::window::Id {
-        CPU_SETTINGS_WINDOW_ID.clone()
-    }
-
     fn label_icon(&self, app_state: &AppState) -> Option<&Handle> {
         let is_dark = app_state.core().system_theme().theme_type.is_dark();
         if is_dark {
@@ -58,7 +45,7 @@ impl DisplayItem for CpuStats {
         }
     }
 
-    fn text(&self, app_config: &AppConfiguration) -> String {
+    fn text(&self, _app_config: &AppConfiguration) -> String {
         format!("{:.1}%", self.cpu_usage_percent)
     }
 
@@ -68,10 +55,6 @@ impl DisplayItem for CpuStats {
 }
 
 impl DisplayItem for NetworkStats {
-    fn settings_window_id(&self) -> Id {
-        NETWORK_SETTINGS_WINDOW_ID.clone()
-    }
-
     fn label_icon(&self, app_state: &AppState) -> Option<&Handle> {
         let is_dark = app_state.core().system_theme().theme_type.is_dark();
 
@@ -93,7 +76,7 @@ impl DisplayItem for NetworkStats {
         }
     }
 
-    fn text(&self, app_config: &AppConfiguration) -> String {
+    fn text(&self, _app_config: &AppConfiguration) -> String {
         let mib = self.bytes as f64 / (1024.0 * 1024.0);
         format!("{:.1}MiB/s", mib)
     }
@@ -104,10 +87,6 @@ impl DisplayItem for NetworkStats {
 }
 
 impl DisplayItem for DiskStats {
-    fn settings_window_id(&self) -> Id {
-        DISK_SETTINGS_WINDOW_ID.clone()
-    }
-
     fn label_icon(&self, app_state: &AppState) -> Option<&Handle> {
         let is_dark = app_state.core().system_theme().theme_type.is_dark();
         match self.direction {
@@ -118,7 +97,7 @@ impl DisplayItem for DiskStats {
         }
     }
 
-    fn text(&self, app_config: &AppConfiguration) -> String {
+    fn text(&self, _app_config: &AppConfiguration) -> String {
         let mib_per_second = self.bytes as f64 / (1024.0 * 1024.0);
         format!("{:.1}MiB/s", mib_per_second)
     }

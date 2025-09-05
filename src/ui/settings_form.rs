@@ -4,7 +4,7 @@ use crate::configuration::cpu::CpuConfiguration;
 use crate::configuration::validation::ConfigurationValidation;
 use crate::fl;
 use cosmic::iced::window;
-use cosmic::iced_widget::{container, row, Container};
+use cosmic::iced_widget::{container, Container};
 use cosmic::widget::{settings};
 use cosmic::{widget, Theme};
 use std::collections::BTreeMap;
@@ -108,7 +108,7 @@ impl SettingsForm {
         column = column.add(settings::item(self.title.clone(), back_button));
 
         for (form_value_key, settings_form_item) in self.values.iter() {
-            let input = match settings_form_item.input_type {
+            match settings_form_item.input_type {
                 SettingsFormInputType::String => {
                     let text_input =
                         widget::text_input(fl!("settings-empty"), &settings_form_item.value).on_input(|new_value| {
