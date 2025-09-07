@@ -2,11 +2,13 @@ use crate::app::{AppState, Message};
 use crate::ui::display_item::DisplayItem;
 use crate::ui::icons::{APP_LOGO_ICON, ICONS};
 use cosmic::applet::cosmic_panel_config::PanelSize;
-use cosmic::iced::Alignment;
+use cosmic::iced::{Alignment, Color};
 use cosmic::iced_widget::Row;
+use cosmic::theme::Svg;
 use cosmic::widget;
-use cosmic::widget::{row, Column};
+use cosmic::widget::{row, svg, Column};
 use cosmic::Element;
+use std::rc::Rc;
 
 const DEFAULT_INDICATOR_FONT_SIZE: u16 = 12;
 const DEFAULT_INDICATOR_ICON_SIZE: u16 = 16;
@@ -30,10 +32,26 @@ impl IndicatorsUI {
 
         let mut content: Vec<Element<Message>> = Vec::new();
 
+        let display_item_color = display_item.label_icon_color(app_state);
+
         match display_item.label_icon(app_state).clone() {
             None => {}
             Some(handle) => {
-                let label_icon = widget::icon::icon(handle.clone()).size(Self::label_icon_size(app_state));
+                let label_icon = widget::icon::icon(handle.clone())
+                    .size(Self::label_icon_size(app_state))
+                    .class(Svg::Custom {
+                        0: Rc::new(move |t| {
+                            let mut style = svg::Catalog::style(t, &Svg::default(), svg::Status::Idle);
+
+                            style.color = Some(Color::from_rgba(
+                                display_item_color.red,
+                                display_item_color.green,
+                                display_item_color.blue,
+                                display_item_color.alpha,
+                            ));
+                            style
+                        }),
+                    });
 
                 content.push(Element::from(label_icon));
             }
@@ -59,7 +77,7 @@ impl IndicatorsUI {
         Some(Element::from(row))
     }
 
-    pub fn no_indicators_content(app_state: &AppState) -> Element<Message> {        
+    pub fn no_indicators_content(app_state: &AppState) -> Element<Message> {
         let handle = ICONS.get(APP_LOGO_ICON);
 
         match handle {

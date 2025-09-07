@@ -1,3 +1,4 @@
+use cosmic::cosmic_theme::palette::Srgba;
 use crate::app::AppState;
 use crate::configuration::app_configuration::AppConfiguration;
 use crate::monitors::cpu_monitor::CpuStats;
@@ -10,6 +11,7 @@ use cosmic::widget::icon::Handle;
 /// This trait defines what will display for each resource, i.e. CPU, RAM, etc, on the panel
 pub trait DisplayItem {
     fn label_icon(&self, app_state: &AppState) -> Option<&Handle>;
+    fn label_icon_color(&self, app_state: &AppState) -> Srgba;
     fn text(&self, app_config: &AppConfiguration) -> String;
     fn is_hidden(&self, app_config: &AppConfiguration) -> bool;
 }
@@ -22,6 +24,10 @@ impl DisplayItem for MemoryStats {
         } else {
             ICONS.get(MEMORY_USAGE_ICON_LIGHT_KEY)
         }
+    }
+
+    fn label_icon_color(&self, app_state: &AppState) -> Srgba {
+        app_state.core().system_theme().cosmic().palette.accent_orange
     }
 
     fn text(&self, _app_config: &AppConfiguration) -> String {
@@ -43,6 +49,10 @@ impl DisplayItem for CpuStats {
         } else {
             ICONS.get(CPU_USAGE_ICON_LIGHT_KEY)
         }
+    }
+
+    fn label_icon_color(&self, app_state: &AppState) -> Srgba {
+        app_state.core().system_theme().cosmic().palette.accent_indigo
     }
 
     fn text(&self, _app_config: &AppConfiguration) -> String {
@@ -76,6 +86,14 @@ impl DisplayItem for NetworkStats {
         }
     }
 
+    fn label_icon_color(&self, app_state: &AppState) -> Srgba {
+        match self.direction {
+            NetworkDirection::Download => app_state.core().system_theme().cosmic().palette
+                .accent_green,
+            NetworkDirection::Upload => app_state.core().system_theme().cosmic().palette.accent_red
+        }
+    }
+
     fn text(&self, _app_config: &AppConfiguration) -> String {
         let mib = self.bytes as f64 / (1024.0 * 1024.0);
         format!("{:.1}MiB/s", mib)
@@ -94,6 +112,14 @@ impl DisplayItem for DiskStats {
             DiskDirection::Read => ICONS.get(DISK_READ_ICON_LIGHT_KEY),
             DiskDirection::Write if is_dark => ICONS.get(DISK_WRITE_ICON_DARK_KEY),
             DiskDirection::Write => ICONS.get(DISK_WRITE_ICON_LIGHT_KEY),
+        }
+    }
+
+    fn label_icon_color(&self, app_state: &AppState) -> Srgba {
+        match self.direction {
+            DiskDirection::Read => app_state.core().system_theme().cosmic().palette
+                .accent_purple,
+            DiskDirection::Write => app_state.core().system_theme().cosmic().palette.accent_warm_grey
         }
     }
 
