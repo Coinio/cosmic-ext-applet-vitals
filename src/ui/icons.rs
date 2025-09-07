@@ -1,9 +1,10 @@
+use crate::app::GLOBAL_APP_ID;
+use once_cell::sync::Lazy;
 use std::collections::HashMap;
 use std::env;
 use std::path::PathBuf;
-use once_cell::sync::Lazy;
-use crate::app::GLOBAL_APP_ID;
 
+pub const APP_LOGO_ICON: &str = "app-logo-icon";
 pub const CPU_USAGE_ICON_DARK_KEY: &str = "cpu-usage-icon-dark";
 pub const CPU_USAGE_ICON_LIGHT_KEY: &str = "cpu-usage-icon-light";
 pub const MEMORY_USAGE_ICON_DARK_KEY: &str = "memory-usage-icon-dark";
@@ -18,7 +19,6 @@ pub const DISK_WRITE_ICON_DARK_KEY: &str = "disk-write-usage-icon-dark";
 pub const DISK_WRITE_ICON_LIGHT_KEY: &str = "disk-write-usage-icon-light";
 
 fn icon_base_dir() -> PathBuf {
-
     // In debug, look in res/icons
     if cfg!(debug_assertions) {
         return PathBuf::from("res/icons");
@@ -54,6 +54,11 @@ pub static ICONS: Lazy<HashMap<&'static str, cosmic::widget::icon::Handle>> = La
     let base = icon_base_dir();
 
     let path = |name: &str| base.join(name).to_string_lossy().to_string();
+
+    cache.insert(
+        APP_LOGO_ICON,
+        cosmic::widget::icon::from_path(path("dev.eidolon.cosmic-vitals-applet.svg").into()).into(),
+    );
 
     cache.insert(
         CPU_USAGE_ICON_DARK_KEY,

@@ -1,10 +1,11 @@
 use crate::app::{AppState, Message};
 use crate::ui::display_item::DisplayItem;
+use crate::ui::icons::{APP_LOGO_ICON, ICONS};
 use cosmic::applet::cosmic_panel_config::PanelSize;
 use cosmic::iced::Alignment;
 use cosmic::iced_widget::Row;
 use cosmic::widget;
-use cosmic::widget::Column;
+use cosmic::widget::{row, Column};
 use cosmic::Element;
 
 const DEFAULT_INDICATOR_FONT_SIZE: u16 = 12;
@@ -24,7 +25,7 @@ impl IndicatorsUI {
         let configuration = app_state.app_configuration();
 
         if display_item.is_hidden(&configuration) {
-            return None
+            return None;
         }
 
         let mut content: Vec<Element<Message>> = Vec::new();
@@ -32,8 +33,7 @@ impl IndicatorsUI {
         match display_item.label_icon(app_state).clone() {
             None => {}
             Some(handle) => {
-                let label_icon = widget::icon::icon(handle.clone())
-                    .size(Self::label_icon_size(app_state));
+                let label_icon = widget::icon::icon(handle.clone()).size(Self::label_icon_size(app_state));
 
                 content.push(Element::from(label_icon));
             }
@@ -46,7 +46,7 @@ impl IndicatorsUI {
         }
 
         content.push(Element::from(value_text));
-        
+
         let row: Element<Message> = if horizontal {
             Row::from_vec(content)
                 .spacing(app_state.core().applet.suggested_padding(false))
@@ -57,6 +57,15 @@ impl IndicatorsUI {
         };
 
         Some(Element::from(row))
+    }
+
+    pub fn no_indicators_content(app_state: &AppState) -> Element<Message> {        
+        let handle = ICONS.get(APP_LOGO_ICON);
+
+        match handle {
+            None => Element::new(row()),
+            Some(handle) => Element::from(widget::icon::icon(handle.clone()).size(Self::label_icon_size(app_state))),
+        }
     }
 
     fn label_icon_size(app_state: &AppState) -> u16 {

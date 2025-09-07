@@ -285,6 +285,10 @@ impl Application for AppState {
             elements.push(element);
         }
 
+        if elements.is_empty() {
+            elements.push(IndicatorsUI::no_indicators_content(&self));
+        }
+
         let wrapper: Element<Message> = if is_horizontal {
             Row::from_vec(elements)
                 .align_y(Alignment::Center)
