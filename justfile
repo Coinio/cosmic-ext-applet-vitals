@@ -25,6 +25,11 @@ metainfo-dst := clean(rootdir / prefix) / 'share' / 'metainfo' / metainfo
 icons-src := 'res' / 'icons'
 icons-dst := clean(rootdir / prefix) / 'share' / APPID / 'icons'
 
+# Path to main app icon (for desktop environment icon theme)
+app-icon-src := icons-src / (APPID + '.svg')
+hicolor-icon-dst := clean(rootdir / prefix) / 'share' / 'icons' / 'hicolor' / 'scalable' / 'apps' / (APPID + '.svg')
+flatpak-hicolor-icon-dst := clean(rootdir / flatpak-prefix) / 'share' / 'icons' / 'hicolor' / 'scalable' / 'apps' / (APPID + '.svg')
+
 # Default recipe which runs `just build-release`
 default: build-release
 
@@ -71,6 +76,8 @@ install:
     install -Dm0644 {{metainfo-src}} {{metainfo-dst}}
     install -d {{icons-dst}}
     cp -a {{icons-src}}/. {{icons-dst}}/
+    # Install main icon into the standard icon theme path for desktop environments
+    install -Dm0644 {{app-icon-src}} {{hicolor-icon-dst}}
 
 # Installs files
 flatpak:
@@ -79,6 +86,8 @@ flatpak:
     install -Dm0644 {{metainfo-src}} {{metainfo-dst}}
     install -d {{icons-dst}}
     cp -a {{icons-src}}/. {{icons-dst}}/
+    # Install main icon into hicolor theme path inside Flatpak
+    install -Dm0644 {{app-icon-src}} {{flatpak-hicolor-icon-dst}}
 
 # Uninstalls installed files
 uninstall:
@@ -86,6 +95,7 @@ uninstall:
     rm {{desktop-dst}}
     rm {{metainfo-dst}}
     rm -rf {{icons-dst}}
+    rm {{hicolor-icon-dst}}
 
 # Vendor dependencies locally
 vendor:

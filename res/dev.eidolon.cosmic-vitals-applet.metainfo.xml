@@ -13,7 +13,7 @@
     <p>A minimal applet for COSMIC to display basic stats, i.e. cpu/ram usage.</p>
   </description>
   <launchable type="desktop-id">dev.eidolon.cosmic-vitals-applet.desktop</launchable>
-  <icon type="remote" height="256" width="256">https://raw.githubusercontent.com/Coinio/cosmic-vitals/refs/heads/main/res/icons/dev.eidolon.cosmic-vitals-applet.svg</icon>
+  <icon type="stock">dev.eidolon.cosmic-vitals-applet.svg</icon>
   <screenshots>
   </screenshots>
   <provides>
