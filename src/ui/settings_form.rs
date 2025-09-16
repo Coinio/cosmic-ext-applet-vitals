@@ -6,14 +6,14 @@ use crate::configuration::memory::MemoryConfiguration;
 use crate::configuration::network::NetworkConfiguration;
 use crate::configuration::validation::ConfigurationValidation;
 use crate::fl;
+use crate::ui::color_util::ColorUtil;
 use cosmic::cosmic_theme::palette::Srgba;
-use cosmic::iced::{window, Background, Radius};
+use cosmic::iced::{window, Background, Color, Radius};
 use cosmic::iced_widget::{container, Container};
-use cosmic::widget::{settings};
+use cosmic::widget::{settings, Column};
 use cosmic::{widget, Theme};
 use std::collections::BTreeMap;
 use std::time::Duration;
-use crate::ui::color_util::ColorUtil;
 
 #[derive(Debug, Clone)]
 pub enum SettingsFormEvent {
@@ -25,7 +25,7 @@ pub enum SettingsFormEvent {
 pub enum SettingsFormInputType {
     String,
     CheckBox,
-    ColorPicker,
+    ColourPicker,
 }
 
 #[derive(Debug, Clone)]
@@ -48,6 +48,8 @@ pub struct SettingsForm {
     pub values: BTreeMap<&'static str, SettingsFormItem>,
 }
 
+pub struct ColourOptions {}
+
 impl SettingsForm {
     pub fn from_cpu_config(config: &CpuConfiguration) -> SettingsForm {
         let mut values = build_shared_settings(config.hide_indicator, config.update_interval, config.max_samples);
@@ -56,7 +58,7 @@ impl SettingsForm {
             SettingsFormItem {
                 label: fl!("settings-label-colour"),
                 value: config.label_colour.clone().unwrap_or_default(),
-                input_type: SettingsFormInputType::ColorPicker,
+                input_type: SettingsFormInputType::ColourPicker,
                 validator: None,
             },
         );
@@ -74,7 +76,7 @@ impl SettingsForm {
             SettingsFormItem {
                 label: fl!("settings-label-colour"),
                 value: config.label_colour.clone().unwrap_or_default(),
-                input_type: SettingsFormInputType::ColorPicker,
+                input_type: SettingsFormInputType::ColourPicker,
                 validator: None,
             },
         );
@@ -92,7 +94,7 @@ impl SettingsForm {
             SettingsFormItem {
                 label: fl!("settings-network-rx-colour"),
                 value: config.label_colour_rx.clone().unwrap_or_default(),
-                input_type: SettingsFormInputType::ColorPicker,
+                input_type: SettingsFormInputType::ColourPicker,
                 validator: None,
             },
         );
@@ -101,7 +103,7 @@ impl SettingsForm {
             SettingsFormItem {
                 label: fl!("settings-network-tx-colour"),
                 value: config.label_colour_tx.clone().unwrap_or_default(),
-                input_type: SettingsFormInputType::ColorPicker,
+                input_type: SettingsFormInputType::ColourPicker,
                 validator: None,
             },
         );
@@ -119,7 +121,7 @@ impl SettingsForm {
             SettingsFormItem {
                 label: fl!("settings-disk-read-colour"),
                 value: config.label_colour_read.clone().unwrap_or_default(),
-                input_type: SettingsFormInputType::ColorPicker,
+                input_type: SettingsFormInputType::ColourPicker,
                 validator: None,
             },
         );
@@ -128,7 +130,7 @@ impl SettingsForm {
             SettingsFormItem {
                 label: fl!("settings-disk-write-colour"),
                 value: config.label_colour_write.clone().unwrap_or_default(),
-                input_type: SettingsFormInputType::ColorPicker,
+                input_type: SettingsFormInputType::ColourPicker,
                 validator: None,
             },
         );
@@ -184,67 +186,69 @@ impl SettingsForm {
 
                     column = column.add(settings::item(settings_form_item.label.clone(), checkbox_input));
                 }
-                SettingsFormInputType::ColorPicker => {
+                SettingsFormInputType::ColourPicker => {
                     let palette = &app_state.core().system_theme().cosmic().palette;
-                    // Available palette keys and display names
-                    let options: [(&str, Srgba); 7] = [
-                        ("Default", palette.accent_green),
-                        ("indigo", palette.accent_indigo),
-                        ("orange", palette.accent_orange),
-                        ("green", palette.accent_green),
-                        ("red", palette.accent_red),
-                        ("purple", palette.accent_purple),
-                        ("warm_grey", palette.accent_warm_grey),
+                    let mut colour_picker_column: Column<Message> = widget::column().spacing(8);
+
+                    let options: [Srgba; 12] = [
+                        palette.bright_green,
+                        palette.accent_green,                        
+                        palette.accent_indigo,
+                        palette.ext_indigo,                        
+                        palette.accent_orange,
+                        palette.accent_red,
+                        palette.accent_purple,
+                        palette.accent_warm_grey,
+                        palette.accent_pink,
+                        palette.accent_yellow,
+                        palette.accent_blue,
+                        palette.ext_blue
                     ];
 
-                    let mut row = widget::row();
-                    row = row.spacing(8);
+                    let mut row = widget::row().spacing(8);
 
-                    for (key, colour) in options {
-                        let is_selected = settings_form_item.value == key;
-                        let mut button = widget::button::custom("").height(25).width(25).class
-                            (cosmic::theme::style::Button::Custom {
-                            active: Box::new(move |_, t| {
-                                cosmic::widget::button::Style {
+                    for colour in options {
+                        let is_selected = settings_form_item.value == ColorUtil::convert_srgba_to_hex_string(colour);
+
+                        let mut button = widget::button::custom("").height(25).width(25).class(
+                            cosmic::theme::style::Button::Custom {
+                                active: Box::new(move |_, t| widget::button::Style {
                                     background: Some(Background::Color(colour.into())),
-                                    text_color: Some(t.cosmic().palette.neutral_8.into()),
-                                    border_radius: Radius::new(2.0),
-                                    //border: Some(Border::rounded(1.0)),
+                                    text_color: None,
+                                    border_radius: Radius::new(3.0),
+                                    border_color: if is_selected { Color::WHITE } else { Color::TRANSPARENT },
+                                    border_width: if is_selected { 3.0 } else { 0.0 },
+
                                     ..Default::default()
-                                }
-                            }),
-                            disabled: Box::new(|_| Default::default()),
-                            hovered: Box::new(|_, t| Default::default()),
-                            pressed: Box::new(|_, t| Default::default()),
-                        });
-                        // Highlight selected option
-                        if is_selected {
-                            button = button.class(cosmic::theme::style::Button::Custom {
-                                active: Box::new(move |_, t| {
-                                    cosmic::widget::button::Style {
-                                        background: Some(Background::Color(t.cosmic().accent.base.into())),
-                                        text_color: Some(t.cosmic().palette.neutral_8.into()),
-                                        //border: Some(Border::rounded(1.0)),
-                                        ..Default::default()
-                                    }
                                 }),
                                 disabled: Box::new(|_| Default::default()),
-                                hovered: Box::new(|_, t| Default::default()),
-                                pressed: Box::new(|_, t| Default::default()),
-                            });
-                        }
+                                hovered: Box::new(move |_, t| widget::button::Style {
+                                    background: Some(Background::Color(colour.into())),
+                                    text_color: None,
+                                    border_radius: Radius::new(3.0),
+                                    border_color: if is_selected { Color::WHITE } else { Color::TRANSPARENT },
+                                    border_width: if is_selected { 3.0 } else { 0.0 },
 
-                        let b = button.on_press(Message::SettingsFormUpdate(SettingsFormEvent::StringFieldUpdated(
+                                    ..Default::default()
+                                }),
+                                pressed: Box::new(|_, t| Default::default()),
+                            },
+                        );
+
+                        button = button.on_press(Message::SettingsFormUpdate
+                            (SettingsFormEvent::StringFieldUpdated(
                             SettingsFormEventValue {
                                 settings_window_id: self.settings_window_id,
                                 form_value_key,
                                 value: ColorUtil::convert_srgba_to_hex_string(colour),
                             },
                         )));
-                        row = row.push(b);
+                        row = row.push(button);
                     }
 
-                    column = column.add(row);
+                    colour_picker_column = colour_picker_column.push(settings_form_item.label.as_str());
+                    colour_picker_column = colour_picker_column.push(row.wrap());
+                    column = column.add(colour_picker_column);
                 }
             };
         }
