@@ -1,4 +1,3 @@
-use cosmic::cosmic_theme::palette::Srgba;
 use crate::app::AppState;
 use crate::configuration::app_configuration::AppConfiguration;
 use crate::monitors::cpu_monitor::CpuStats;
@@ -6,12 +5,13 @@ use crate::monitors::disk_monitor::{DiskDirection, DiskStats};
 use crate::monitors::memory_monitor::MemoryStats;
 use crate::monitors::network_monitor::{NetworkDirection, NetworkStats};
 use crate::ui::icons::*;
+use cosmic::iced::Color;
 use cosmic::widget::icon::Handle;
 
 /// This trait defines what will display for each resource, i.e. CPU, RAM, etc, on the panel
 pub trait DisplayItem {
     fn label_icon(&self, app_state: &AppState) -> Option<&Handle>;
-    fn label_icon_color(&self, app_state: &AppState) -> Srgba;
+    fn label_icon_color(&self, app_state: &AppState) -> Color;
     fn text(&self, app_config: &AppConfiguration) -> String;
     fn is_hidden(&self, app_config: &AppConfiguration) -> bool;
 }
@@ -26,8 +26,15 @@ impl DisplayItem for MemoryStats {
         }
     }
 
-    fn label_icon_color(&self, app_state: &AppState) -> Srgba {
-        app_state.core().system_theme().cosmic().palette.accent_orange
+    fn label_icon_color(&self, app_state: &AppState) -> Color {
+        let colour = app_state
+            .app_configuration()
+            .memory
+            .label_colour
+            .as_deref()
+            .unwrap_or_default();
+
+        Color::parse(colour).unwrap_or(Color::WHITE)
     }
 
     fn text(&self, _app_config: &AppConfiguration) -> String {
@@ -51,8 +58,15 @@ impl DisplayItem for CpuStats {
         }
     }
 
-    fn label_icon_color(&self, app_state: &AppState) -> Srgba {
-        app_state.core().system_theme().cosmic().palette.accent_indigo
+    fn label_icon_color(&self, app_state: &AppState) -> Color {
+        let colour = app_state
+            .app_configuration()
+            .cpu
+            .label_colour
+            .as_deref()
+            .unwrap_or_default();
+
+        Color::parse(colour).unwrap_or(Color::WHITE)
     }
 
     fn text(&self, _app_config: &AppConfiguration) -> String {
@@ -86,11 +100,28 @@ impl DisplayItem for NetworkStats {
         }
     }
 
-    fn label_icon_color(&self, app_state: &AppState) -> Srgba {
+    fn label_icon_color(&self, app_state: &AppState) -> Color {
         match self.direction {
-            NetworkDirection::Download => app_state.core().system_theme().cosmic().palette
-                .accent_green,
-            NetworkDirection::Upload => app_state.core().system_theme().cosmic().palette.accent_red
+            NetworkDirection::Download => {
+                let colour = app_state
+                    .app_configuration()
+                    .network
+                    .label_colour_rx
+                    .as_deref()
+                    .unwrap_or_default();
+
+                Color::parse(colour).unwrap_or(Color::WHITE)
+            }
+            NetworkDirection::Upload => {
+                let colour = app_state
+                    .app_configuration()
+                    .network
+                    .label_colour_tx
+                    .as_deref()
+                    .unwrap_or_default();
+
+                Color::parse(colour).unwrap_or(Color::WHITE)
+            }
         }
     }
 
@@ -115,11 +146,28 @@ impl DisplayItem for DiskStats {
         }
     }
 
-    fn label_icon_color(&self, app_state: &AppState) -> Srgba {
+    fn label_icon_color(&self, app_state: &AppState) -> Color {
         match self.direction {
-            DiskDirection::Read => app_state.core().system_theme().cosmic().palette
-                .accent_purple,
-            DiskDirection::Write => app_state.core().system_theme().cosmic().palette.accent_warm_grey
+            DiskDirection::Read => {
+                let colour = app_state
+                    .app_configuration()
+                    .disk
+                    .label_colour_read
+                    .as_deref()
+                    .unwrap_or_default();
+
+                Color::parse(colour).unwrap_or(Color::WHITE)
+            }
+            DiskDirection::Write => {
+                let colour = app_state
+                    .app_configuration()
+                    .disk
+                    .label_colour_write
+                    .as_deref()
+                    .unwrap_or_default();
+
+                Color::parse(colour).unwrap_or(Color::WHITE)
+            }
         }
     }
 

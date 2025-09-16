@@ -1,4 +1,7 @@
-use crate::configuration::app_configuration::{DISK_SETTINGS_WINDOW_ID, HIDE_INDICATOR_SETTING_KEY, MAX_SAMPLES_SETTING_KEY, UPDATE_INTERVAL_SETTING_KEY};
+use crate::configuration::app_configuration::{
+    DISK_READ_COLOUR_SETTING_KEY, DISK_SETTINGS_WINDOW_ID, DISK_WRITE_COLOUR_SETTING_KEY, HIDE_INDICATOR_SETTING_KEY,
+    MAX_SAMPLES_SETTING_KEY, UPDATE_INTERVAL_SETTING_KEY,
+};
 use crate::configuration::validation::ConfigurationValidation;
 use crate::ui::settings_form::SettingsForm;
 use serde::{Deserialize, Serialize};
@@ -13,6 +16,10 @@ pub struct DiskConfiguration {
     pub update_interval: Duration,
     /// The number of samples to keep and average for the final result
     pub max_samples: usize,
+    /// Selected colour for Read indicator as Hex string
+    pub label_colour_read: Option<String>,
+    /// Selected colour for Write indicator as Hex string
+    pub label_colour_write: Option<String>,
 }
 
 impl Default for DiskConfiguration {
@@ -20,7 +27,9 @@ impl Default for DiskConfiguration {
         Self {
             hide_indicator: false,
             update_interval: Duration::from_secs(1),
-            max_samples: 3
+            max_samples: 3,
+            label_colour_read: None,
+            label_colour_write: None,
         }
     }
 }
@@ -59,6 +68,22 @@ impl DiskConfiguration {
                     .clone(),
                 self.max_samples,
             ),
+            label_colour_read: Some(
+                settings_form
+                    .values
+                    .get(DISK_READ_COLOUR_SETTING_KEY)
+                    .expect("Read colour missing from settings form options")
+                    .value
+                    .clone(),
+            ),
+            label_colour_write: Some(
+                settings_form
+                    .values
+                    .get(DISK_WRITE_COLOUR_SETTING_KEY)
+                    .expect("Write colour missing from settings form options")
+                    .value
+                    .clone(),
+            ),
         }
-    }  
+    }
 }

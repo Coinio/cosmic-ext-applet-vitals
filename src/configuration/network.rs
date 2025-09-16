@@ -13,6 +13,10 @@ pub struct NetworkConfiguration {
     pub update_interval: Duration,
     /// The number of samples to keep and average for the final result
     pub max_samples: usize,
+    /// Selected colour for the RX indicator label / icon as Hex string
+    pub label_colour_rx: Option<String>,
+    /// Selected colour for the TX indicator label / icon as Hex string
+    pub label_colour_tx: Option<String>,
 }
 
 impl Default for NetworkConfiguration {
@@ -21,6 +25,8 @@ impl Default for NetworkConfiguration {
             hide_indicator: false,
             update_interval: Duration::from_secs(1),
             max_samples: 4,
+            label_colour_rx: None,
+            label_colour_tx: None,
         }
     }
 }
@@ -58,6 +64,22 @@ impl NetworkConfiguration {
                     .value
                     .clone(),
                 self.max_samples,
+            ),
+            label_colour_rx: Some(
+                settings_form
+                    .values
+                    .get(NETWORK_RX_COLOUR_SETTING_KEY)
+                    .expect("Network Rx label colour settings missing from form options")
+                    .value
+                    .clone(),
+            ),
+            label_colour_tx: Some(
+                settings_form
+                    .values
+                    .get(NETWORK_TX_COLOUR_SETTING_KEY)
+                    .expect("Network Tx label colour settings missing from form options")
+                    .value
+                    .clone(),
             ),
         }
     }

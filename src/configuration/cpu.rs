@@ -1,6 +1,4 @@
-use crate::configuration::app_configuration::{
-    CPU_SETTINGS_WINDOW_ID, HIDE_INDICATOR_SETTING_KEY, MAX_SAMPLES_SETTING_KEY, UPDATE_INTERVAL_SETTING_KEY,
-};
+use crate::configuration::app_configuration::{CPU_SETTINGS_WINDOW_ID, HIDE_INDICATOR_SETTING_KEY, LABEL_COLOUR_SETTING_KEY, MAX_SAMPLES_SETTING_KEY, UPDATE_INTERVAL_SETTING_KEY};
 use crate::configuration::validation::ConfigurationValidation;
 use crate::ui::settings_form::SettingsForm;
 use serde::{Deserialize, Serialize};
@@ -15,6 +13,8 @@ pub struct CpuConfiguration {
     pub update_interval: Duration,
     /// The number of samples to keep and average for the final result
     pub max_samples: usize,
+    /// Selected label/icon colour as Hex
+    pub label_colour: Option<String>,
 }
 
 impl Default for CpuConfiguration {
@@ -23,6 +23,7 @@ impl Default for CpuConfiguration {
             update_interval: Duration::from_secs(1),
             max_samples: 4,
             hide_indicator: false,
+            label_colour: None,
         }
     }
 }
@@ -61,8 +62,12 @@ impl CpuConfiguration {
                     .clone(),
                 self.max_samples,
             ),
+            label_colour: Some(settings_form
+                .values
+                .get(LABEL_COLOUR_SETTING_KEY)
+                .expect("Label colour setting missing from settings form options")
+                .value
+                .clone())
         }
     }
-
-    
 }

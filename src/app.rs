@@ -320,7 +320,7 @@ impl Application for AppState {
         } else {
             match self.settings_forms.get(&content_id) {
                 None => container(row!["No settings window configured."]),
-                Some(form) => form.content(),
+                Some(form) => form.content(&self),
             }
         };
 
