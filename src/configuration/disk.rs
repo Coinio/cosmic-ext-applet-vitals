@@ -6,6 +6,7 @@ use crate::configuration::validation::ConfigurationValidation;
 use crate::ui::settings_form::SettingsForm;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
+use crate::ui::app_colours::{ACCENT_GREEN, ACCENT_PINK};
 
 /// The configuration for the memory monitor
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
@@ -16,9 +17,9 @@ pub struct DiskConfiguration {
     pub update_interval: Duration,
     /// The number of samples to keep and average for the final result
     pub max_samples: usize,
-    /// Selected colour for Read indicator as Hex string
+    /// The read indicator icon colour key
     pub label_colour_read: Option<String>,
-    /// Selected colour for Write indicator as Hex string
+    /// The write indicator icon colour key
     pub label_colour_write: Option<String>,
 }
 
@@ -28,8 +29,8 @@ impl Default for DiskConfiguration {
             hide_indicator: false,
             update_interval: Duration::from_secs(1),
             max_samples: 3,
-            label_colour_read: None,
-            label_colour_write: None,
+            label_colour_read: Some(ACCENT_GREEN.to_string()),
+            label_colour_write: Some(ACCENT_PINK.to_string()),
         }
     }
 }

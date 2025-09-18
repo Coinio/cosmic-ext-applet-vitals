@@ -4,7 +4,7 @@ use crate::monitors::cpu_monitor::CpuStats;
 use crate::monitors::disk_monitor::{DiskDirection, DiskStats};
 use crate::monitors::memory_monitor::MemoryStats;
 use crate::monitors::network_monitor::{NetworkDirection, NetworkStats};
-use crate::ui::icons::*;
+use crate::ui::app_icons::*;
 use cosmic::iced::Color;
 use cosmic::widget::icon::Handle;
 
@@ -20,21 +20,20 @@ impl DisplayItem for MemoryStats {
     fn label_icon(&self, app_state: &AppState) -> Option<&Handle> {
         let is_dark = app_state.core().system_theme().theme_type.is_dark();
         if is_dark {
-            ICONS.get(MEMORY_USAGE_ICON_DARK_KEY)
+            APP_ICONS.get(MEMORY_USAGE_ICON_DARK_KEY)
         } else {
-            ICONS.get(MEMORY_USAGE_ICON_LIGHT_KEY)
+            APP_ICONS.get(MEMORY_USAGE_ICON_LIGHT_KEY)
         }
     }
 
     fn label_icon_color(&self, app_state: &AppState) -> Color {
-        let colour = app_state
+        app_state
             .app_configuration()
             .memory
             .label_colour
             .as_deref()
-            .unwrap_or_default();
-
-        Color::parse(colour).unwrap_or(Color::WHITE)
+            .and_then(|key| app_state.app_colours().get(key))
+            .map_or(Color::WHITE, |c| Color::new(c.red, c.green, c.blue, c.alpha))
     }
 
     fn text(&self, _app_config: &AppConfiguration) -> String {
@@ -52,21 +51,20 @@ impl DisplayItem for CpuStats {
     fn label_icon(&self, app_state: &AppState) -> Option<&Handle> {
         let is_dark = app_state.core().system_theme().theme_type.is_dark();
         if is_dark {
-            ICONS.get(CPU_USAGE_ICON_DARK_KEY)
+            APP_ICONS.get(CPU_USAGE_ICON_DARK_KEY)
         } else {
-            ICONS.get(CPU_USAGE_ICON_LIGHT_KEY)
+            APP_ICONS.get(CPU_USAGE_ICON_LIGHT_KEY)
         }
     }
 
     fn label_icon_color(&self, app_state: &AppState) -> Color {
-        let colour = app_state
+        app_state
             .app_configuration()
             .cpu
             .label_colour
             .as_deref()
-            .unwrap_or_default();
-
-        Color::parse(colour).unwrap_or(Color::WHITE)
+            .and_then(|key| app_state.app_colours().get(key))
+            .map_or(Color::WHITE, |c| Color::new(c.red, c.green, c.blue, c.alpha))
     }
 
     fn text(&self, _app_config: &AppConfiguration) -> String {
@@ -85,16 +83,16 @@ impl DisplayItem for NetworkStats {
         match self.direction {
             NetworkDirection::Download => {
                 if is_dark {
-                    ICONS.get(NETWORK_RX_USAGE_ICON_DARK_KEY)
+                    APP_ICONS.get(NETWORK_RX_USAGE_ICON_DARK_KEY)
                 } else {
-                    ICONS.get(NETWORK_RX_USAGE_ICON_LIGHT_KEY)
+                    APP_ICONS.get(NETWORK_RX_USAGE_ICON_LIGHT_KEY)
                 }
             }
             NetworkDirection::Upload => {
                 if is_dark {
-                    ICONS.get(NETWORK_TX_USAGE_ICON_DARK_KEY)
+                    APP_ICONS.get(NETWORK_TX_USAGE_ICON_DARK_KEY)
                 } else {
-                    ICONS.get(NETWORK_TX_USAGE_ICON_LIGHT_KEY)
+                    APP_ICONS.get(NETWORK_TX_USAGE_ICON_LIGHT_KEY)
                 }
             }
         }
@@ -102,26 +100,20 @@ impl DisplayItem for NetworkStats {
 
     fn label_icon_color(&self, app_state: &AppState) -> Color {
         match self.direction {
-            NetworkDirection::Download => {
-                let colour = app_state
-                    .app_configuration()
-                    .network
-                    .label_colour_rx
-                    .as_deref()
-                    .unwrap_or_default();
-
-                Color::parse(colour).unwrap_or(Color::WHITE)
-            }
-            NetworkDirection::Upload => {
-                let colour = app_state
-                    .app_configuration()
-                    .network
-                    .label_colour_tx
-                    .as_deref()
-                    .unwrap_or_default();
-
-                Color::parse(colour).unwrap_or(Color::WHITE)
-            }
+            NetworkDirection::Download => app_state
+                .app_configuration()
+                .network
+                .label_colour_rx
+                .as_deref()
+                .and_then(|key| app_state.app_colours().get(key))
+                .map_or(Color::WHITE, |c| Color::new(c.red, c.green, c.blue, c.alpha)),
+            NetworkDirection::Upload => app_state
+                .app_configuration()
+                .network
+                .label_colour_tx
+                .as_deref()
+                .and_then(|key| app_state.app_colours().get(key))
+                .map_or(Color::WHITE, |c| Color::new(c.red, c.green, c.blue, c.alpha)),
         }
     }
 
@@ -139,35 +131,29 @@ impl DisplayItem for DiskStats {
     fn label_icon(&self, app_state: &AppState) -> Option<&Handle> {
         let is_dark = app_state.core().system_theme().theme_type.is_dark();
         match self.direction {
-            DiskDirection::Read if is_dark => ICONS.get(DISK_READ_ICON_DARK_KEY),
-            DiskDirection::Read => ICONS.get(DISK_READ_ICON_LIGHT_KEY),
-            DiskDirection::Write if is_dark => ICONS.get(DISK_WRITE_ICON_DARK_KEY),
-            DiskDirection::Write => ICONS.get(DISK_WRITE_ICON_LIGHT_KEY),
+            DiskDirection::Read if is_dark => APP_ICONS.get(DISK_READ_ICON_DARK_KEY),
+            DiskDirection::Read => APP_ICONS.get(DISK_READ_ICON_LIGHT_KEY),
+            DiskDirection::Write if is_dark => APP_ICONS.get(DISK_WRITE_ICON_DARK_KEY),
+            DiskDirection::Write => APP_ICONS.get(DISK_WRITE_ICON_LIGHT_KEY),
         }
     }
 
     fn label_icon_color(&self, app_state: &AppState) -> Color {
         match self.direction {
-            DiskDirection::Read => {
-                let colour = app_state
-                    .app_configuration()
-                    .disk
-                    .label_colour_read
-                    .as_deref()
-                    .unwrap_or_default();
-
-                Color::parse(colour).unwrap_or(Color::WHITE)
-            }
-            DiskDirection::Write => {
-                let colour = app_state
-                    .app_configuration()
-                    .disk
-                    .label_colour_write
-                    .as_deref()
-                    .unwrap_or_default();
-
-                Color::parse(colour).unwrap_or(Color::WHITE)
-            }
+            DiskDirection::Read => app_state
+                .app_configuration()
+                .disk
+                .label_colour_read
+                .as_deref()
+                .and_then(|key| app_state.app_colours().get(key))
+                .map_or(Color::WHITE, |c| Color::new(c.red, c.green, c.blue, c.alpha)),
+            DiskDirection::Write => app_state
+                .app_configuration()
+                .disk
+                .label_colour_write
+                .as_deref()
+                .and_then(|key| app_state.app_colours().get(key))
+                .map_or(Color::WHITE, |c| Color::new(c.red, c.green, c.blue, c.alpha)),
         }
     }
 

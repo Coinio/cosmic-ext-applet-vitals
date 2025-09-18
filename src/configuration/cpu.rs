@@ -3,6 +3,7 @@ use crate::configuration::validation::ConfigurationValidation;
 use crate::ui::settings_form::SettingsForm;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
+use crate::ui::app_colours::EXT_BLUE;
 
 /// The configuration for the CPU monitor
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
@@ -13,7 +14,7 @@ pub struct CpuConfiguration {
     pub update_interval: Duration,
     /// The number of samples to keep and average for the final result
     pub max_samples: usize,
-    /// Selected label/icon colour as Hex
+    /// The indicator icon colour key
     pub label_colour: Option<String>,
 }
 
@@ -23,7 +24,7 @@ impl Default for CpuConfiguration {
             update_interval: Duration::from_secs(1),
             max_samples: 4,
             hide_indicator: false,
-            label_colour: None,
+            label_colour: Some(EXT_BLUE.to_string()),
         }
     }
 }

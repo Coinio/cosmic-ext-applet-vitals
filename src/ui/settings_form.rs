@@ -6,14 +6,13 @@ use crate::configuration::memory::MemoryConfiguration;
 use crate::configuration::network::NetworkConfiguration;
 use crate::configuration::validation::ConfigurationValidation;
 use crate::fl;
-use crate::ui::color_util::ColorUtil;
-use cosmic::cosmic_theme::palette::Srgba;
 use cosmic::iced::{window, Background, Color, Radius};
 use cosmic::iced_widget::{container, Container};
 use cosmic::widget::{settings, Column};
 use cosmic::{widget, Theme};
-use std::collections::BTreeMap;
 use std::time::Duration;
+use indexmap::IndexMap;
+use crate::ui::app_colours::AppColours;
 
 #[derive(Debug, Clone)]
 pub enum SettingsFormEvent {
@@ -45,7 +44,7 @@ pub struct SettingsFormItem {
 pub struct SettingsForm {
     pub settings_window_id: window::Id,
     pub title: String,
-    pub values: BTreeMap<&'static str, SettingsFormItem>,
+    pub values: IndexMap<&'static str, SettingsFormItem>,
 }
 
 pub struct ColourOptions {}
@@ -190,25 +189,12 @@ impl SettingsForm {
                     let palette = &app_state.core().system_theme().cosmic().palette;
                     let mut colour_picker_column: Column<Message> = widget::column().spacing(8);
 
-                    let options: [Srgba; 12] = [
-                        palette.bright_green,
-                        palette.accent_green,                        
-                        palette.accent_indigo,
-                        palette.ext_indigo,                        
-                        palette.accent_orange,
-                        palette.accent_red,
-                        palette.accent_purple,
-                        palette.accent_warm_grey,
-                        palette.accent_pink,
-                        palette.accent_yellow,
-                        palette.accent_blue,
-                        palette.ext_blue
-                    ];
+                    let app_colors = AppColours::from(palette);
 
                     let mut row = widget::row().spacing(8);
 
-                    for colour in options {
-                        let is_selected = settings_form_item.value == ColorUtil::convert_srgba_to_hex_string(colour);
+                    for (key, colour) in app_colors.colours.into_iter() {
+                        let is_selected = settings_form_item.value == key;
 
                         let mut button = widget::button::custom("").height(25).width(25).class(
                             cosmic::theme::style::Button::Custom {
@@ -240,7 +226,7 @@ impl SettingsForm {
                             SettingsFormEventValue {
                                 settings_window_id: self.settings_window_id,
                                 form_value_key,
-                                value: ColorUtil::convert_srgba_to_hex_string(colour),
+                                value: key.to_string(),
                             },
                         )));
                         row = row.push(button);
@@ -263,8 +249,8 @@ fn build_shared_settings(
     hide_indicator: bool,
     update_interval: Duration,
     max_samples: usize,
-) -> BTreeMap<&'static str, SettingsFormItem> {
-    BTreeMap::from([
+) -> IndexMap<&'static str, SettingsFormItem> {
+    IndexMap::from([
         (
             HIDE_INDICATOR_SETTING_KEY,
             SettingsFormItem {

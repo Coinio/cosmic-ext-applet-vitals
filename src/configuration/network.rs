@@ -3,6 +3,7 @@ use crate::configuration::validation::ConfigurationValidation;
 use crate::ui::settings_form::SettingsForm;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
+use crate::ui::app_colours::{ACCENT_GREEN, ACCENT_PINK};
 
 /// The configuration for the network monitor
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
@@ -13,9 +14,9 @@ pub struct NetworkConfiguration {
     pub update_interval: Duration,
     /// The number of samples to keep and average for the final result
     pub max_samples: usize,
-    /// Selected colour for the RX indicator label / icon as Hex string
+    /// The RX indicator icon colour key
     pub label_colour_rx: Option<String>,
-    /// Selected colour for the TX indicator label / icon as Hex string
+    /// The TX indicator icon colour key
     pub label_colour_tx: Option<String>,
 }
 
@@ -25,8 +26,8 @@ impl Default for NetworkConfiguration {
             hide_indicator: false,
             update_interval: Duration::from_secs(1),
             max_samples: 4,
-            label_colour_rx: None,
-            label_colour_tx: None,
+            label_colour_rx: Some(ACCENT_GREEN.to_string()),
+            label_colour_tx: Some(ACCENT_PINK.to_string()),
         }
     }
 }

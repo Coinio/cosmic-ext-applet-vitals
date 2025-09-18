@@ -25,7 +25,7 @@ fn svg_handle(name: &str) -> cosmic::widget::icon::Handle {
     cosmic::widget::icon::from_svg_bytes(bytes.data)
 }
 
-pub static ICONS: Lazy<HashMap<&'static str, cosmic::widget::icon::Handle>> = Lazy::new(|| {
+pub static APP_ICONS: Lazy<HashMap<&'static str, cosmic::widget::icon::Handle>> = Lazy::new(|| {
     let mut cache = HashMap::new();
 
     cache.insert(APP_LOGO_ICON, svg_handle("dev.eidolon.cosmic-vitals-applet.svg").into());

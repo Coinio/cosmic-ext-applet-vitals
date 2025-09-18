@@ -1,8 +1,8 @@
 use crate::app::{AppState, Message};
+use crate::ui::app_icons::{APP_ICONS, APP_LOGO_ICON};
 use crate::ui::display_item::DisplayItem;
-use crate::ui::icons::{APP_LOGO_ICON, ICONS};
 use cosmic::applet::cosmic_panel_config::PanelSize;
-use cosmic::iced::{Alignment};
+use cosmic::iced::Alignment;
 use cosmic::iced_widget::Row;
 use cosmic::theme::Svg;
 use cosmic::widget;
@@ -73,7 +73,7 @@ impl IndicatorsUI {
     }
 
     pub fn no_indicators_content(app_state: &'_ AppState) -> Element<Message> {
-        let handle = ICONS.get(APP_LOGO_ICON);
+        let handle = APP_ICONS.get(APP_LOGO_ICON);
 
         match handle {
             None => Element::new(row()),

@@ -12,6 +12,7 @@ use crate::sensors::proc_disk_stats_reader::ProcDiskStatsReader;
 use crate::sensors::proc_meminfo_reader::ProcMemInfoSensorReader;
 use crate::sensors::proc_net_dev_reader::ProcNetDevReader;
 use crate::sensors::proc_stat_reader::ProcStatSensorReader;
+use crate::ui::app_colours::AppColours;
 use crate::ui::indicators::{IndicatorsUI, DEFAULT_INDICATOR_SPACING};
 use crate::ui::main_settings_form::MainSettingsForm;
 use crate::ui::settings_form::{SettingsForm, SettingsFormEvent};
@@ -40,6 +41,8 @@ pub struct AppState {
     core: Core,
     /// The cancellation token to stop the status updates
     monitor_cancellation_token: Option<CancellationToken>,
+    /// The colours available to the application
+    app_colours: AppColours,
     /// The application configuration
     configuration: AppConfiguration,
     /// The settings forms that are available for configuration of the monitors.
@@ -105,10 +108,12 @@ impl Application for AppState {
             .unwrap_or_default();
 
         let settings_forms = configuration.settings_form_options();
+        let app_colours = AppColours::from(&core.system_theme().cosmic().palette);
 
         let app = AppState {
             core,
             settings_forms,
+            app_colours,
             configuration,
             ..Default::default()
         };
@@ -335,6 +340,10 @@ impl Application for AppState {
 impl AppState {
     pub fn core(&self) -> &Core {
         &self.core
+    }
+
+    pub fn app_colours(&self) -> &AppColours {
+        &self.app_colours
     }
 
     pub fn app_configuration(&self) -> &AppConfiguration {
