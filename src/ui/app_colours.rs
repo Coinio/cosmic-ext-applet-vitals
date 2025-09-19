@@ -22,8 +22,6 @@ pub const ACCENT_YELLOW: &str = "accent_yellow";
 pub const EXT_YELLOW: &str = "ext_yellow";
 pub const ACCENT_BLUE: &str = "accent_blue";
 pub const EXT_BLUE: &str = "ext_blue";
-pub const WHITE: &str = "white";
-pub const BLACK: &str = "black";
 
 
 #[derive(Default)]
@@ -59,9 +57,7 @@ impl From<&CosmicPaletteInner> for AppColours {
                 (ACCENT_YELLOW, palette.accent_yellow),
                 (EXT_YELLOW, palette.ext_yellow),
                 (ACCENT_BLUE, palette.accent_blue),
-                (EXT_BLUE, palette.ext_blue),
-                (WHITE, Srgba::new(1.0, 1.0, 1.0, 1.0)),
-                (BLACK, Srgba::new(0.0, 0.0, 0.0, 1.0)),
+                (EXT_BLUE, palette.ext_blue)
             ]),
         }
     }
