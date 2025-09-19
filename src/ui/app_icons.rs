@@ -1,4 +1,3 @@
-use once_cell::sync::Lazy;
 use rust_embed::RustEmbed;
 use std::collections::HashMap;
 

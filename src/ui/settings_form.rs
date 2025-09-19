@@ -204,7 +204,7 @@ impl SettingsForm {
 
                         let mut button = widget::button::custom("").height(25).width(25).class(
                             cosmic::theme::style::Button::Custom {
-                                active: Box::new(move |_, t| widget::button::Style {
+                                active: Box::new(move |_, _| widget::button::Style {
                                     background: Some(Background::Color(colour.into())),
                                     text_color: None,
                                     border_radius: Radius::new(3.0),
@@ -214,7 +214,7 @@ impl SettingsForm {
                                     ..Default::default()
                                 }),
                                 disabled: Box::new(|_| Default::default()),
-                                hovered: Box::new(move |_, t| widget::button::Style {
+                                hovered: Box::new(move |_, _| widget::button::Style {
                                     background: Some(Background::Color(colour.into())),
                                     text_color: None,
                                     border_radius: Radius::new(3.0),
@@ -223,7 +223,7 @@ impl SettingsForm {
 
                                     ..Default::default()
                                 }),
-                                pressed: Box::new(|_, t| Default::default()),
+                                pressed: Box::new(|_, _| Default::default()),
                             },
                         );
 

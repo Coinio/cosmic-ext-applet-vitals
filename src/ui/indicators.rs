@@ -72,7 +72,7 @@ impl IndicatorsUI {
         Some(Element::from(row))
     }
 
-    pub fn no_indicators_content(app_state: &'_ AppState) -> Element<Message> {
+    pub fn no_indicators_content(app_state: &'_ AppState) -> Element<'_, Message> {
         let handle = app_state.app_icons().get(APP_LOGO_ICON);
 
         match handle {
