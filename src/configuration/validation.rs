@@ -2,28 +2,12 @@ use crate::configuration::app_configuration::{
     SENSOR_INTERVAL_MINIMUM_IN_MS, SENSOR_MAX_LABEL_LENGTH, SENSOR_MAX_SAMPLES_MINIMUM,
 };
 use crate::fl;
-use hex_color::HexColor;
 use std::cmp;
 use std::time::Duration;
 
 pub struct ConfigurationValidation;
 
 impl ConfigurationValidation {
-    pub fn is_valid_colour(input: &str) -> Result<(), String> {
-        match HexColor::parse(input) {
-            Ok(_) => Ok(()),
-            Err(_) => Err(fl!("settings-colour-error")),
-        }
-    }
-
-    pub fn sanitise_label_colour(new_input: String, previous_colour: HexColor) -> HexColor {
-        let validation_result = Self::is_valid_colour(new_input.as_str());
-
-        match validation_result {
-            Ok(_) => HexColor::parse(new_input.as_str()).expect("Failed to parse. Should always be valid here."),
-            Err(_) => previous_colour,
-        }
-    }
 
     pub fn is_valid_interval(input: &str) -> Result<(), String> {
         let error_message = fl!(
@@ -121,40 +105,6 @@ impl ConfigurationValidation {
         }
 
         new_input.trim().to_string()
-    }
-}
-
-#[cfg(test)]
-mod label_colour_tests {
-    use super::ConfigurationValidation;
-    use hex_color::HexColor;
-
-    #[test]
-    fn is_valid_colour_accepts_valid_hex() {
-        assert!(ConfigurationValidation::is_valid_colour("#029BAC").is_ok());
-        assert!(ConfigurationValidation::is_valid_colour("#ffffff").is_ok());
-        assert!(ConfigurationValidation::is_valid_colour("#ABCDEF").is_ok());
-    }
-
-    #[test]
-    fn is_valid_colour_rejects_invalid_hex() {
-        assert!(ConfigurationValidation::is_valid_colour("not-a-colour").is_err());
-        assert!(ConfigurationValidation::is_valid_colour("").is_err());
-        assert!(ConfigurationValidation::is_valid_colour("#12345").is_err());
-    }
-
-    #[test]
-    fn sanitise_label_colour_returns_new_when_valid() {
-        let previous = HexColor::parse("#111111").unwrap();
-        let result = ConfigurationValidation::sanitise_label_colour("#222222".to_string(), previous);
-        assert_eq!(result, HexColor::parse("#222222").unwrap());
-    }
-
-    #[test]
-    fn sanitise_label_colour_returns_previous_when_invalid() {
-        let previous = HexColor::parse("#111111").unwrap();
-        let result = ConfigurationValidation::sanitise_label_colour("bad-colour".to_string(), previous);
-        assert_eq!(result, HexColor::parse("#111111").unwrap());
     }
 }
 

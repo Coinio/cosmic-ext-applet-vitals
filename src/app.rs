@@ -12,6 +12,7 @@ use crate::sensors::proc_disk_stats_reader::ProcDiskStatsReader;
 use crate::sensors::proc_meminfo_reader::ProcMemInfoSensorReader;
 use crate::sensors::proc_net_dev_reader::ProcNetDevReader;
 use crate::sensors::proc_stat_reader::ProcStatSensorReader;
+use crate::ui::app_colours::AppColours;
 use crate::ui::indicators::{IndicatorsUI, DEFAULT_INDICATOR_SPACING};
 use crate::ui::main_settings_form::MainSettingsForm;
 use crate::ui::settings_form::{SettingsForm, SettingsFormEvent};
@@ -29,6 +30,7 @@ use log::{error, info};
 use once_cell::sync::Lazy;
 use std::collections::BTreeMap;
 use tokio_util::sync::CancellationToken;
+use crate::ui::app_icons::AppIcons;
 
 pub const GLOBAL_APP_ID: &'static str = "dev.eidolon.cosmic-vitals-applet";
 
@@ -40,6 +42,10 @@ pub struct AppState {
     core: Core,
     /// The cancellation token to stop the status updates
     monitor_cancellation_token: Option<CancellationToken>,
+    /// The colours available to the application
+    app_colours: AppColours,
+    /// The icons available to the application
+    app_icons: AppIcons,
     /// The application configuration
     configuration: AppConfiguration,
     /// The settings forms that are available for configuration of the monitors.
@@ -105,10 +111,14 @@ impl Application for AppState {
             .unwrap_or_default();
 
         let settings_forms = configuration.settings_form_options();
+        let app_colours = AppColours::from(&core.system_theme().cosmic().palette);
+        let app_icons = AppIcons::new();
 
         let app = AppState {
             core,
             settings_forms,
+            app_colours,
+            app_icons,
             configuration,
             ..Default::default()
         };
@@ -320,7 +330,7 @@ impl Application for AppState {
         } else {
             match self.settings_forms.get(&content_id) {
                 None => container(row!["No settings window configured."]),
-                Some(form) => form.content(),
+                Some(form) => form.content(&self),
             }
         };
 
@@ -335,6 +345,14 @@ impl Application for AppState {
 impl AppState {
     pub fn core(&self) -> &Core {
         &self.core
+    }
+
+    pub fn app_colours(&self) -> &AppColours {
+        &self.app_colours
+    }
+
+    pub fn app_icons(&self) -> &AppIcons {
+        &self.app_icons
     }
 
     pub fn app_configuration(&self) -> &AppConfiguration {
@@ -365,10 +383,10 @@ impl AppState {
             .expect("No disk settings form configured.");
 
         self.configuration = AppConfiguration {
-            memory: self.configuration.memory.from(memory_settings_form),
-            cpu: self.configuration.cpu.from(cpu_settings_form),
-            network: self.configuration.network.from(network_settings_form),
-            disk: self.configuration.disk.from(disk_settings_form),
+            memory: self.configuration.memory.update(memory_settings_form),
+            cpu: self.configuration.cpu.update(cpu_settings_form),
+            network: self.configuration.network.update(network_settings_form),
+            disk: self.configuration.disk.update(disk_settings_form),
             ..Default::default()
         }
     }

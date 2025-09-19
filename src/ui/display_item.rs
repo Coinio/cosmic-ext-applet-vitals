@@ -1,33 +1,34 @@
-use cosmic::cosmic_theme::palette::Srgba;
 use crate::app::AppState;
 use crate::configuration::app_configuration::AppConfiguration;
 use crate::monitors::cpu_monitor::CpuStats;
 use crate::monitors::disk_monitor::{DiskDirection, DiskStats};
 use crate::monitors::memory_monitor::MemoryStats;
 use crate::monitors::network_monitor::{NetworkDirection, NetworkStats};
-use crate::ui::icons::*;
+use crate::ui::app_icons::*;
+use cosmic::iced::Color;
 use cosmic::widget::icon::Handle;
 
 /// This trait defines what will display for each resource, i.e. CPU, RAM, etc, on the panel
 pub trait DisplayItem {
-    fn label_icon(&self, app_state: &AppState) -> Option<&Handle>;
-    fn label_icon_color(&self, app_state: &AppState) -> Srgba;
+    fn label_icon<'app>(&self, app_state: &'app AppState) -> Option<&'app Handle>;
+    fn label_icon_color(&self, app_state: &AppState) -> Color;
     fn text(&self, app_config: &AppConfiguration) -> String;
     fn is_hidden(&self, app_config: &AppConfiguration) -> bool;
 }
 
 impl DisplayItem for MemoryStats {
-    fn label_icon(&self, app_state: &AppState) -> Option<&Handle> {
-        let is_dark = app_state.core().system_theme().theme_type.is_dark();
-        if is_dark {
-            ICONS.get(MEMORY_USAGE_ICON_DARK_KEY)
-        } else {
-            ICONS.get(MEMORY_USAGE_ICON_LIGHT_KEY)
-        }
+    fn label_icon<'app>(&self, app_state: &'app AppState) -> Option<&'app Handle> {
+        app_state.app_icons().get(MEMORY_USAGE_ICON_DARK_KEY)
     }
 
-    fn label_icon_color(&self, app_state: &AppState) -> Srgba {
-        app_state.core().system_theme().cosmic().palette.accent_orange
+    fn label_icon_color(&self, app_state: &AppState) -> Color {
+        app_state
+            .app_configuration()
+            .memory
+            .label_colour
+            .as_deref()
+            .and_then(|key| app_state.app_colours().get(key))
+            .map_or(Color::WHITE, |c| Color::new(c.red, c.green, c.blue, c.alpha))
     }
 
     fn text(&self, _app_config: &AppConfiguration) -> String {
@@ -42,17 +43,18 @@ impl DisplayItem for MemoryStats {
 }
 
 impl DisplayItem for CpuStats {
-    fn label_icon(&self, app_state: &AppState) -> Option<&Handle> {
-        let is_dark = app_state.core().system_theme().theme_type.is_dark();
-        if is_dark {
-            ICONS.get(CPU_USAGE_ICON_DARK_KEY)
-        } else {
-            ICONS.get(CPU_USAGE_ICON_LIGHT_KEY)
-        }
+    fn label_icon<'app>(&self, app_state: &'app AppState) -> Option<&'app Handle> {
+        app_state.app_icons().get(CPU_USAGE_ICON_DARK_KEY)
     }
 
-    fn label_icon_color(&self, app_state: &AppState) -> Srgba {
-        app_state.core().system_theme().cosmic().palette.accent_indigo
+    fn label_icon_color(&self, app_state: &AppState) -> Color {
+        app_state
+            .app_configuration()
+            .cpu
+            .label_colour
+            .as_deref()
+            .and_then(|key| app_state.app_colours().get(key))
+            .map_or(Color::WHITE, |c| Color::new(c.red, c.green, c.blue, c.alpha))
     }
 
     fn text(&self, _app_config: &AppConfiguration) -> String {
@@ -65,32 +67,29 @@ impl DisplayItem for CpuStats {
 }
 
 impl DisplayItem for NetworkStats {
-    fn label_icon(&self, app_state: &AppState) -> Option<&Handle> {
-        let is_dark = app_state.core().system_theme().theme_type.is_dark();
-
+    fn label_icon<'app>(&self, app_state: &'app AppState) -> Option<&'app Handle> {
         match self.direction {
-            NetworkDirection::Download => {
-                if is_dark {
-                    ICONS.get(NETWORK_RX_USAGE_ICON_DARK_KEY)
-                } else {
-                    ICONS.get(NETWORK_RX_USAGE_ICON_LIGHT_KEY)
-                }
-            }
-            NetworkDirection::Upload => {
-                if is_dark {
-                    ICONS.get(NETWORK_TX_USAGE_ICON_DARK_KEY)
-                } else {
-                    ICONS.get(NETWORK_TX_USAGE_ICON_LIGHT_KEY)
-                }
-            }
+            NetworkDirection::Download => app_state.app_icons().get(NETWORK_RX_USAGE_ICON_DARK_KEY),
+            NetworkDirection::Upload => app_state.app_icons().get(NETWORK_TX_USAGE_ICON_DARK_KEY),
         }
     }
 
-    fn label_icon_color(&self, app_state: &AppState) -> Srgba {
+    fn label_icon_color(&self, app_state: &AppState) -> Color {
         match self.direction {
-            NetworkDirection::Download => app_state.core().system_theme().cosmic().palette
-                .accent_green,
-            NetworkDirection::Upload => app_state.core().system_theme().cosmic().palette.accent_red
+            NetworkDirection::Download => app_state
+                .app_configuration()
+                .network
+                .label_colour_rx
+                .as_deref()
+                .and_then(|key| app_state.app_colours().get(key))
+                .map_or(Color::WHITE, |c| Color::new(c.red, c.green, c.blue, c.alpha)),
+            NetworkDirection::Upload => app_state
+                .app_configuration()
+                .network
+                .label_colour_tx
+                .as_deref()
+                .and_then(|key| app_state.app_colours().get(key))
+                .map_or(Color::WHITE, |c| Color::new(c.red, c.green, c.blue, c.alpha)),
         }
     }
 
@@ -105,21 +104,29 @@ impl DisplayItem for NetworkStats {
 }
 
 impl DisplayItem for DiskStats {
-    fn label_icon(&self, app_state: &AppState) -> Option<&Handle> {
-        let is_dark = app_state.core().system_theme().theme_type.is_dark();
+    fn label_icon<'app>(&self, app_state: &'app AppState) -> Option<&'app Handle> {
         match self.direction {
-            DiskDirection::Read if is_dark => ICONS.get(DISK_READ_ICON_DARK_KEY),
-            DiskDirection::Read => ICONS.get(DISK_READ_ICON_LIGHT_KEY),
-            DiskDirection::Write if is_dark => ICONS.get(DISK_WRITE_ICON_DARK_KEY),
-            DiskDirection::Write => ICONS.get(DISK_WRITE_ICON_LIGHT_KEY),
+            DiskDirection::Read => app_state.app_icons().get(DISK_READ_ICON_DARK_KEY),
+            DiskDirection::Write => app_state.app_icons().get(DISK_WRITE_ICON_DARK_KEY),
         }
     }
 
-    fn label_icon_color(&self, app_state: &AppState) -> Srgba {
+    fn label_icon_color(&self, app_state: &AppState) -> Color {
         match self.direction {
-            DiskDirection::Read => app_state.core().system_theme().cosmic().palette
-                .accent_purple,
-            DiskDirection::Write => app_state.core().system_theme().cosmic().palette.accent_warm_grey
+            DiskDirection::Read => app_state
+                .app_configuration()
+                .disk
+                .label_colour_read
+                .as_deref()
+                .and_then(|key| app_state.app_colours().get(key))
+                .map_or(Color::WHITE, |c| Color::new(c.red, c.green, c.blue, c.alpha)),
+            DiskDirection::Write => app_state
+                .app_configuration()
+                .disk
+                .label_colour_write
+                .as_deref()
+                .and_then(|key| app_state.app_colours().get(key))
+                .map_or(Color::WHITE, |c| Color::new(c.red, c.green, c.blue, c.alpha)),
         }
     }
 

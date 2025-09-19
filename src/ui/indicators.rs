@@ -1,8 +1,8 @@
 use crate::app::{AppState, Message};
+use crate::ui::app_icons::{APP_LOGO_ICON};
 use crate::ui::display_item::DisplayItem;
-use crate::ui::icons::{APP_LOGO_ICON, ICONS};
 use cosmic::applet::cosmic_panel_config::PanelSize;
-use cosmic::iced::{Alignment, Color};
+use cosmic::iced::Alignment;
 use cosmic::iced_widget::Row;
 use cosmic::theme::Svg;
 use cosmic::widget;
@@ -43,12 +43,7 @@ impl IndicatorsUI {
                         0: Rc::new(move |t| {
                             let mut style = svg::Catalog::style(t, &Svg::default(), svg::Status::Idle);
 
-                            style.color = Some(Color::from_rgba(
-                                display_item_color.red,
-                                display_item_color.green,
-                                display_item_color.blue,
-                                display_item_color.alpha,
-                            ));
+                            style.color = Some(display_item_color);
                             style
                         }),
                     });
@@ -77,8 +72,8 @@ impl IndicatorsUI {
         Some(Element::from(row))
     }
 
-    pub fn no_indicators_content(app_state: &AppState) -> Element<Message> {
-        let handle = ICONS.get(APP_LOGO_ICON);
+    pub fn no_indicators_content(app_state: &'_ AppState) -> Element<'_, Message> {
+        let handle = app_state.app_icons().get(APP_LOGO_ICON);
 
         match handle {
             None => Element::new(row()),

@@ -1,17 +1,18 @@
-use crate::app::Message;
+use crate::app::{AppState, Message};
 use crate::configuration::app_configuration::*;
 use crate::configuration::cpu::CpuConfiguration;
-use crate::configuration::validation::ConfigurationValidation;
-use crate::fl;
-use cosmic::iced::window;
-use cosmic::iced_widget::{container, Container};
-use cosmic::widget::{settings};
-use cosmic::{widget, Theme};
-use std::collections::BTreeMap;
-use std::time::Duration;
 use crate::configuration::disk::DiskConfiguration;
 use crate::configuration::memory::MemoryConfiguration;
 use crate::configuration::network::NetworkConfiguration;
+use crate::configuration::validation::ConfigurationValidation;
+use crate::fl;
+use crate::ui::app_colours::AppColours;
+use cosmic::iced::{window, Background, Color, Radius};
+use cosmic::iced_widget::{container, Container};
+use cosmic::widget::{settings, Column};
+use cosmic::{widget, Theme};
+use indexmap::IndexMap;
+use std::time::Duration;
 
 #[derive(Debug, Clone)]
 pub enum SettingsFormEvent {
@@ -23,6 +24,7 @@ pub enum SettingsFormEvent {
 pub enum SettingsFormInputType {
     String,
     CheckBox,
+    ColourPicker,
 }
 
 #[derive(Debug, Clone)]
@@ -42,67 +44,112 @@ pub struct SettingsFormItem {
 pub struct SettingsForm {
     pub settings_window_id: window::Id,
     pub title: String,
-    pub values: BTreeMap<&'static str, SettingsFormItem>,
+    pub values: IndexMap<&'static str, SettingsFormItem>,
 }
 
-impl SettingsForm {
-    pub fn from_cpu_config(config: &CpuConfiguration) -> SettingsForm {
+impl From<&CpuConfiguration> for SettingsForm {
+    fn from(config: &CpuConfiguration) -> SettingsForm {
+        let mut values = build_shared_settings(config.hide_indicator, config.update_interval, config.max_samples);
+        values.insert(
+            LABEL_COLOUR_SETTING_KEY,
+            SettingsFormItem {
+                label: fl!("settings-label-colour"),
+                value: config.label_colour.clone().unwrap_or_default(),
+                input_type: SettingsFormInputType::ColourPicker,
+                validator: None,
+            },
+        );
         SettingsForm {
             settings_window_id: CPU_SETTINGS_WINDOW_ID.clone(),
             title: fl!("settings-cpu-title"),
-            values: build_shared_settings(
-                config.hide_indicator,
-                config.update_interval,
-                config.max_samples,
-            ),
+            values,
         }
     }
+}
 
-    pub fn from_memory_config(config: &MemoryConfiguration) -> SettingsForm {
+impl From<&MemoryConfiguration> for SettingsForm {
+    fn from(config: &MemoryConfiguration) -> SettingsForm {
+        let mut values = build_shared_settings(config.hide_indicator, config.update_interval, config.max_samples);
+        values.insert(
+            LABEL_COLOUR_SETTING_KEY,
+            SettingsFormItem {
+                label: fl!("settings-label-colour"),
+                value: config.label_colour.clone().unwrap_or_default(),
+                input_type: SettingsFormInputType::ColourPicker,
+                validator: None,
+            },
+        );
         SettingsForm {
             settings_window_id: MEMORY_SETTINGS_WINDOW_ID.clone(),
             title: fl!("settings-memory-title"),
-            values: build_shared_settings(
-                config.hide_indicator,
-                config.update_interval,
-                config.max_samples,
-            ),
+            values,
         }
     }
+}
 
-    pub fn from_network_config(config: &NetworkConfiguration) -> SettingsForm {
+impl From<&NetworkConfiguration> for SettingsForm {
+    fn from(config: &NetworkConfiguration) -> SettingsForm {
+        let mut values = build_shared_settings(config.hide_indicator, config.update_interval, config.max_samples);
+        values.insert(
+            NETWORK_RX_COLOUR_SETTING_KEY,
+            SettingsFormItem {
+                label: fl!("settings-network-rx-colour"),
+                value: config.label_colour_rx.clone().unwrap_or_default(),
+                input_type: SettingsFormInputType::ColourPicker,
+                validator: None,
+            },
+        );
+        values.insert(
+            NETWORK_TX_COLOUR_SETTING_KEY,
+            SettingsFormItem {
+                label: fl!("settings-network-tx-colour"),
+                value: config.label_colour_tx.clone().unwrap_or_default(),
+                input_type: SettingsFormInputType::ColourPicker,
+                validator: None,
+            },
+        );
         SettingsForm {
             settings_window_id: NETWORK_SETTINGS_WINDOW_ID.clone(),
             title: fl!("settings-network-title"),
-            values: build_shared_settings(
-                config.hide_indicator,
-                config.update_interval,
-                config.max_samples,
-            ),
+            values,
         }
     }
+}
 
-    pub fn from_disk_config(config: &DiskConfiguration) -> SettingsForm {
+impl From<&DiskConfiguration> for SettingsForm {
+    fn from(config: &DiskConfiguration) -> SettingsForm {
+        let mut values = build_shared_settings(config.hide_indicator, config.update_interval, config.max_samples);
+        values.insert(
+            DISK_READ_COLOUR_SETTING_KEY,
+            SettingsFormItem {
+                label: fl!("settings-disk-read-colour"),
+                value: config.label_colour_read.clone().unwrap_or_default(),
+                input_type: SettingsFormInputType::ColourPicker,
+                validator: None,
+            },
+        );
+        values.insert(
+            DISK_WRITE_COLOUR_SETTING_KEY,
+            SettingsFormItem {
+                label: fl!("settings-disk-write-colour"),
+                value: config.label_colour_write.clone().unwrap_or_default(),
+                input_type: SettingsFormInputType::ColourPicker,
+                validator: None,
+            },
+        );
         SettingsForm {
             settings_window_id: DISK_SETTINGS_WINDOW_ID.clone(),
             title: fl!("settings-disk-title"),
-            values: build_shared_settings(
-                config.hide_indicator,
-                config.update_interval,
-                config.max_samples,
-            ),
+            values,
         }
     }
+}
 
-    pub fn content(&self) -> Container<'_, Message, Theme> {
-        let mut column =
-            widget::list_column()
-                .padding(2)
-                .spacing(0)
-                .divider_padding(2);
+impl SettingsForm {
+    pub fn content(&self, app_state: &AppState) -> Container<'_, Message, Theme> {
+        let mut column = widget::list_column().padding(2).spacing(0).divider_padding(2);
 
-        let back_button = widget::button::custom(widget::icon::from_name("go-previous-symbolic")
-            .size(16).icon())
+        let back_button = widget::button::custom(widget::icon::from_name("go-previous-symbolic").size(16).icon())
             .on_press(Message::SettingsPopupOpened(MAIN_SETTINGS_WINDOW_ID.clone()));
 
         column = column.add(settings::item(self.title.clone(), back_button));
@@ -144,6 +191,56 @@ impl SettingsForm {
 
                     column = column.add(settings::item(settings_form_item.label.clone(), checkbox_input));
                 }
+                SettingsFormInputType::ColourPicker => {
+                    let palette = &app_state.core().system_theme().cosmic().palette;
+                    let mut colour_picker_column: Column<Message> = widget::column().spacing(8);
+
+                    let app_colors = AppColours::from(palette);
+
+                    let mut row = widget::row().spacing(8);
+
+                    for (key, colour) in app_colors.colours.into_iter() {
+                        let is_selected = settings_form_item.value == key;
+
+                        let mut button = widget::button::custom("").height(25).width(25).class(
+                            cosmic::theme::style::Button::Custom {
+                                active: Box::new(move |_, _| widget::button::Style {
+                                    background: Some(Background::Color(colour.into())),
+                                    text_color: None,
+                                    border_radius: Radius::new(3.0),
+                                    border_color: if is_selected { Color::WHITE } else { Color::TRANSPARENT },
+                                    border_width: if is_selected { 3.0 } else { 0.0 },
+
+                                    ..Default::default()
+                                }),
+                                disabled: Box::new(|_| Default::default()),
+                                hovered: Box::new(move |_, _| widget::button::Style {
+                                    background: Some(Background::Color(colour.into())),
+                                    text_color: None,
+                                    border_radius: Radius::new(3.0),
+                                    border_color: if is_selected { Color::WHITE } else { Color::TRANSPARENT },
+                                    border_width: if is_selected { 3.0 } else { 0.0 },
+
+                                    ..Default::default()
+                                }),
+                                pressed: Box::new(|_, _| Default::default()),
+                            },
+                        );
+
+                        button = button.on_press(Message::SettingsFormUpdate(SettingsFormEvent::StringFieldUpdated(
+                            SettingsFormEventValue {
+                                settings_window_id: self.settings_window_id,
+                                form_value_key,
+                                value: key.to_string(),
+                            },
+                        )));
+                        row = row.push(button);
+                    }
+
+                    colour_picker_column = colour_picker_column.push(settings_form_item.label.as_str());
+                    colour_picker_column = colour_picker_column.push(row.wrap());
+                    column = column.add(colour_picker_column);
+                }
             };
         }
 
@@ -157,8 +254,8 @@ fn build_shared_settings(
     hide_indicator: bool,
     update_interval: Duration,
     max_samples: usize,
-) -> BTreeMap<&'static str, SettingsFormItem> {
-    BTreeMap::from([
+) -> IndexMap<&'static str, SettingsFormItem> {
+    IndexMap::from([
         (
             HIDE_INDICATOR_SETTING_KEY,
             SettingsFormItem {
