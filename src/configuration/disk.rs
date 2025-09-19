@@ -36,7 +36,7 @@ impl Default for DiskConfiguration {
 }
 
 impl DiskConfiguration {
-    pub fn from(&self, settings_form: &SettingsForm) -> Self {
+    pub fn update(&self, settings_form: &SettingsForm) -> Self {
         if settings_form.settings_window_id != DISK_SETTINGS_WINDOW_ID.clone() {
             panic!("Attempted to update disk settings from a non-disk settings window.")
         }

@@ -33,7 +33,7 @@ impl Default for NetworkConfiguration {
 }
 
 impl NetworkConfiguration {
-    pub fn from(&self, settings_form: &SettingsForm) -> Self {
+    pub fn update(&self, settings_form: &SettingsForm) -> Self {
         if settings_form.settings_window_id != NETWORK_SETTINGS_WINDOW_ID.clone() {
             panic!("Attempted to update network settings from a non-network settings window.")
         }

@@ -30,7 +30,7 @@ impl Default for MemoryConfiguration {
 }
 
 impl MemoryConfiguration {
-    pub fn from(&self, settings_form: &SettingsForm) -> Self {
+    pub fn update(&self, settings_form: &SettingsForm) -> Self {
         if settings_form.settings_window_id != MEMORY_SETTINGS_WINDOW_ID.clone() {
             panic!("Attempted to update memory settings from a non-memory settings window.")
         }

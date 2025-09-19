@@ -350,7 +350,7 @@ impl AppState {
     pub fn app_colours(&self) -> &AppColours {
         &self.app_colours
     }
-    
+
     pub fn app_icons(&self) -> &AppIcons {
         &self.app_icons
     }
@@ -383,10 +383,10 @@ impl AppState {
             .expect("No disk settings form configured.");
 
         self.configuration = AppConfiguration {
-            memory: self.configuration.memory.from(memory_settings_form),
-            cpu: self.configuration.cpu.from(cpu_settings_form),
-            network: self.configuration.network.from(network_settings_form),
-            disk: self.configuration.disk.from(disk_settings_form),
+            memory: self.configuration.memory.update(memory_settings_form),
+            cpu: self.configuration.cpu.update(cpu_settings_form),
+            network: self.configuration.network.update(network_settings_form),
+            disk: self.configuration.disk.update(disk_settings_form),
             ..Default::default()
         }
     }

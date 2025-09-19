@@ -6,13 +6,13 @@ use crate::configuration::memory::MemoryConfiguration;
 use crate::configuration::network::NetworkConfiguration;
 use crate::configuration::validation::ConfigurationValidation;
 use crate::fl;
+use crate::ui::app_colours::AppColours;
 use cosmic::iced::{window, Background, Color, Radius};
 use cosmic::iced_widget::{container, Container};
 use cosmic::widget::{settings, Column};
 use cosmic::{widget, Theme};
-use std::time::Duration;
 use indexmap::IndexMap;
-use crate::ui::app_colours::AppColours;
+use std::time::Duration;
 
 #[derive(Debug, Clone)]
 pub enum SettingsFormEvent {
@@ -47,10 +47,8 @@ pub struct SettingsForm {
     pub values: IndexMap<&'static str, SettingsFormItem>,
 }
 
-pub struct ColourOptions {}
-
-impl SettingsForm {
-    pub fn from_cpu_config(config: &CpuConfiguration) -> SettingsForm {
+impl From<&CpuConfiguration> for SettingsForm {
+    fn from(config: &CpuConfiguration) -> SettingsForm {
         let mut values = build_shared_settings(config.hide_indicator, config.update_interval, config.max_samples);
         values.insert(
             LABEL_COLOUR_SETTING_KEY,
@@ -67,8 +65,10 @@ impl SettingsForm {
             values,
         }
     }
+}
 
-    pub fn from_memory_config(config: &MemoryConfiguration) -> SettingsForm {
+impl From<&MemoryConfiguration> for SettingsForm {
+    fn from(config: &MemoryConfiguration) -> SettingsForm {
         let mut values = build_shared_settings(config.hide_indicator, config.update_interval, config.max_samples);
         values.insert(
             LABEL_COLOUR_SETTING_KEY,
@@ -85,8 +85,10 @@ impl SettingsForm {
             values,
         }
     }
+}
 
-    pub fn from_network_config(config: &NetworkConfiguration) -> SettingsForm {
+impl From<&NetworkConfiguration> for SettingsForm {
+    fn from(config: &NetworkConfiguration) -> SettingsForm {
         let mut values = build_shared_settings(config.hide_indicator, config.update_interval, config.max_samples);
         values.insert(
             NETWORK_RX_COLOUR_SETTING_KEY,
@@ -112,8 +114,10 @@ impl SettingsForm {
             values,
         }
     }
+}
 
-    pub fn from_disk_config(config: &DiskConfiguration) -> SettingsForm {
+impl From<&DiskConfiguration> for SettingsForm {
+    fn from(config: &DiskConfiguration) -> SettingsForm {
         let mut values = build_shared_settings(config.hide_indicator, config.update_interval, config.max_samples);
         values.insert(
             DISK_READ_COLOUR_SETTING_KEY,
@@ -139,7 +143,9 @@ impl SettingsForm {
             values,
         }
     }
+}
 
+impl SettingsForm {
     pub fn content(&self, app_state: &AppState) -> Container<'_, Message, Theme> {
         let mut column = widget::list_column().padding(2).spacing(0).divider_padding(2);
 
@@ -221,8 +227,7 @@ impl SettingsForm {
                             },
                         );
 
-                        button = button.on_press(Message::SettingsFormUpdate
-                            (SettingsFormEvent::StringFieldUpdated(
+                        button = button.on_press(Message::SettingsFormUpdate(SettingsFormEvent::StringFieldUpdated(
                             SettingsFormEventValue {
                                 settings_window_id: self.settings_window_id,
                                 form_value_key,

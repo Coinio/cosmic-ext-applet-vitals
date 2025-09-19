@@ -3,7 +3,7 @@ use crate::configuration::validation::ConfigurationValidation;
 use crate::ui::settings_form::SettingsForm;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
-use crate::ui::app_colours::EXT_BLUE;
+use crate::ui::app_colours::{EXT_BLUE};
 
 /// The configuration for the CPU monitor
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
@@ -30,7 +30,7 @@ impl Default for CpuConfiguration {
 }
 
 impl CpuConfiguration {
-    pub fn from(&self, settings_form: &SettingsForm) -> Self {
+    pub fn update(&self, settings_form: &SettingsForm) -> Self {
         if settings_form.settings_window_id != CPU_SETTINGS_WINDOW_ID.clone() {
             panic!("Attempted to update CPU settings from a non-cpu settings window.")
         }
