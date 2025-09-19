@@ -19,7 +19,6 @@ I started building this to learn some Rust and play around with Pop_OS COSMIC. I
 
 * Calculate the maximum width of the labels so the indicators don't expand / contract
 * Improve the vertical layout
-* Dynamically colour the icons based on the theme accent colours
 * Add configurable units KiBs/MiBs/GiBs or progressively change units depending on how large / small reading is
 * Better logging into journalctl
 
@@ -30,7 +29,9 @@ I started building this to learn some Rust and play around with Pop_OS COSMIC. I
 ##### Vertical Layout
 ![Vertical Panel Layout](https://github.com/Coinio/cosmic-vitals/blob/main/res/screenshots/vertical-layout.jpg)
 ##### Main Settings Page
-![Main Settings Page (booooring)](https://github.com/Coinio/cosmic-vitals/blob/main/res/screenshots/main-settings.png)
+![Main Settings Page](https://github.com/Coinio/cosmic-vitals/blob/main/res/screenshots/main-settings.png)
+##### Example Settings Page
+![Example Settings Page](https://github.com/Coinio/cosmic-vitals/blob/main/res/screenshots/example-network-settings.png)
 
 ## Install
 
