@@ -30,6 +30,7 @@ use log::{error, info};
 use once_cell::sync::Lazy;
 use std::collections::BTreeMap;
 use tokio_util::sync::CancellationToken;
+use crate::ui::app_icons::AppIcons;
 
 pub const GLOBAL_APP_ID: &'static str = "dev.eidolon.cosmic-vitals-applet";
 
@@ -43,6 +44,8 @@ pub struct AppState {
     monitor_cancellation_token: Option<CancellationToken>,
     /// The colours available to the application
     app_colours: AppColours,
+    /// The icons available to the application
+    app_icons: AppIcons,
     /// The application configuration
     configuration: AppConfiguration,
     /// The settings forms that are available for configuration of the monitors.
@@ -109,11 +112,13 @@ impl Application for AppState {
 
         let settings_forms = configuration.settings_form_options();
         let app_colours = AppColours::from(&core.system_theme().cosmic().palette);
+        let app_icons = AppIcons::new();
 
         let app = AppState {
             core,
             settings_forms,
             app_colours,
+            app_icons,
             configuration,
             ..Default::default()
         };
@@ -344,6 +349,10 @@ impl AppState {
 
     pub fn app_colours(&self) -> &AppColours {
         &self.app_colours
+    }
+    
+    pub fn app_icons(&self) -> &AppIcons {
+        &self.app_icons
     }
 
     pub fn app_configuration(&self) -> &AppConfiguration {

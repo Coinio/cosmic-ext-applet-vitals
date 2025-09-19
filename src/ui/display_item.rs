@@ -10,15 +10,15 @@ use cosmic::widget::icon::Handle;
 
 /// This trait defines what will display for each resource, i.e. CPU, RAM, etc, on the panel
 pub trait DisplayItem {
-    fn label_icon(&self, app_state: &AppState) -> Option<&Handle>;
+    fn label_icon<'app>(&self, app_state: &'app AppState) -> Option<&'app Handle>;
     fn label_icon_color(&self, app_state: &AppState) -> Color;
     fn text(&self, app_config: &AppConfiguration) -> String;
     fn is_hidden(&self, app_config: &AppConfiguration) -> bool;
 }
 
 impl DisplayItem for MemoryStats {
-    fn label_icon(&self, app_state: &AppState) -> Option<&Handle> {
-        APP_ICONS.get(MEMORY_USAGE_ICON_DARK_KEY)
+    fn label_icon<'app>(&self, app_state: &'app AppState) -> Option<&'app Handle> {
+        app_state.app_icons().get(MEMORY_USAGE_ICON_DARK_KEY)
     }
 
     fn label_icon_color(&self, app_state: &AppState) -> Color {
@@ -43,8 +43,8 @@ impl DisplayItem for MemoryStats {
 }
 
 impl DisplayItem for CpuStats {
-    fn label_icon(&self, app_state: &AppState) -> Option<&Handle> {
-        APP_ICONS.get(CPU_USAGE_ICON_DARK_KEY)
+    fn label_icon<'app>(&self, app_state: &'app AppState) -> Option<&'app Handle> {
+        app_state.app_icons().get(CPU_USAGE_ICON_DARK_KEY)
     }
 
     fn label_icon_color(&self, app_state: &AppState) -> Color {
@@ -67,10 +67,10 @@ impl DisplayItem for CpuStats {
 }
 
 impl DisplayItem for NetworkStats {
-    fn label_icon(&self, app_state: &AppState) -> Option<&Handle> {
+    fn label_icon<'app>(&self, app_state: &'app AppState) -> Option<&'app Handle> {
         match self.direction {
-            NetworkDirection::Download => APP_ICONS.get(NETWORK_RX_USAGE_ICON_DARK_KEY),
-            NetworkDirection::Upload => APP_ICONS.get(NETWORK_TX_USAGE_ICON_DARK_KEY),
+            NetworkDirection::Download => app_state.app_icons().get(NETWORK_RX_USAGE_ICON_DARK_KEY),
+            NetworkDirection::Upload => app_state.app_icons().get(NETWORK_TX_USAGE_ICON_DARK_KEY),
         }
     }
 
@@ -104,10 +104,10 @@ impl DisplayItem for NetworkStats {
 }
 
 impl DisplayItem for DiskStats {
-    fn label_icon(&self, app_state: &AppState) -> Option<&Handle> {
+    fn label_icon<'app>(&self, app_state: &'app AppState) -> Option<&'app Handle> {
         match self.direction {
-            DiskDirection::Read => APP_ICONS.get(DISK_READ_ICON_DARK_KEY),
-            DiskDirection::Write => APP_ICONS.get(DISK_WRITE_ICON_DARK_KEY),
+            DiskDirection::Read => app_state.app_icons().get(DISK_READ_ICON_DARK_KEY),
+            DiskDirection::Write => app_state.app_icons().get(DISK_WRITE_ICON_DARK_KEY),
         }
     }
 
