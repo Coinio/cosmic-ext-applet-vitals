@@ -18,12 +18,7 @@ pub trait DisplayItem {
 
 impl DisplayItem for MemoryStats {
     fn label_icon(&self, app_state: &AppState) -> Option<&Handle> {
-        let is_dark = app_state.core().system_theme().theme_type.is_dark();
-        if is_dark {
-            APP_ICONS.get(MEMORY_USAGE_ICON_DARK_KEY)
-        } else {
-            APP_ICONS.get(MEMORY_USAGE_ICON_LIGHT_KEY)
-        }
+        APP_ICONS.get(MEMORY_USAGE_ICON_DARK_KEY)
     }
 
     fn label_icon_color(&self, app_state: &AppState) -> Color {
@@ -49,12 +44,7 @@ impl DisplayItem for MemoryStats {
 
 impl DisplayItem for CpuStats {
     fn label_icon(&self, app_state: &AppState) -> Option<&Handle> {
-        let is_dark = app_state.core().system_theme().theme_type.is_dark();
-        if is_dark {
-            APP_ICONS.get(CPU_USAGE_ICON_DARK_KEY)
-        } else {
-            APP_ICONS.get(CPU_USAGE_ICON_LIGHT_KEY)
-        }
+        APP_ICONS.get(CPU_USAGE_ICON_DARK_KEY)
     }
 
     fn label_icon_color(&self, app_state: &AppState) -> Color {
@@ -78,23 +68,9 @@ impl DisplayItem for CpuStats {
 
 impl DisplayItem for NetworkStats {
     fn label_icon(&self, app_state: &AppState) -> Option<&Handle> {
-        let is_dark = app_state.core().system_theme().theme_type.is_dark();
-
         match self.direction {
-            NetworkDirection::Download => {
-                if is_dark {
-                    APP_ICONS.get(NETWORK_RX_USAGE_ICON_DARK_KEY)
-                } else {
-                    APP_ICONS.get(NETWORK_RX_USAGE_ICON_LIGHT_KEY)
-                }
-            }
-            NetworkDirection::Upload => {
-                if is_dark {
-                    APP_ICONS.get(NETWORK_TX_USAGE_ICON_DARK_KEY)
-                } else {
-                    APP_ICONS.get(NETWORK_TX_USAGE_ICON_LIGHT_KEY)
-                }
-            }
+            NetworkDirection::Download => APP_ICONS.get(NETWORK_RX_USAGE_ICON_DARK_KEY),
+            NetworkDirection::Upload => APP_ICONS.get(NETWORK_TX_USAGE_ICON_DARK_KEY),
         }
     }
 
@@ -129,12 +105,9 @@ impl DisplayItem for NetworkStats {
 
 impl DisplayItem for DiskStats {
     fn label_icon(&self, app_state: &AppState) -> Option<&Handle> {
-        let is_dark = app_state.core().system_theme().theme_type.is_dark();
         match self.direction {
-            DiskDirection::Read if is_dark => APP_ICONS.get(DISK_READ_ICON_DARK_KEY),
-            DiskDirection::Read => APP_ICONS.get(DISK_READ_ICON_LIGHT_KEY),
-            DiskDirection::Write if is_dark => APP_ICONS.get(DISK_WRITE_ICON_DARK_KEY),
-            DiskDirection::Write => APP_ICONS.get(DISK_WRITE_ICON_LIGHT_KEY),
+            DiskDirection::Read => APP_ICONS.get(DISK_READ_ICON_DARK_KEY),
+            DiskDirection::Write => APP_ICONS.get(DISK_WRITE_ICON_DARK_KEY),
         }
     }
 
