@@ -2,7 +2,6 @@ use cosmic::cosmic_theme::palette::Srgba;
 use cosmic::cosmic_theme::CosmicPaletteInner;
 use indexmap::IndexMap;
 
-// Define constants for all colour keys
 pub const BRIGHT_GREEN: &str = "bright_green";
 pub const ACCENT_GREEN: &str = "accent_green";
 pub const ACCENT_INDIGO: &str = "accent_indigo";
