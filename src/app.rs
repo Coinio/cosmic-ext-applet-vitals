@@ -13,6 +13,7 @@ use crate::sensors::proc_meminfo_reader::ProcMemInfoSensorReader;
 use crate::sensors::proc_net_dev_reader::ProcNetDevReader;
 use crate::sensors::proc_stat_reader::ProcStatSensorReader;
 use crate::ui::app_colours::AppColours;
+use crate::ui::app_icons::AppIcons;
 use crate::ui::indicators::{IndicatorsUI, DEFAULT_INDICATOR_SPACING};
 use crate::ui::main_settings_form::MainSettingsForm;
 use crate::ui::settings_form::{SettingsForm, SettingsFormEvent};
@@ -21,6 +22,7 @@ use cosmic::applet::cosmic_panel_config::PanelAnchor;
 use cosmic::cosmic_config::{Config, CosmicConfigEntry};
 use cosmic::iced::{window, Subscription};
 use cosmic::iced::{Alignment, Limits};
+use cosmic::iced_renderer::graphics::text::cosmic_text::{Attrs, Buffer, FontSystem, Metrics, Shaping};
 use cosmic::iced_widget::{row, Column, Row};
 use cosmic::iced_winit::commands::popup::get_popup;
 use cosmic::widget;
@@ -30,7 +32,7 @@ use log::{error, info};
 use once_cell::sync::Lazy;
 use std::collections::BTreeMap;
 use tokio_util::sync::CancellationToken;
-use crate::ui::app_icons::AppIcons;
+use crate::ui::text_measurer::CosmicTextMeasurer;
 
 pub const GLOBAL_APP_ID: &'static str = "dev.eidolon.cosmic-vitals-applet";
 
@@ -46,6 +48,12 @@ pub struct AppState {
     app_colours: AppColours,
     /// The icons available to the application
     app_icons: AppIcons,
+    /// The cached label widths for the application indicators. Only needs to change on startup
+    /// and theme change.
+   // max_label_widths: AppLabelWidths,
+    /// A text measurer for the application. Needs to be in app_state so we can initialise
+    /// FontSystem once on init.
+    text_measurer: CosmicTextMeasurer,
     /// The application configuration
     configuration: AppConfiguration,
     /// The settings forms that are available for configuration of the monitors.
@@ -113,6 +121,7 @@ impl Application for AppState {
         let settings_forms = configuration.settings_form_options();
         let app_colours = AppColours::from(&core.system_theme().cosmic().palette);
         let app_icons = AppIcons::new();
+        let text_measurer = CosmicTextMeasurer::new();
 
         let app = AppState {
             core,
@@ -120,6 +129,7 @@ impl Application for AppState {
             app_colours,
             app_icons,
             configuration,
+            text_measurer,
             ..Default::default()
         };
 
@@ -357,6 +367,9 @@ impl AppState {
 
     pub fn app_configuration(&self) -> &AppConfiguration {
         &self.configuration
+    }
+    pub fn text_measurer(&self) -> &CosmicTextMeasurer {
+        &self.text_measurer
     }
 
     fn update_configuration(&mut self) {
