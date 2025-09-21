@@ -7,6 +7,7 @@ use cosmic::iced::window;
 use once_cell::sync::Lazy;
 use std::collections::BTreeMap;
 use crate::configuration::disk::DiskConfiguration;
+use crate::configuration::general::GeneralConfiguration;
 
 pub static MAIN_SETTINGS_WINDOW_ID: Lazy<cosmic::iced::window::Id> = Lazy::new(|| cosmic::iced::window::Id::unique());
 pub static CPU_SETTINGS_WINDOW_ID: Lazy<cosmic::iced::window::Id> = Lazy::new(|| cosmic::iced::window::Id::unique());
@@ -33,6 +34,7 @@ pub const MAX_SAMPLES_SETTING_KEY: &'static str = "settings-max-samples";
 #[derive(Debug, Default, Clone, CosmicConfigEntry, Eq, PartialEq)]
 #[version = 1]
 pub struct AppConfiguration {
+    pub general: GeneralConfiguration,
     pub cpu: CpuConfiguration,
     pub memory: MemoryConfiguration,
     pub network: NetworkConfiguration,
