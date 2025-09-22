@@ -14,6 +14,8 @@ use crate::sensors::proc_net_dev_reader::ProcNetDevReader;
 use crate::sensors::proc_stat_reader::ProcStatSensorReader;
 use crate::ui::app_colours::AppColours;
 use crate::ui::app_icons::AppIcons;
+use crate::ui::app_text_measurements::AppTextMeasurements;
+use crate::ui::cosmic_text_measurer::{CosmicTextMeasurer};
 use crate::ui::indicators::{IndicatorsUI, DEFAULT_INDICATOR_SPACING};
 use crate::ui::main_settings_form::MainSettingsForm;
 use crate::ui::settings_form::{SettingsForm, SettingsFormEvent};
@@ -32,7 +34,6 @@ use log::{error, info};
 use once_cell::sync::Lazy;
 use std::collections::BTreeMap;
 use tokio_util::sync::CancellationToken;
-use crate::ui::text_measurer::CosmicTextMeasurer;
 
 pub const GLOBAL_APP_ID: &'static str = "dev.eidolon.cosmic-vitals-applet";
 
@@ -48,12 +49,8 @@ pub struct AppState {
     app_colours: AppColours,
     /// The icons available to the application
     app_icons: AppIcons,
-    /// The cached label widths for the application indicators. Only needs to change on startup
-    /// and theme change.
-   // max_label_widths: AppLabelWidths,
-    /// A text measurer for the application. Needs to be in app_state so we can initialise
-    /// FontSystem once on init.
-    text_measurer: CosmicTextMeasurer,
+    /// The text measurements for indicator labels to prevent jittering as labels change size
+    app_text_measurements: AppTextMeasurements,
     /// The application configuration
     configuration: AppConfiguration,
     /// The settings forms that are available for configuration of the monitors.
@@ -121,15 +118,15 @@ impl Application for AppState {
         let settings_forms = configuration.settings_form_options();
         let app_colours = AppColours::from(&core.system_theme().cosmic().palette);
         let app_icons = AppIcons::new();
-        let text_measurer = CosmicTextMeasurer::new();
+        let app_text_measurements = AppTextMeasurements::new();
 
         let app = AppState {
             core,
             settings_forms,
             app_colours,
             app_icons,
+            app_text_measurements,
             configuration,
-            text_measurer,
             ..Default::default()
         };
 
@@ -368,8 +365,8 @@ impl AppState {
     pub fn app_configuration(&self) -> &AppConfiguration {
         &self.configuration
     }
-    pub fn text_measurer(&self) -> &CosmicTextMeasurer {
-        &self.text_measurer
+    pub fn app_text_measurements(&self) -> &AppTextMeasurements {
+        &self.app_text_measurements
     }
 
     fn update_configuration(&mut self) {
@@ -396,6 +393,7 @@ impl AppState {
             .expect("No disk settings form configured.");
 
         self.configuration = AppConfiguration {
+            general: self.configuration.general.clone(),
             memory: self.configuration.memory.update(memory_settings_form),
             cpu: self.configuration.cpu.update(cpu_settings_form),
             network: self.configuration.network.update(network_settings_form),

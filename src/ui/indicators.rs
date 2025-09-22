@@ -1,7 +1,7 @@
 use crate::app::{AppState, Message};
-use crate::ui::app_icons::{APP_LOGO_ICON};
+use crate::ui::app_icons::APP_LOGO_ICON;
 use crate::ui::display_item::DisplayItem;
-use cosmic::applet::cosmic_panel_config::PanelSize;
+use cosmic::applet::cosmic_panel_config::{PanelAnchor, PanelSize};
 use cosmic::iced::Alignment;
 use cosmic::iced_widget::Row;
 use cosmic::theme::Svg;
@@ -10,7 +10,8 @@ use cosmic::widget::{row, svg, Column};
 use cosmic::Element;
 use std::rc::Rc;
 
-const DEFAULT_INDICATOR_FONT_SIZE: u16 = 12;
+
+const DEFAULT_INDICATOR_FONT_SIZE: u16 = 14;
 const DEFAULT_INDICATOR_ICON_SIZE: u16 = 16;
 
 pub const DEFAULT_INDICATOR_SPACING: u16 = 16;
@@ -29,6 +30,12 @@ impl IndicatorsUI {
         if display_item.is_hidden(&configuration) {
             return None;
         }
+        
+        let font_size = Self::label_font_size(app_state);
+
+        let max_text_width = app_state
+            .app_text_measurements()
+            .measure(display_item.max_label_text(configuration), font_size);
 
         let mut content: Vec<Element<Message>> = Vec::new();
 
@@ -52,10 +59,16 @@ impl IndicatorsUI {
             }
         };
 
-        let mut value_text = core.applet.text(display_item.text(&configuration));
+        let mut value_text = core
+            .applet
+            .text(display_item.label(&configuration))
+            .width(max_text_width.unwrap_or(1.0))
+            .size(font_size);
 
-        if !horizontal {
-            value_text = value_text.size(Self::label_text_vertical_font_size(app_state));
+        if horizontal {
+            value_text = value_text.align_x(Alignment::Start);
+        } else {
+            value_text = value_text.align_x(Alignment::Center);
         }
 
         content.push(Element::from(value_text));
@@ -81,6 +94,25 @@ impl IndicatorsUI {
         }
     }
 
+    fn label_font_size(app_state: &AppState) -> u16 {
+        let configuration = app_state.app_configuration();
+        let is_horizontal = matches!(app_state.core().applet.anchor, PanelAnchor::Top | PanelAnchor::Bottom);
+
+        match app_state.core().applet.size {
+            cosmic::applet::Size::PanelSize(PanelSize::XS) if is_horizontal => configuration.general.horizontal_font_size_xs,
+            cosmic::applet::Size::PanelSize(PanelSize::XS) => configuration.general.vertical_font_size_xs,
+            cosmic::applet::Size::PanelSize(PanelSize::S) if is_horizontal => configuration.general.horizontal_font_size_sm,
+            cosmic::applet::Size::PanelSize(PanelSize::S) => configuration.general.vertical_font_size_sm,
+            cosmic::applet::Size::PanelSize(PanelSize::M) if is_horizontal => configuration.general.horizontal_font_size_md,
+            cosmic::applet::Size::PanelSize(PanelSize::M) => configuration.general.vertical_font_size_md,
+            cosmic::applet::Size::PanelSize(PanelSize::L) if is_horizontal => configuration.general.horizontal_font_size_lg,
+            cosmic::applet::Size::PanelSize(PanelSize::L) => configuration.general.vertical_font_size_lg,
+            cosmic::applet::Size::PanelSize(PanelSize::XL) if is_horizontal => configuration.general.horizontal_font_size_xl,
+            cosmic::applet::Size::PanelSize(PanelSize::XL) => configuration.general.vertical_font_size_xl,
+            _ => DEFAULT_INDICATOR_FONT_SIZE,
+        }
+    }
+
     fn label_icon_size(app_state: &AppState) -> u16 {
         match app_state.core().applet.size {
             cosmic::applet::Size::PanelSize(PanelSize::XS) => DEFAULT_INDICATOR_ICON_SIZE,
@@ -89,17 +121,6 @@ impl IndicatorsUI {
             cosmic::applet::Size::PanelSize(PanelSize::L) => DEFAULT_INDICATOR_ICON_SIZE + 9,
             cosmic::applet::Size::PanelSize(PanelSize::XL) => DEFAULT_INDICATOR_ICON_SIZE + 10,
             _ => DEFAULT_INDICATOR_ICON_SIZE,
-        }
-    }
-
-    fn label_text_vertical_font_size(app_state: &AppState) -> u16 {
-        match app_state.core().applet.size {
-            cosmic::applet::Size::PanelSize(PanelSize::XS) => DEFAULT_INDICATOR_FONT_SIZE - 3,
-            cosmic::applet::Size::PanelSize(PanelSize::S) => DEFAULT_INDICATOR_FONT_SIZE - 1,
-            cosmic::applet::Size::PanelSize(PanelSize::M) => DEFAULT_INDICATOR_FONT_SIZE,
-            cosmic::applet::Size::PanelSize(PanelSize::L) => DEFAULT_INDICATOR_FONT_SIZE + 1,
-            cosmic::applet::Size::PanelSize(PanelSize::XL) => DEFAULT_INDICATOR_FONT_SIZE + 2,
-            _ => DEFAULT_INDICATOR_FONT_SIZE,
         }
     }
 }
