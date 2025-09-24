@@ -28,6 +28,10 @@ impl AppTextMeasurements {
             .measure_single(text, font_size)
             .unwrap_or_default();
 
+        if new_measurement <= 0.0 {
+            return None;
+        }
+
         self.text_measurements
             .borrow_mut()
             .insert((text, font_size), new_measurement);
@@ -37,7 +41,6 @@ impl AppTextMeasurements {
     }
 
     pub fn reset(&self) {
-        todo!()
-      //  self.text_measurements.borrow().clear();
+        self.text_measurements.borrow_mut().clear();       
     }
 }

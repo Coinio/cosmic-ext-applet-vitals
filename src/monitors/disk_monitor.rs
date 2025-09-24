@@ -5,9 +5,6 @@ use log::info;
 use std::cmp;
 use std::collections::VecDeque;
 
-const DISK_STAT_READ_INDEX: usize = 0;
-const DISK_STAT_WRITE_INDEX: usize = 1;
-
 const SECTOR_SIZE_BYTES: u64 = 512;
 
 #[derive(Debug, Clone, Default)]
@@ -18,26 +15,17 @@ struct DiskSample {
 
 impl DiskSample {
     pub fn new(bytes_read: u64, bytes_written: u64) -> Self {
-        Self { bytes_read, bytes_written }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum DiskDirection {
-    Read,
-    Write,
-}
-
-impl Default for DiskDirection {
-    fn default() -> Self {
-        Self::Read
+        Self {
+            bytes_read,
+            bytes_written,
+        }
     }
 }
 
 #[derive(Debug, Clone, Default)]
 pub struct DiskStats {
-    pub bytes: u64,
-    pub direction: DiskDirection,
+    pub avg_bytes_written: u64,
+    pub avg_bytes_read: u64,
 }
 
 pub struct DiskMonitor<S: SensorReader<Output = ProcDiskStats>> {
@@ -60,7 +48,7 @@ impl<S: SensorReader<Output = ProcDiskStats>> DiskMonitor<S> {
         }
     }
 
-    pub fn poll(&mut self) -> Result<[DiskStats; 2], String> {
+    pub fn poll(&mut self) -> Result<DiskStats, String> {
         let current = match self.sensor_reader.read() {
             Ok(value) => value,
             Err(err) => return Err(err),
@@ -92,24 +80,21 @@ impl<S: SensorReader<Output = ProcDiskStats>> DiskMonitor<S> {
         let delta_bytes_read = delta_sectors_read.saturating_mul(SECTOR_SIZE_BYTES);
         let delta_bytes_written = delta_sectors_written.saturating_mul(SECTOR_SIZE_BYTES);
 
-        self.sample_buffer.push_back(DiskSample::new(delta_bytes_read, delta_bytes_written));
+        self.sample_buffer
+            .push_back(DiskSample::new(delta_bytes_read, delta_bytes_written));
         if self.sample_buffer.len() > self.max_samples {
             self.sample_buffer.pop_front();
         }
 
-        let avg_bytes_read = self.sample_buffer.iter().map(|s| s.bytes_read).sum::<u64>() / self.sample_buffer.len() as u64;
-        let avg_bytes_written = self.sample_buffer.iter().map(|s| s.bytes_written).sum::<u64>() / self.sample_buffer.len() as u64;
+        let avg_bytes_read =
+            self.sample_buffer.iter().map(|s| s.bytes_read).sum::<u64>() / self.sample_buffer.len() as u64;
+        let avg_bytes_written =
+            self.sample_buffer.iter().map(|s| s.bytes_written).sum::<u64>() / self.sample_buffer.len() as u64;
 
-        Ok([
-            DiskStats {
-                bytes: avg_bytes_read,
-                direction: DiskDirection::Read,
-            },
-            DiskStats {
-                bytes: avg_bytes_written,
-                direction: DiskDirection::Write,
-            },
-        ])
+        Ok(DiskStats {
+            avg_bytes_read,
+            avg_bytes_written,
+        })
     }
 }
 
@@ -165,7 +150,11 @@ mod test {
     }
 
     fn make_sensor_sample(device_name: String, sectors_read: u64, sectors_written: u64) -> ProcDiskStats {
-        ProcDiskStats::new(vec![ProcDiskStatsStatus::new(device_name, sectors_read, sectors_written)])
+        ProcDiskStats::new(vec![ProcDiskStatsStatus::new(
+            device_name,
+            sectors_read,
+            sectors_written,
+        )])
     }
 
     #[test]
@@ -182,8 +171,8 @@ mod test {
 
         let result = result.unwrap();
 
-        assert_eq!(result[DISK_STAT_READ_INDEX].bytes, 0);
-        assert_eq!(result[DISK_STAT_WRITE_INDEX].bytes, 0);
+        assert_eq!(result.avg_bytes_read, 0);
+        assert_eq!(result.avg_bytes_written, 0);
     }
 
     #[test]
@@ -203,8 +192,8 @@ mod test {
 
         let result = result.unwrap();
 
-        assert_eq!(result[DISK_STAT_READ_INDEX].bytes, ((2000 - 1000) * 512) / 2);
-        assert_eq!(result[DISK_STAT_WRITE_INDEX].bytes, ((2000 - 1000) * 512) / 2);
+        assert_eq!(result.avg_bytes_read, ((2000 - 1000) * 512) / 2);
+        assert_eq!(result.avg_bytes_written, ((2000 - 1000) * 512) / 2);
     }
 
     #[test]
@@ -227,15 +216,15 @@ mod test {
 
         let result1 = result1.unwrap();
 
-        assert_eq!(result1[DISK_STAT_READ_INDEX].bytes, ((2000 - 1000) * 512) / 2);
-        assert_eq!(result1[DISK_STAT_WRITE_INDEX].bytes, ((2000 - 1000) * 512) / 2);
+        assert_eq!(result1.avg_bytes_read, ((2000 - 1000) * 512) / 2);
+        assert_eq!(result1.avg_bytes_written, ((2000 - 1000) * 512) / 2);
 
         assert!(result2.is_ok());
 
         let result2 = result2.unwrap();
 
-        assert_eq!(result2[DISK_STAT_READ_INDEX].bytes, ((3000 - 1000) * 512) / 3);
-        assert_eq!(result2[DISK_STAT_WRITE_INDEX].bytes, ((3000 - 1000) * 512) / 3);
+        assert_eq!(result2.avg_bytes_read, ((3000 - 1000) * 512) / 3);
+        assert_eq!(result2.avg_bytes_written, ((3000 - 1000) * 512) / 3);
     }
 
     #[test]
@@ -258,7 +247,6 @@ mod test {
 
     #[test]
     fn include_only_logical_disks() {
-
         let samples1 = ProcDiskStats::new(vec![
             ProcDiskStatsStatus::new("nvme0n1".to_string(), 1000, 1000),
             ProcDiskStatsStatus::new("nvme0n1p1".to_string(), 1000, 1000),
@@ -297,8 +285,14 @@ mod test {
 
         let result = result.unwrap();
 
-        assert_eq!(result[DISK_STAT_READ_INDEX].bytes, (((2000 + 2000) - (1000 + 1000)) * 512) / 2);
-        assert_eq!(result[DISK_STAT_WRITE_INDEX].bytes, (((2000 + 2000) - (1000 + 1000)) * 512) / 2);
+        assert_eq!(
+            result.avg_bytes_read,
+            (((2000 + 2000) - (1000 + 1000)) * 512) / 2
+        );
+        assert_eq!(
+            result.avg_bytes_written,
+            (((2000 + 2000) - (1000 + 1000)) * 512) / 2
+        );
     }
 
     #[test]

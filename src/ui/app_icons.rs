@@ -2,12 +2,8 @@ use rust_embed::RustEmbed;
 use std::collections::HashMap;
 
 pub const APP_LOGO_ICON: &str = "app-logo-icon";
-pub const CPU_USAGE_ICON_DARK_KEY: &str = "cpu-usage-icon-dark";
-pub const MEMORY_USAGE_ICON_DARK_KEY: &str = "memory-usage-icon-dark";
-pub const NETWORK_RX_USAGE_ICON_DARK_KEY: &str = "network-rx-usage-icon-dark";
-pub const NETWORK_TX_USAGE_ICON_DARK_KEY: &str = "network-tx-usage-icon-dark";
-pub const DISK_READ_ICON_DARK_KEY: &str = "disk-read-usage-icon-dark";
-pub const DISK_WRITE_ICON_DARK_KEY: &str = "disk-write-usage-icon-dark";
+pub const UP_ARROW_ICON: &str = "up-arrow-icon";
+pub const DOWN_ARROW_ICON: &str = "down-arrow-icon";
 
 #[derive(RustEmbed)]
 #[folder = "res/icons/"]
@@ -29,12 +25,8 @@ impl AppIcons {
         Self {
             icons: HashMap::from([
                 (APP_LOGO_ICON, svg_handle("dev.eidolon.cosmic-vitals-applet.svg").into()),
-                (CPU_USAGE_ICON_DARK_KEY, svg_handle("cpu.svg").into()),
-                (MEMORY_USAGE_ICON_DARK_KEY, svg_handle("memory.svg").into()),
-                (NETWORK_RX_USAGE_ICON_DARK_KEY, svg_handle("arrow-download.svg").into()),
-                (NETWORK_TX_USAGE_ICON_DARK_KEY, svg_handle("arrow-upload.svg").into()),
-                (DISK_READ_ICON_DARK_KEY, svg_handle("disk-download.svg").into()),
-                (DISK_WRITE_ICON_DARK_KEY, svg_handle("disk-upload.svg").into()),
+                (UP_ARROW_ICON, svg_handle("arrow-download.svg").into()),
+                (DOWN_ARROW_ICON, svg_handle("arrow-upload.svg").into()),
             ])
         }
     }

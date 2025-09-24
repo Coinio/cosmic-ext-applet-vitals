@@ -15,17 +15,17 @@ pub struct GeneralConfiguration {
     pub horizontal_font_size_sm: u16,
     pub horizontal_font_size_md: u16,
     pub horizontal_font_size_lg: u16,
-    pub horizontal_font_size_xl: u16,
+    pub horizontal_font_size_xl: u16
 }
 
 impl Default for GeneralConfiguration {
     fn default() -> Self {
         GeneralConfiguration {
-            vertical_font_size_xs: DEFAULT_INDICATOR_FONT_SIZE - 6,
+            vertical_font_size_xs: DEFAULT_INDICATOR_FONT_SIZE - 5,
             vertical_font_size_sm: DEFAULT_INDICATOR_FONT_SIZE - 3,
             vertical_font_size_md: DEFAULT_INDICATOR_FONT_SIZE,
-            vertical_font_size_lg: DEFAULT_INDICATOR_FONT_SIZE + 2,
-            vertical_font_size_xl: DEFAULT_INDICATOR_FONT_SIZE + 4,
+            vertical_font_size_lg: DEFAULT_INDICATOR_FONT_SIZE,
+            vertical_font_size_xl: DEFAULT_INDICATOR_FONT_SIZE,
             horizontal_font_size_xs: DEFAULT_INDICATOR_FONT_SIZE,
             horizontal_font_size_sm: DEFAULT_INDICATOR_FONT_SIZE + 2,
             horizontal_font_size_md: DEFAULT_INDICATOR_FONT_SIZE + 4,
