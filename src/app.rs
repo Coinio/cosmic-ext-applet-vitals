@@ -15,6 +15,7 @@ use crate::sensors::proc_stat_reader::ProcStatSensorReader;
 use crate::ui::app_colours::AppColours;
 use crate::ui::app_icons::{AppIcons, APP_LOGO_ICON};
 use crate::ui::app_text_measurements::AppTextMeasurements;
+use crate::ui::components::no_indicator::{no_indicators_content, NoIndicatorProps};
 use crate::ui::main_settings_form::MainSettingsForm;
 use crate::ui::settings_form::{SettingsForm, SettingsFormEvent};
 use cosmic::app::{Core, Task};
@@ -31,7 +32,6 @@ use log::{error, info};
 use once_cell::sync::Lazy;
 use std::collections::BTreeMap;
 use tokio_util::sync::CancellationToken;
-use crate::ui::components::no_indicator::{no_indicators_content, NoIndicatorProps};
 
 pub const GLOBAL_APP_ID: &'static str = "dev.eidolon.cosmic-vitals-applet";
 
@@ -301,15 +301,15 @@ impl Application for AppState {
         }
         if let Some(element) = self.disk.draw(&self, is_horizontal) {
             elements.push(element);
+            elements.push(divider::vertical::default().into());
         }
         if elements.len() <= 1 {
             elements.push(no_indicators_content(NoIndicatorProps {
                 icon: self.app_icons.get(APP_LOGO_ICON),
                 size: self.label_icon_size(),
             }));
+            elements.push(divider::vertical::default().into());
         }
-
-        elements.push(divider::vertical::default().into());
 
         let wrapper: Element<Message> = if is_horizontal {
             Row::from_vec(elements)
@@ -419,8 +419,7 @@ impl AppState {
 
     pub fn font_size(&self) -> u16 {
         let configuration = self.configuration();
-        let is_horizontal = matches!(self.core.applet.anchor, PanelAnchor::Top |
-            PanelAnchor::Bottom);
+        let is_horizontal = matches!(self.core.applet.anchor, PanelAnchor::Top | PanelAnchor::Bottom);
 
         match self.core.applet.size {
             cosmic::applet::Size::PanelSize(PanelSize::XS) if is_horizontal => {
