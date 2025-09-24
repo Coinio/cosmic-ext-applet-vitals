@@ -1,5 +1,4 @@
-pub mod display_item;
-pub mod indicators_ui;
+
 pub mod settings_form;
 pub mod main_settings_form;
 pub mod app_icons;

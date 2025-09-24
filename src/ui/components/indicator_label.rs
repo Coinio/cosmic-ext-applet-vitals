@@ -9,7 +9,7 @@ pub struct IndicatorLabelProps {
 }
 
 /// Creates a label for an indicator
-pub fn indicator_label(core: &cosmic::Core, props: IndicatorLabelProps) -> Option<Element<Message>> {
+pub fn indicator_label(core: &'_ cosmic::Core, props: IndicatorLabelProps) -> Option<Element<'_, Message>> {
     if props.text.is_none() {
         return None;
     }

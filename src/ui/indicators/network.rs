@@ -1,6 +1,6 @@
 use crate::app::{AppState, Message};
 use crate::configuration::app_configuration::AppConfiguration;
-use crate::monitors::disk_monitor::DiskStats;
+use crate::monitors::network_monitor::NetworkStats;
 use crate::ui::app_colours::{BRIGHT_GREEN, BRIGHT_RED};
 use crate::ui::app_icons::{DOWN_ARROW_ICON, UP_ARROW_ICON};
 use crate::ui::components::indicator_label::{indicator_label, IndicatorLabelProps};
@@ -11,7 +11,7 @@ use cosmic::iced_widget::Row;
 use cosmic::widget::Column;
 use cosmic::Element;
 
-impl DiskStats {
+impl NetworkStats {
     pub fn draw<'app>(&self, app_state: &'app AppState, horizontal: bool) -> Option<Element<'app, Message>> {
         let core = app_state.core();
         let configuration = app_state.configuration();
@@ -127,7 +127,7 @@ impl DiskStats {
         let row: Element<Message> = if horizontal {
             Row::from_vec(content)
                 .padding(suggested_padding)
-                .align_y(Alignment::Center)
+                .align_y(Alignment::Center)                
                 .into()
         } else {
             Column::from_vec(content).align_x(Alignment::Center).into()
@@ -137,23 +137,23 @@ impl DiskStats {
     }
 
     fn label(&self, app_state: &AppState) -> Option<String> {
-        Some("DISK".to_string())
+        Some("NET".to_string())
     }
 
     fn label_colour(&self, app_state: &AppState) -> Color {
         app_state
             .configuration()
-            .disk
-            .label_colour_read
+            .network
+            .label_colour_rx
             .as_deref()
             .and_then(|key| app_state.app_colours().get(key))
             .map_or(Color::WHITE, |c| Color::new(c.red, c.green, c.blue, c.alpha))
     }
 
     fn read_value(&self, _app_config: &AppConfiguration) -> String {
-        let mb_per_second = self.avg_bytes_read as f64 / 1_000_000.0;
+        let mb_per_second = self.rx_bytes as f64 / 1_000_000.0;
         if mb_per_second > 999.9 {
-            let gb_per_second = self.avg_bytes_read as f64 / 1_000_000_000.0;
+            let gb_per_second = self.rx_bytes as f64 / 1_000_000_000.0;
             format!("{:.1}GB/s", gb_per_second)
         } else if mb_per_second > 99.9 {
             format!("{:.0}MB/s", mb_per_second.round())
@@ -163,9 +163,9 @@ impl DiskStats {
     }
 
     fn write_value(&self, _app_config: &AppConfiguration) -> String {
-        let mb_per_second = self.avg_bytes_written as f64 / 1_000_000.0;
+        let mb_per_second = self.tx_bytes as f64 / 1_000_000.0;
         if mb_per_second > 999.9 {
-            let gb_per_second = self.avg_bytes_written as f64 / 1_000_000_000.0;
+            let gb_per_second = self.tx_bytes as f64 / 1_000_000_000.0;
             format!("{:.1}GB/s", gb_per_second)
         } else if mb_per_second > 99.9 {
             format!("{:.0}MB/s", mb_per_second.round())
@@ -179,6 +179,6 @@ impl DiskStats {
     }
 
     fn is_hidden(&self, app_config: &AppConfiguration) -> bool {
-        app_config.disk.hide_indicator
+        app_config.network.hide_indicator
     }
 }

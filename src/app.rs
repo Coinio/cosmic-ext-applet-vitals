@@ -7,23 +7,21 @@ use crate::configuration::app_configuration::{
 use crate::monitors::cpu_monitor::{CpuMonitor, CpuStats};
 use crate::monitors::disk_monitor::{DiskMonitor, DiskStats};
 use crate::monitors::memory_monitor::{MemoryMonitor, MemoryStats};
-use crate::monitors::network_monitor::{NetworkMonitor, NetworkStats, NETWORK_STAT_RX_INDEX, NETWORK_STAT_TX_INDEX};
+use crate::monitors::network_monitor::{NetworkMonitor, NetworkStats};
 use crate::sensors::proc_disk_stats_reader::ProcDiskStatsReader;
 use crate::sensors::proc_meminfo_reader::ProcMemInfoSensorReader;
 use crate::sensors::proc_net_dev_reader::ProcNetDevReader;
 use crate::sensors::proc_stat_reader::ProcStatSensorReader;
 use crate::ui::app_colours::AppColours;
-use crate::ui::app_icons::AppIcons;
+use crate::ui::app_icons::{AppIcons, APP_LOGO_ICON};
 use crate::ui::app_text_measurements::AppTextMeasurements;
-use crate::ui::cosmic_text_measurer::{CosmicTextMeasurer};
 use crate::ui::main_settings_form::MainSettingsForm;
 use crate::ui::settings_form::{SettingsForm, SettingsFormEvent};
 use cosmic::app::{Core, Task};
-use cosmic::applet::cosmic_panel_config::PanelAnchor;
+use cosmic::applet::cosmic_panel_config::{PanelAnchor, PanelSize};
 use cosmic::cosmic_config::{Config, CosmicConfigEntry};
 use cosmic::iced::{window, Subscription};
 use cosmic::iced::{Alignment, Limits};
-use cosmic::iced_renderer::graphics::text::cosmic_text::{Attrs, Buffer, FontSystem, Metrics, Shaping};
 use cosmic::iced_widget::{row, Column, Row};
 use cosmic::iced_winit::commands::popup::get_popup;
 use cosmic::widget;
@@ -32,13 +30,16 @@ use cosmic::{cosmic_config, Application, Element};
 use log::{error, info};
 use once_cell::sync::Lazy;
 use std::collections::BTreeMap;
-use cosmic::widget::menu::Item::{Divider};
 use tokio_util::sync::CancellationToken;
-use crate::ui::indicators_ui::{IndicatorsUI, DEFAULT_INDICATOR_SPACING};
+use crate::ui::components::no_indicator::{no_indicators_content, NoIndicatorProps};
 
 pub const GLOBAL_APP_ID: &'static str = "dev.eidolon.cosmic-vitals-applet";
 
 static AUTOSIZE_MAIN_ID: Lazy<Id> = Lazy::new(|| Id::new("autosize-main"));
+
+const DEFAULT_INDICATOR_FONT_SIZE: u16 = 14;
+const DEFAULT_INDICATOR_ICON_SIZE: u16 = 14;
+const DEFAULT_INDICATOR_SPACING: u16 = 8;
 
 #[derive(Default)]
 pub struct AppState {
@@ -61,7 +62,7 @@ pub struct AppState {
     /// The current cpu usage stats
     cpu: CpuStats,
     /// The current network usage stats
-    network: [NetworkStats; 2],
+    network: NetworkStats,
     /// The current disk usage stats   
     disk: DiskStats,
     /// The popup id.
@@ -82,7 +83,7 @@ pub enum Message {
     /// The cpu usage stats were updated
     CpuUpdate(CpuStats),
     /// The network usage stats were updated
-    NetworkUpdate([NetworkStats; 2]),
+    NetworkUpdate(NetworkStats),
     /// The disk usage stats were updated
     DiskUpdate(DiskStats),
     /// The user has updated the settings form
@@ -286,36 +287,26 @@ impl Application for AppState {
 
         elements.push(divider::vertical::default().into());
 
-        if let Some(element) = IndicatorsUI::content(&self, &self.cpu) {
+        if let Some(element) = self.cpu.draw(&self, is_horizontal) {
             elements.push(element);
             elements.push(divider::vertical::default().into())
         }
-        if let Some(element) = IndicatorsUI::content(&self, &self.memory) {
+        if let Some(element) = self.memory.draw(&self, is_horizontal) {
             elements.push(element);
             elements.push(divider::vertical::default().into())
         }
-        if let Some(element) = IndicatorsUI::content(&self, &self.network[NETWORK_STAT_RX_INDEX]) {
-            elements.push(element);
-            elements.push(divider::vertical::default().into())
-        }
-        if let Some(element) = IndicatorsUI::content(&self, &self.network[NETWORK_STAT_TX_INDEX]) {
+        if let Some(element) = self.network.draw(&self, is_horizontal) {
             elements.push(element);
             elements.push(divider::vertical::default().into())
         }
         if let Some(element) = self.disk.draw(&self, is_horizontal) {
             elements.push(element);
         }
-        
-        /*if let Some(element) = IndicatorsUI::content(&self, &self.disk[0]) {
-            elements.push(element);
-            elements.push(divider::vertical::default().into())
-        }
-        if let Some(element) = IndicatorsUI::content(&self, &self.disk[1]) {
-            elements.push(element);
-        }*/
-
-        if elements.is_empty() {
-            elements.push(IndicatorsUI::no_indicators_content(&self));
+        if elements.len() <= 1 {
+            elements.push(no_indicators_content(NoIndicatorProps {
+                icon: self.app_icons.get(APP_LOGO_ICON),
+                size: self.label_icon_size(),
+            }));
         }
 
         elements.push(divider::vertical::default().into());
@@ -423,6 +414,47 @@ impl AppState {
             if let Err(err) = self.configuration.write_entry(&helper) {
                 error!("Failed to save configuration: {}", err);
             }
+        }
+    }
+
+    pub fn font_size(&self) -> u16 {
+        let configuration = self.configuration();
+        let is_horizontal = matches!(self.core.applet.anchor, PanelAnchor::Top |
+            PanelAnchor::Bottom);
+
+        match self.core.applet.size {
+            cosmic::applet::Size::PanelSize(PanelSize::XS) if is_horizontal => {
+                configuration.general.horizontal_font_size_xs
+            }
+            cosmic::applet::Size::PanelSize(PanelSize::XS) => configuration.general.vertical_font_size_xs,
+            cosmic::applet::Size::PanelSize(PanelSize::S) if is_horizontal => {
+                configuration.general.horizontal_font_size_sm
+            }
+            cosmic::applet::Size::PanelSize(PanelSize::S) => configuration.general.vertical_font_size_sm,
+            cosmic::applet::Size::PanelSize(PanelSize::M) if is_horizontal => {
+                configuration.general.horizontal_font_size_md
+            }
+            cosmic::applet::Size::PanelSize(PanelSize::M) => configuration.general.vertical_font_size_md,
+            cosmic::applet::Size::PanelSize(PanelSize::L) if is_horizontal => {
+                configuration.general.horizontal_font_size_lg
+            }
+            cosmic::applet::Size::PanelSize(PanelSize::L) => configuration.general.vertical_font_size_lg,
+            cosmic::applet::Size::PanelSize(PanelSize::XL) if is_horizontal => {
+                configuration.general.horizontal_font_size_xl
+            }
+            cosmic::applet::Size::PanelSize(PanelSize::XL) => configuration.general.vertical_font_size_xl,
+            _ => DEFAULT_INDICATOR_FONT_SIZE,
+        }
+    }
+
+    pub fn label_icon_size(&self) -> u16 {
+        match self.core.applet.size {
+            cosmic::applet::Size::PanelSize(PanelSize::XS) => DEFAULT_INDICATOR_ICON_SIZE,
+            cosmic::applet::Size::PanelSize(PanelSize::S) => DEFAULT_INDICATOR_ICON_SIZE + 3,
+            cosmic::applet::Size::PanelSize(PanelSize::M) => DEFAULT_INDICATOR_ICON_SIZE + 6,
+            cosmic::applet::Size::PanelSize(PanelSize::L) => DEFAULT_INDICATOR_ICON_SIZE + 9,
+            cosmic::applet::Size::PanelSize(PanelSize::XL) => DEFAULT_INDICATOR_ICON_SIZE + 10,
+            _ => DEFAULT_INDICATOR_ICON_SIZE,
         }
     }
 }
