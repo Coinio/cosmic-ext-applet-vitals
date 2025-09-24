@@ -1,9 +1,9 @@
 use crate::configuration::app_configuration::*;
 use crate::configuration::validation::ConfigurationValidation;
+use crate::ui::app_colours::ACCENT_GREEN;
 use crate::ui::settings_form::SettingsForm;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
-use crate::ui::app_colours::{ACCENT_GREEN, ACCENT_PINK};
 
 /// The configuration for the network monitor
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
@@ -14,10 +14,8 @@ pub struct NetworkConfiguration {
     pub update_interval: Duration,
     /// The number of samples to keep and average for the final result
     pub max_samples: usize,
-    /// The RX indicator icon colour key
-    pub label_colour_rx: Option<String>,
-    /// The TX indicator icon colour key
-    pub label_colour_tx: Option<String>,
+    /// The label colour
+    pub label_colour: Option<String>,
 }
 
 impl Default for NetworkConfiguration {
@@ -26,8 +24,7 @@ impl Default for NetworkConfiguration {
             hide_indicator: false,
             update_interval: Duration::from_secs(1),
             max_samples: 4,
-            label_colour_rx: Some(ACCENT_GREEN.to_string()),
-            label_colour_tx: Some(ACCENT_PINK.to_string()),
+            label_colour: Some(ACCENT_GREEN.to_string()),
         }
     }
 }
@@ -66,22 +63,14 @@ impl NetworkConfiguration {
                     .clone(),
                 self.max_samples,
             ),
-            label_colour_rx: Some(
+            label_colour: Some(
                 settings_form
                     .values
-                    .get(NETWORK_RX_COLOUR_SETTING_KEY)
+                    .get(LABEL_COLOUR_SETTING_KEY)
                     .expect("Network Rx label colour settings missing from form options")
                     .value
                     .clone(),
-            ),
-            label_colour_tx: Some(
-                settings_form
-                    .values
-                    .get(NETWORK_TX_COLOUR_SETTING_KEY)
-                    .expect("Network Tx label colour settings missing from form options")
-                    .value
-                    .clone(),
-            ),
+            )
         }
     }
 }

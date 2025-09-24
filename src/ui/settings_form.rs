@@ -49,16 +49,9 @@ pub struct SettingsForm {
 
 impl From<&CpuConfiguration> for SettingsForm {
     fn from(config: &CpuConfiguration) -> SettingsForm {
-        let mut values = build_shared_settings(config.hide_indicator, config.update_interval, config.max_samples);
-        values.insert(
-            LABEL_COLOUR_SETTING_KEY,
-            SettingsFormItem {
-                label: fl!("settings-label-colour"),
-                value: config.label_colour.clone().unwrap_or_default(),
-                input_type: SettingsFormInputType::ColourPicker,
-                validator: None,
-            },
-        );
+        let mut values = build_shared_settings(config.hide_indicator, config.update_interval,
+                                               config.max_samples, config.label_colour.clone());
+
         SettingsForm {
             settings_window_id: CPU_SETTINGS_WINDOW_ID.clone(),
             title: fl!("settings-cpu-title"),
@@ -69,16 +62,8 @@ impl From<&CpuConfiguration> for SettingsForm {
 
 impl From<&MemoryConfiguration> for SettingsForm {
     fn from(config: &MemoryConfiguration) -> SettingsForm {
-        let mut values = build_shared_settings(config.hide_indicator, config.update_interval, config.max_samples);
-        values.insert(
-            LABEL_COLOUR_SETTING_KEY,
-            SettingsFormItem {
-                label: fl!("settings-label-colour"),
-                value: config.label_colour.clone().unwrap_or_default(),
-                input_type: SettingsFormInputType::ColourPicker,
-                validator: None,
-            },
-        );
+        let mut values = build_shared_settings(config.hide_indicator, config.update_interval,
+                                               config.max_samples, config.label_colour.clone());
         SettingsForm {
             settings_window_id: MEMORY_SETTINGS_WINDOW_ID.clone(),
             title: fl!("settings-memory-title"),
@@ -89,25 +74,9 @@ impl From<&MemoryConfiguration> for SettingsForm {
 
 impl From<&NetworkConfiguration> for SettingsForm {
     fn from(config: &NetworkConfiguration) -> SettingsForm {
-        let mut values = build_shared_settings(config.hide_indicator, config.update_interval, config.max_samples);
-        values.insert(
-            NETWORK_RX_COLOUR_SETTING_KEY,
-            SettingsFormItem {
-                label: fl!("settings-network-rx-colour"),
-                value: config.label_colour_rx.clone().unwrap_or_default(),
-                input_type: SettingsFormInputType::ColourPicker,
-                validator: None,
-            },
-        );
-        values.insert(
-            NETWORK_TX_COLOUR_SETTING_KEY,
-            SettingsFormItem {
-                label: fl!("settings-network-tx-colour"),
-                value: config.label_colour_tx.clone().unwrap_or_default(),
-                input_type: SettingsFormInputType::ColourPicker,
-                validator: None,
-            },
-        );
+        let mut values = build_shared_settings(config.hide_indicator, config.update_interval,
+                                               config.max_samples, config.label_colour.clone());
+
         SettingsForm {
             settings_window_id: NETWORK_SETTINGS_WINDOW_ID.clone(),
             title: fl!("settings-network-title"),
@@ -118,25 +87,8 @@ impl From<&NetworkConfiguration> for SettingsForm {
 
 impl From<&DiskConfiguration> for SettingsForm {
     fn from(config: &DiskConfiguration) -> SettingsForm {
-        let mut values = build_shared_settings(config.hide_indicator, config.update_interval, config.max_samples);
-        values.insert(
-            DISK_READ_COLOUR_SETTING_KEY,
-            SettingsFormItem {
-                label: fl!("settings-disk-read-colour"),
-                value: config.label_colour_read.clone().unwrap_or_default(),
-                input_type: SettingsFormInputType::ColourPicker,
-                validator: None,
-            },
-        );
-        values.insert(
-            DISK_WRITE_COLOUR_SETTING_KEY,
-            SettingsFormItem {
-                label: fl!("settings-disk-write-colour"),
-                value: config.label_colour_write.clone().unwrap_or_default(),
-                input_type: SettingsFormInputType::ColourPicker,
-                validator: None,
-            },
-        );
+        let mut values = build_shared_settings(config.hide_indicator, config.update_interval, 
+                                               config.max_samples, config.label_colour.clone());
         SettingsForm {
             settings_window_id: DISK_SETTINGS_WINDOW_ID.clone(),
             title: fl!("settings-disk-title"),
@@ -254,6 +206,7 @@ fn build_shared_settings(
     hide_indicator: bool,
     update_interval: Duration,
     max_samples: usize,
+    label_colour: Option<String>,
 ) -> IndexMap<&'static str, SettingsFormItem> {
     IndexMap::from([
         (
@@ -281,6 +234,15 @@ fn build_shared_settings(
                 value: max_samples.to_string(),
                 input_type: SettingsFormInputType::String,
                 validator: Some(ConfigurationValidation::is_valid_max_samples),
+            },
+        ),
+        (
+            LABEL_COLOUR_SETTING_KEY,
+            SettingsFormItem {
+                label: fl!("settings-label-colour"),
+                value: label_colour.clone().unwrap_or_default(),
+                input_type: SettingsFormInputType::ColourPicker,
+                validator: None,
             },
         ),
     ])

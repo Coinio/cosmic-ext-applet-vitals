@@ -144,7 +144,7 @@ impl NetworkStats {
         app_state
             .configuration()
             .network
-            .label_colour_rx
+            .label_colour
             .as_deref()
             .and_then(|key| app_state.app_colours().get(key))
             .map_or(Color::WHITE, |c| Color::new(c.red, c.green, c.blue, c.alpha))

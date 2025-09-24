@@ -144,7 +144,7 @@ impl DiskStats {
         app_state
             .configuration()
             .disk
-            .label_colour_read
+            .label_colour
             .as_deref()
             .and_then(|key| app_state.app_colours().get(key))
             .map_or(Color::WHITE, |c| Color::new(c.red, c.green, c.blue, c.alpha))
