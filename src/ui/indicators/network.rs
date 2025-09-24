@@ -126,8 +126,8 @@ impl NetworkStats {
 
         let row: Element<Message> = if horizontal {
             Row::from_vec(content)
-                .padding(suggested_padding)
-                .align_y(Alignment::Center)                
+                .spacing(app_state.core().applet.suggested_padding(false))
+                .align_y(Alignment::Center)
                 .into()
         } else {
             Column::from_vec(content).align_x(Alignment::Center).into()

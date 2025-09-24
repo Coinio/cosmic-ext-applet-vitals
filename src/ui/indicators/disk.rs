@@ -126,7 +126,7 @@ impl DiskStats {
 
         let row: Element<Message> = if horizontal {
             Row::from_vec(content)
-                .padding(suggested_padding)
+                .spacing(app_state.core().applet.suggested_padding(false))
                 .align_y(Alignment::Center)
                 .into()
         } else {
