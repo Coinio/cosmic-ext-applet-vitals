@@ -18,7 +18,7 @@ pub static DISK_SETTINGS_WINDOW_ID: Lazy<cosmic::iced::window::Id> = Lazy::new(|
 
 pub const SENSOR_INTERVAL_MINIMUM_IN_MS: u64 = 250;
 pub const SENSOR_MAX_SAMPLES_MINIMUM: usize = 1;
-pub const SENSOR_MAX_LABEL_LENGTH: usize = 16;
+pub const SENSOR_MAX_LABEL_LENGTH: usize = 10;
 pub const LABEL_TEXT_SETTING_KEY: &'static str = "settings-label-text";
 pub const LABEL_COLOUR_SETTING_KEY: &'static str = "settings-label-colour";
 pub const HIDE_INDICATOR_SETTING_KEY: &'static str = "settings-hide-indicator";

@@ -117,6 +117,7 @@ impl Application for AppState {
             })
             .unwrap_or_default();
 
+
         let settings_forms = configuration.settings_form_options();
         let app_colours = AppColours::from(&core.system_theme().cosmic().palette);
         let app_icons = AppIcons::new();
@@ -148,7 +149,11 @@ impl Application for AppState {
     fn update(&mut self, message: Self::Message) -> Task<Self::Message> {
         match message {
             Message::SettingsPopupOpened(target_id) => {
+
                 info!("Opening settings popup with id: {}", target_id);
+
+                // Ensure the configuration is up to date when we open the settings form.
+                self.refresh_configuration_from_disk();
 
                 match self.popup {
                     None => self.popup = Some(MAIN_SETTINGS_WINDOW_ID.clone()),
@@ -404,6 +409,21 @@ impl AppState {
             network: self.configuration.network.update(network_settings_form),
             disk: self.configuration.disk.update(disk_settings_form),
             ..Default::default()
+        }
+    }
+
+    fn refresh_configuration_from_disk(&mut self) {
+        if let Ok(helper) = Config::new(Self::APP_ID, AppConfiguration::VERSION) {
+            let loaded = AppConfiguration::get_entry(&helper)
+                .unwrap_or_else(|(errs, cfg)| {
+                    error!("Errors while loading configuration: {:?}", errs);
+                    cfg
+                });
+
+            self.configuration = loaded;
+            self.settings_forms = self.configuration.settings_form_options();
+        } else {
+            error!("Failed to create config context for reload");
         }
     }
 

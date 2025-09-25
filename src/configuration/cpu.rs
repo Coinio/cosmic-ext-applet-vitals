@@ -77,13 +77,14 @@ impl CpuConfiguration {
                     .value
                     .clone(),
             ),
-            label_text: Some(
+            label_text: Some(ConfigurationValidation::sanitise_label_text(
                 settings_form
                     .values
                     .get(LABEL_TEXT_SETTING_KEY)
                     .expect("Label text missing from settings form options")
                     .value
                     .clone(),
+                self.label_text.clone().unwrap_or_default(),),
             ),
         }
     }
