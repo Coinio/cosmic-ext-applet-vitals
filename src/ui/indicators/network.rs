@@ -1,11 +1,11 @@
 use crate::app::{AppState, Message};
 use crate::configuration::app_configuration::AppConfiguration;
 use crate::monitors::network_monitor::NetworkStats;
-use crate::ui::app_colours::{BRIGHT_GREEN, BRIGHT_RED};
+use crate::ui::app_colours::{ACCENT_GREEN, ACCENT_RED};
 use crate::ui::app_icons::{DOWN_ARROW_ICON, UP_ARROW_ICON};
 use crate::ui::components::indicator::{indicator, IndicatorProps, IndicatorValueItem};
 use crate::ui::components::svg_icon::SvgIconProps;
-use cosmic::iced::{Alignment, Color};
+use cosmic::iced::Color;
 use cosmic::Element;
 
 impl NetworkStats {
@@ -37,7 +37,7 @@ impl NetworkStats {
                     size: icon_size,
                     colour: app_state
                         .app_colours()
-                        .get(BRIGHT_GREEN)
+                        .get(ACCENT_GREEN)
                         .map(|c| Color::new(c.red, c.green, c.blue, c.alpha)),
                 })
             } else {
@@ -53,7 +53,7 @@ impl NetworkStats {
                     size: icon_size,
                     colour: app_state
                         .app_colours()
-                        .get(BRIGHT_RED)
+                        .get(ACCENT_RED)
                         .map(|c| Color::new(c.red, c.green, c.blue, c.alpha)),
                 })
             } else {
@@ -70,6 +70,7 @@ impl NetworkStats {
                 value_width: max_text_width,
                 horizontal,
                 spacing: app_state.core().applet.suggested_padding(false),
+                icon_spacing: 2,
                 values,
             },
         )

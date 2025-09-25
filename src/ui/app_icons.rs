@@ -4,6 +4,8 @@ use std::collections::HashMap;
 pub const APP_LOGO_ICON: &str = "app-logo-icon";
 pub const UP_ARROW_ICON: &str = "up-arrow-icon";
 pub const DOWN_ARROW_ICON: &str = "down-arrow-icon";
+pub const READ_ICON: &str = "read-icon";
+pub const WRITE_ICON: &str = "write-icon";
 
 #[derive(RustEmbed)]
 #[folder = "res/icons/"]
@@ -27,6 +29,8 @@ impl AppIcons {
                 (APP_LOGO_ICON, svg_handle("dev.eidolon.cosmic-vitals-applet.svg").into()),
                 (DOWN_ARROW_ICON, svg_handle("arrow-download.svg").into()),
                 (UP_ARROW_ICON, svg_handle("arrow-upload.svg").into()),
+                (READ_ICON, svg_handle("read.svg").into()),
+                (WRITE_ICON, svg_handle("write.svg").into()),
             ])
         }
     }

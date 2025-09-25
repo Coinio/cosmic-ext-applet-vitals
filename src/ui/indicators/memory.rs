@@ -38,6 +38,7 @@ impl MemoryStats {
                 value_width: max_text_width,
                 horizontal,
                 spacing: app_state.core().applet.suggested_padding(false),
+                icon_spacing: 2,
                 values,
             },
         )

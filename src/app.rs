@@ -152,11 +152,12 @@ impl Application for AppState {
 
                 info!("Opening settings popup with id: {}", target_id);
 
-                // Ensure the configuration is up to date when we open the settings form.
-                self.refresh_configuration_from_disk();
-
                 match self.popup {
-                    None => self.popup = Some(MAIN_SETTINGS_WINDOW_ID.clone()),
+                    None => {
+                        self.popup = Some(MAIN_SETTINGS_WINDOW_ID.clone());
+                        // Ensure the configuration is up to date when we open the settings form.
+                        self.refresh_configuration_from_disk();
+                    },
                     Some(_) => self.popup = Some(target_id),
                 };
 
@@ -286,7 +287,8 @@ impl Application for AppState {
     }
 
     fn view(&self) -> Element<'_, Self::Message> {
-        let is_horizontal = matches!(self.core.applet.anchor, PanelAnchor::Top | PanelAnchor::Bottom);
+        let is_horizontal = true;
+        //matches!(self.core.applet.anchor, PanelAnchor::Top |            PanelAnchor::Bottom);
 
         let mut elements: Vec<Element<Message>> = Vec::new();
 

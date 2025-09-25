@@ -1,8 +1,8 @@
 use crate::app::{AppState, Message};
 use crate::configuration::app_configuration::AppConfiguration;
 use crate::monitors::disk_monitor::DiskStats;
-use crate::ui::app_colours::{BRIGHT_GREEN, BRIGHT_RED};
-use crate::ui::app_icons::{DOWN_ARROW_ICON, UP_ARROW_ICON};
+use crate::ui::app_colours::{ACCENT_GREEN, ACCENT_RED, BRIGHT_GREEN, BRIGHT_RED};
+use crate::ui::app_icons::{DOWN_ARROW_ICON, READ_ICON, UP_ARROW_ICON, WRITE_ICON};
 use crate::ui::components::indicator::{indicator, IndicatorProps, IndicatorValueItem};
 use crate::ui::components::svg_icon::SvgIconProps;
 use cosmic::iced::Color;
@@ -33,11 +33,11 @@ impl DiskStats {
             text: self.read_value(app_state.configuration()),
             icon: if horizontal {
                 Some(SvgIconProps {
-                    icon: app_state.app_icons().get(DOWN_ARROW_ICON),
+                    icon: app_state.app_icons().get(READ_ICON),
                     size: icon_size,
                     colour: app_state
                         .app_colours()
-                        .get(BRIGHT_GREEN)
+                        .get(ACCENT_GREEN)
                         .map(|c| Color::new(c.red, c.green, c.blue, c.alpha)),
                 })
             } else {
@@ -49,11 +49,11 @@ impl DiskStats {
             text: self.write_value(app_state.configuration()),
             icon: if horizontal {
                 Some(SvgIconProps {
-                    icon: app_state.app_icons().get(UP_ARROW_ICON),
+                    icon: app_state.app_icons().get(WRITE_ICON),
                     size: icon_size,
                     colour: app_state
                         .app_colours()
-                        .get(BRIGHT_RED)
+                        .get(ACCENT_RED)
                         .map(|c| Color::new(c.red, c.green, c.blue, c.alpha)),
                 })
             } else {
@@ -70,10 +70,11 @@ impl DiskStats {
                 value_width: max_text_width,
                 horizontal,
                 spacing: app_state.core().applet.suggested_padding(false),
+                icon_spacing: 2,
                 values,
             },
         )
-            }
+    }
 
     fn label(&self, app_state: &AppState) -> Option<String> {
         Some("DISK".to_string())

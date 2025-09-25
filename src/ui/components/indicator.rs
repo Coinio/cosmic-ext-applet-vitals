@@ -19,6 +19,7 @@ pub struct IndicatorProps<'a> {
     pub value_width: f32,
     pub horizontal: bool,
     pub spacing: u16,
+    pub icon_spacing: u16,
     pub values: Vec<IndicatorValueItem<'a>>,
 }
 
@@ -39,7 +40,7 @@ pub fn indicator<'a>(core: &'a cosmic::Core, props: IndicatorProps<'a>) -> Optio
 
     let mut value_rows: Vec<Element<Message>> = Vec::new();
     for item in props.values.into_iter() {
-        let mut row = Row::new().spacing(2).align_y(Alignment::Center);
+        let mut row = Row::new().spacing(props.icon_spacing).align_y(Alignment::Center);
 
         if let Some(value_el) = indicator_value(
             core,
