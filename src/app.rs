@@ -281,7 +281,8 @@ impl Application for AppState {
     }
 
     fn view(&self) -> Element<'_, Self::Message> {
-        let is_horizontal = matches!(self.core.applet.anchor, PanelAnchor::Top | PanelAnchor::Bottom);
+        let is_horizontal = true;
+        //matches!(self.core.applet.anchor, PanelAnchor::Top |       PanelAnchor::Bottom);
 
         let mut elements: Vec<Element<Message>> = Vec::new();
 
@@ -417,28 +418,27 @@ impl AppState {
         }
     }
 
-    pub fn font_size(&self) -> u16 {
+    pub fn font_size(&self, horizontal: bool) -> u16 {
         let configuration = self.configuration();
-        let is_horizontal = matches!(self.core.applet.anchor, PanelAnchor::Top | PanelAnchor::Bottom);
 
         match self.core.applet.size {
-            cosmic::applet::Size::PanelSize(PanelSize::XS) if is_horizontal => {
+            cosmic::applet::Size::PanelSize(PanelSize::XS) if horizontal => {
                 configuration.general.horizontal_font_size_xs
             }
             cosmic::applet::Size::PanelSize(PanelSize::XS) => configuration.general.vertical_font_size_xs,
-            cosmic::applet::Size::PanelSize(PanelSize::S) if is_horizontal => {
+            cosmic::applet::Size::PanelSize(PanelSize::S) if horizontal => {
                 configuration.general.horizontal_font_size_sm
             }
             cosmic::applet::Size::PanelSize(PanelSize::S) => configuration.general.vertical_font_size_sm,
-            cosmic::applet::Size::PanelSize(PanelSize::M) if is_horizontal => {
+            cosmic::applet::Size::PanelSize(PanelSize::M) if horizontal => {
                 configuration.general.horizontal_font_size_md
             }
             cosmic::applet::Size::PanelSize(PanelSize::M) => configuration.general.vertical_font_size_md,
-            cosmic::applet::Size::PanelSize(PanelSize::L) if is_horizontal => {
+            cosmic::applet::Size::PanelSize(PanelSize::L) if horizontal => {
                 configuration.general.horizontal_font_size_lg
             }
             cosmic::applet::Size::PanelSize(PanelSize::L) => configuration.general.vertical_font_size_lg,
-            cosmic::applet::Size::PanelSize(PanelSize::XL) if is_horizontal => {
+            cosmic::applet::Size::PanelSize(PanelSize::XL) if horizontal => {
                 configuration.general.horizontal_font_size_xl
             }
             cosmic::applet::Size::PanelSize(PanelSize::XL) => configuration.general.vertical_font_size_xl,

@@ -23,7 +23,7 @@ impl NetworkStats {
         let text = self.label(app_state);
 
         let display_item_color = self.label_colour(app_state);
-        let font_size = app_state.font_size();
+        let font_size = app_state.font_size(horizontal);
 
         let label = indicator_label(
             core,
