@@ -16,6 +16,8 @@ pub struct NetworkConfiguration {
     pub max_samples: usize,
     /// The label colour
     pub label_colour: Option<String>,
+    /// The indicator label text
+    pub label_text: Option<String>,
 }
 
 impl Default for NetworkConfiguration {
@@ -25,6 +27,7 @@ impl Default for NetworkConfiguration {
             update_interval: Duration::from_secs(1),
             max_samples: 4,
             label_colour: Some(ACCENT_GREEN.to_string()),
+            label_text: Some("NET".to_string()),
         }
     }
 }
@@ -67,10 +70,18 @@ impl NetworkConfiguration {
                 settings_form
                     .values
                     .get(LABEL_COLOUR_SETTING_KEY)
-                    .expect("Network Rx label colour settings missing from form options")
+                    .expect("Label colour settings missing from form options")
                     .value
                     .clone(),
-            )
+            ),
+            label_text: Some(
+                settings_form
+                    .values
+                    .get(LABEL_TEXT_SETTING_KEY)
+                    .expect("Label text missing from settings form options")
+                    .value
+                    .clone(),
+            ),
         }
     }
 }

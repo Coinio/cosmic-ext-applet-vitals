@@ -15,7 +15,7 @@ impl CpuStats {
             return None;
         }
 
-        let text = self.label(app_state);
+        let text = configuration.cpu.label_text.clone();
 
         let display_item_color = self.label_colour(app_state);
         let font_size = app_state.font_size(horizontal);
@@ -42,10 +42,6 @@ impl CpuStats {
                 values,
             },
         )
-    }
-    
-    fn label(&self, app_state: &AppState) -> Option<String> {
-        Some("CPU".to_string())
     }
 
     fn label_colour(&self, app_state: &AppState) -> Color {

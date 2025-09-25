@@ -1,4 +1,7 @@
-use crate::configuration::app_configuration::{DISK_SETTINGS_WINDOW_ID, HIDE_INDICATOR_SETTING_KEY, LABEL_COLOUR_SETTING_KEY, MAX_SAMPLES_SETTING_KEY, UPDATE_INTERVAL_SETTING_KEY};
+use crate::configuration::app_configuration::{
+    DISK_SETTINGS_WINDOW_ID, HIDE_INDICATOR_SETTING_KEY, LABEL_COLOUR_SETTING_KEY, LABEL_TEXT_SETTING_KEY,
+    MAX_SAMPLES_SETTING_KEY, UPDATE_INTERVAL_SETTING_KEY,
+};
 use crate::configuration::validation::ConfigurationValidation;
 use crate::ui::app_colours::ACCENT_ORANGE;
 use crate::ui::settings_form::SettingsForm;
@@ -16,6 +19,8 @@ pub struct DiskConfiguration {
     pub max_samples: usize,
     /// The label colour
     pub label_colour: Option<String>,
+    /// The indicator label text
+    pub label_text: Option<String>,
 }
 
 impl Default for DiskConfiguration {
@@ -24,7 +29,8 @@ impl Default for DiskConfiguration {
             hide_indicator: false,
             update_interval: Duration::from_secs(1),
             max_samples: 3,
-            label_colour: Some(ACCENT_ORANGE.to_string())
+            label_colour: Some(ACCENT_ORANGE.to_string()),
+            label_text: Some("DISK".to_string()),
         }
     }
 }
@@ -70,7 +76,15 @@ impl DiskConfiguration {
                     .expect("Read colour missing from settings form options")
                     .value
                     .clone(),
-            )
+            ),
+            label_text: Some(
+                settings_form
+                    .values
+                    .get(LABEL_TEXT_SETTING_KEY)
+                    .expect("Label text missing from settings form options")
+                    .value
+                    .clone(),
+            ),
         }
     }
 }

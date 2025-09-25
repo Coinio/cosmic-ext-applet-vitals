@@ -90,7 +90,8 @@ impl ConfigurationValidation {
     }
 
     pub fn is_valid_label_text(input: &str) -> Result<(), String> {
-        if input.len() > SENSOR_MAX_LABEL_LENGTH {
+
+        if input.trim().is_empty() || input.len() > SENSOR_MAX_LABEL_LENGTH {
             Err(fl!("settings-label-text-error", max_length = SENSOR_MAX_LABEL_LENGTH))
         } else {
             Ok(())
@@ -286,6 +287,12 @@ mod label_text_tests {
         let max = SENSOR_MAX_LABEL_LENGTH;
         let too_long_string = "Y".repeat(max + 1);
         assert!(ConfigurationValidation::is_valid_label_text(&too_long_string).is_err());
+    }
+
+    #[test]
+    fn is_valid_label_text_rejects_empty() {
+        assert!(ConfigurationValidation::is_valid_label_text("").is_err());
+        assert!(ConfigurationValidation::is_valid_label_text("    ").is_err());
     }
 
     #[test]

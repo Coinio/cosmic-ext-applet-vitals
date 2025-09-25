@@ -1,9 +1,12 @@
-use crate::configuration::app_configuration::{CPU_SETTINGS_WINDOW_ID, HIDE_INDICATOR_SETTING_KEY, LABEL_COLOUR_SETTING_KEY, MAX_SAMPLES_SETTING_KEY, UPDATE_INTERVAL_SETTING_KEY};
+use crate::configuration::app_configuration::{
+    CPU_SETTINGS_WINDOW_ID, HIDE_INDICATOR_SETTING_KEY, LABEL_COLOUR_SETTING_KEY, LABEL_TEXT_SETTING_KEY,
+    MAX_SAMPLES_SETTING_KEY, UPDATE_INTERVAL_SETTING_KEY,
+};
 use crate::configuration::validation::ConfigurationValidation;
+use crate::ui::app_colours::EXT_BLUE;
 use crate::ui::settings_form::SettingsForm;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
-use crate::ui::app_colours::{EXT_BLUE};
 
 /// The configuration for the CPU monitor
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
@@ -16,6 +19,8 @@ pub struct CpuConfiguration {
     pub max_samples: usize,
     /// The indicator icon colour key
     pub label_colour: Option<String>,
+    /// The indicator label text
+    pub label_text: Option<String>,
 }
 
 impl Default for CpuConfiguration {
@@ -25,6 +30,7 @@ impl Default for CpuConfiguration {
             max_samples: 4,
             hide_indicator: false,
             label_colour: Some(EXT_BLUE.to_string()),
+            label_text: Some("CPU".to_string()),
         }
     }
 }
@@ -63,12 +69,22 @@ impl CpuConfiguration {
                     .clone(),
                 self.max_samples,
             ),
-            label_colour: Some(settings_form
-                .values
-                .get(LABEL_COLOUR_SETTING_KEY)
-                .expect("Label colour setting missing from settings form options")
-                .value
-                .clone())
+            label_colour: Some(
+                settings_form
+                    .values
+                    .get(LABEL_COLOUR_SETTING_KEY)
+                    .expect("Label colour setting missing from settings form options")
+                    .value
+                    .clone(),
+            ),
+            label_text: Some(
+                settings_form
+                    .values
+                    .get(LABEL_TEXT_SETTING_KEY)
+                    .expect("Label text missing from settings form options")
+                    .value
+                    .clone(),
+            ),
         }
     }
 }

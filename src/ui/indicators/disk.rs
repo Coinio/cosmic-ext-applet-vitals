@@ -5,7 +5,7 @@ use crate::ui::app_colours::{BRIGHT_GREEN, BRIGHT_RED};
 use crate::ui::app_icons::{DOWN_ARROW_ICON, UP_ARROW_ICON};
 use crate::ui::components::indicator::{indicator, IndicatorProps, IndicatorValueItem};
 use crate::ui::components::svg_icon::SvgIconProps;
-use cosmic::iced::{Alignment, Color};
+use cosmic::iced::Color;
 use cosmic::Element;
 
 impl DiskStats {
@@ -17,7 +17,7 @@ impl DiskStats {
             return None;
         }
 
-        let text = self.label(app_state);
+        let text = configuration.disk.label_text.clone();
 
         let display_item_color = self.label_colour(app_state);
         let font_size = app_state.font_size(horizontal);

@@ -14,7 +14,7 @@ impl MemoryStats {
             return None;
         }
 
-        let text = self.label(app_state);
+        let text = configuration.memory.label_text.clone();
 
         let display_item_color = self.label_colour(app_state);
         let font_size = app_state.font_size(horizontal);
