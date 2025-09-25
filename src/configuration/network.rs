@@ -1,9 +1,9 @@
 use crate::configuration::app_configuration::*;
 use crate::configuration::validation::ConfigurationValidation;
-use crate::ui::app_colours::ACCENT_GREEN;
-use crate::ui::settings_form::SettingsForm;
+use crate::core::app_colours::ACCENT_GREEN;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
+use crate::core::settings::SettingsForm;
 
 /// The configuration for the network monitor
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]

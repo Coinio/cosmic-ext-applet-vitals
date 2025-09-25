@@ -1,9 +1,9 @@
 use crate::configuration::app_configuration::*;
 use crate::configuration::validation::ConfigurationValidation;
-use crate::ui::app_colours::EXT_PURPLE;
-use crate::ui::settings_form::SettingsForm;
+use crate::core::app_colours::EXT_PURPLE;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
+use crate::core::settings::SettingsForm;
 
 /// The configuration for the memory monitor
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]

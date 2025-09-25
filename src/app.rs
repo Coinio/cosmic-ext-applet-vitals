@@ -4,6 +4,10 @@ use crate::configuration::app_configuration::{
     AppConfiguration, CPU_SETTINGS_WINDOW_ID, DISK_SETTINGS_WINDOW_ID, MAIN_SETTINGS_WINDOW_ID,
     MEMORY_SETTINGS_WINDOW_ID, NETWORK_SETTINGS_WINDOW_ID,
 };
+use crate::core::app_colours::AppColours;
+use crate::core::app_icons::{AppIcons, APP_LOGO_ICON};
+use crate::core::app_text_measurements::AppTextMeasurements;
+use crate::core::settings::{SettingsForm, SettingsFormEvent};
 use crate::monitors::cpu_monitor::{CpuMonitor, CpuStats};
 use crate::monitors::disk_monitor::{DiskMonitor, DiskStats};
 use crate::monitors::memory_monitor::{MemoryMonitor, MemoryStats};
@@ -12,12 +16,8 @@ use crate::sensors::proc_disk_stats_reader::ProcDiskStatsReader;
 use crate::sensors::proc_meminfo_reader::ProcMemInfoSensorReader;
 use crate::sensors::proc_net_dev_reader::ProcNetDevReader;
 use crate::sensors::proc_stat_reader::ProcStatSensorReader;
-use crate::ui::app_colours::AppColours;
-use crate::ui::app_icons::{AppIcons, APP_LOGO_ICON};
-use crate::ui::app_text_measurements::AppTextMeasurements;
 use crate::ui::components::no_indicator::{no_indicators_content, NoIndicatorProps};
-use crate::ui::main_settings_form::MainSettingsForm;
-use crate::ui::settings_form::{SettingsForm, SettingsFormEvent};
+use crate::ui::settings_forms::main_settings_form::MainSettingsForm;
 use cosmic::app::{Core, Task};
 use cosmic::applet::cosmic_panel_config::{PanelAnchor, PanelSize};
 use cosmic::cosmic_config::{Config, CosmicConfigEntry};
@@ -37,7 +37,7 @@ pub const GLOBAL_APP_ID: &'static str = "dev.eidolon.cosmic-vitals-applet";
 
 static AUTOSIZE_MAIN_ID: Lazy<Id> = Lazy::new(|| Id::new("autosize-main"));
 
-const DEFAULT_INDICATOR_FONT_SIZE: u16 = 14;
+const DEFAULT_INDICATOR_FONT_SIZE: u16 = 13;
 const DEFAULT_INDICATOR_ICON_SIZE: u16 = 12;
 const DEFAULT_INDICATOR_SPACING: u16 = 8;
 
@@ -117,7 +117,6 @@ impl Application for AppState {
             })
             .unwrap_or_default();
 
-
         let settings_forms = configuration.settings_form_options();
         let app_colours = AppColours::from(&core.system_theme().cosmic().palette);
         let app_icons = AppIcons::new();
@@ -149,7 +148,6 @@ impl Application for AppState {
     fn update(&mut self, message: Self::Message) -> Task<Self::Message> {
         match message {
             Message::SettingsPopupOpened(target_id) => {
-
                 info!("Opening settings popup with id: {}", target_id);
 
                 match self.popup {
@@ -157,7 +155,7 @@ impl Application for AppState {
                         self.popup = Some(MAIN_SETTINGS_WINDOW_ID.clone());
                         // Ensure the configuration is up to date when we open the settings form.
                         self.refresh_configuration_from_disk();
-                    },
+                    }
                     Some(_) => self.popup = Some(target_id),
                 };
 
@@ -287,8 +285,7 @@ impl Application for AppState {
     }
 
     fn view(&self) -> Element<'_, Self::Message> {
-        let is_horizontal = true;
-        //matches!(self.core.applet.anchor, PanelAnchor::Top |            PanelAnchor::Bottom);
+        let is_horizontal = matches!(self.core.applet.anchor, PanelAnchor::Top | PanelAnchor::Bottom);
 
         let mut elements: Vec<Element<Message>> = Vec::new();
 
@@ -345,11 +342,11 @@ impl Application for AppState {
         let content_id = self.popup.unwrap_or_else(|| MAIN_SETTINGS_WINDOW_ID.clone());
 
         let content = if content_id == MAIN_SETTINGS_WINDOW_ID.clone() {
-            MainSettingsForm::content(self.configuration())
+            MainSettingsForm::draw(self.configuration())
         } else {
             match self.settings_forms.get(&content_id) {
                 None => container(row!["No settings window configured."]),
-                Some(form) => form.content(&self),
+                Some(form) => form.draw(&self),
             }
         };
 
@@ -416,11 +413,10 @@ impl AppState {
 
     fn refresh_configuration_from_disk(&mut self) {
         if let Ok(helper) = Config::new(Self::APP_ID, AppConfiguration::VERSION) {
-            let loaded = AppConfiguration::get_entry(&helper)
-                .unwrap_or_else(|(errs, cfg)| {
-                    error!("Errors while loading configuration: {:?}", errs);
-                    cfg
-                });
+            let loaded = AppConfiguration::get_entry(&helper).unwrap_or_else(|(errs, cfg)| {
+                error!("Errors while loading configuration: {:?}", errs);
+                cfg
+            });
 
             self.configuration = loaded;
             self.settings_forms = self.configuration.settings_form_options();

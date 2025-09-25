@@ -1,13 +1,13 @@
 use crate::configuration::cpu::CpuConfiguration;
 use crate::configuration::memory::MemoryConfiguration;
 use crate::configuration::network::NetworkConfiguration;
-use crate::ui::settings_form::SettingsForm;
 use cosmic::cosmic_config::{self, cosmic_config_derive::CosmicConfigEntry, CosmicConfigEntry};
 use cosmic::iced::window;
 use once_cell::sync::Lazy;
 use std::collections::BTreeMap;
 use crate::configuration::disk::DiskConfiguration;
 use crate::configuration::general::GeneralConfiguration;
+use crate::core::settings::SettingsForm;
 
 pub static MAIN_SETTINGS_WINDOW_ID: Lazy<cosmic::iced::window::Id> = Lazy::new(|| cosmic::iced::window::Id::unique());
 pub static CPU_SETTINGS_WINDOW_ID: Lazy<cosmic::iced::window::Id> = Lazy::new(|| cosmic::iced::window::Id::unique());

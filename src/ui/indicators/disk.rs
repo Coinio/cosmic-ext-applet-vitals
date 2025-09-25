@@ -1,8 +1,8 @@
 use crate::app::{AppState, Message};
 use crate::configuration::app_configuration::AppConfiguration;
 use crate::monitors::disk_monitor::DiskStats;
-use crate::ui::app_colours::{ACCENT_GREEN, ACCENT_RED, BRIGHT_GREEN, BRIGHT_RED};
-use crate::ui::app_icons::{DOWN_ARROW_ICON, READ_ICON, UP_ARROW_ICON, WRITE_ICON};
+use crate::core::app_colours::{ACCENT_GREEN, ACCENT_RED, BRIGHT_GREEN, BRIGHT_RED};
+use crate::core::app_icons::{DOWN_ARROW_ICON, READ_ICON, UP_ARROW_ICON, WRITE_ICON};
 use crate::ui::components::indicator::{indicator, IndicatorProps, IndicatorValueItem};
 use crate::ui::components::svg_icon::SvgIconProps;
 use cosmic::iced::Color;

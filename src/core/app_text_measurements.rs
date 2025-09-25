@@ -1,4 +1,4 @@
-use crate::ui::cosmic_text_measurer::CosmicTextMeasurer;
+use crate::core::cosmic_text_measurer::CosmicTextMeasurer;
 use std::collections::HashMap;
 
 /// Contains the current text measurements for the indicator labels. This is essentially a
