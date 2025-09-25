@@ -24,6 +24,7 @@ impl NetworkStats {
 
         let display_item_color = self.label_colour(app_state);
         let font_size = app_state.font_size(horizontal);
+        let icon_size = app_state.icon_size();
 
         let label = indicator_label(
             core,
@@ -52,7 +53,7 @@ impl NetworkStats {
         let rx_icon = if horizontal {
             svg_icon(SvgIconProps {
                 icon: app_state.app_icons().get(DOWN_ARROW_ICON),
-                size: font_size,
+                size: icon_size,
                 colour: app_state
                     .app_colours()
                     .get(BRIGHT_GREEN)
@@ -75,7 +76,7 @@ impl NetworkStats {
         let tx_icon = if horizontal {
             svg_icon(SvgIconProps {
                 icon: app_state.app_icons().get(UP_ARROW_ICON),
-                size: font_size,
+                size: icon_size,
                 colour: app_state
                     .app_colours()
                     .get(BRIGHT_RED)
@@ -90,7 +91,9 @@ impl NetworkStats {
         if let Some(label) = label {
             content.push(label);
         }
-        let mut read_container = Row::new().spacing(3);
+        let mut read_container = Row::new()
+            .spacing(2)
+            .align_y(Alignment::Center);
 
         if let Some(value) = rx_value {
             read_container = read_container.push(value);
@@ -99,29 +102,27 @@ impl NetworkStats {
             read_container = read_container.push(icon);
         }
 
-        let suggested_padding = app_state.core().applet.suggested_padding(false);
-
-        if (horizontal) {
-            content.push(read_container.align_y(Alignment::Center).padding(suggested_padding)
-                .into());
-        } else {
-            content.push(read_container.into());
-        }
-
-        let mut write_container = Row::new().spacing(3);
-
+        let mut write_container = Row::new()
+            .spacing(2)
+            .align_y(Alignment::Center);
+        
         if let Some(value) = tx_value {
             write_container = write_container.push(value);
         }
         if let Some(icon) = tx_icon {
-            write_container = write_container.push(icon);
+            write_container = write_container.push(icon)
         }
 
-        if (horizontal) {
-            content.push(write_container.align_y(Alignment::Center).padding(suggested_padding)
-                .into());
+        if horizontal {
+            let mut values_container = Row::new().align_y(Alignment::Center);
+            values_container = values_container.push(read_container.align_y(Alignment::Center));
+            values_container = values_container.push(write_container.align_y(Alignment::Center));
+            content.push(values_container.into());
         } else {
-            content.push(write_container.into());
+            let mut values_container = Column::new().align_x(Alignment::Center);
+            values_container = values_container.push(read_container);
+            values_container = values_container.push(write_container);
+            content.push(values_container.into());
         }
 
         let row: Element<Message> = if horizontal {

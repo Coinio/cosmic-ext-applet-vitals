@@ -38,7 +38,7 @@ pub const GLOBAL_APP_ID: &'static str = "dev.eidolon.cosmic-vitals-applet";
 static AUTOSIZE_MAIN_ID: Lazy<Id> = Lazy::new(|| Id::new("autosize-main"));
 
 const DEFAULT_INDICATOR_FONT_SIZE: u16 = 14;
-const DEFAULT_INDICATOR_ICON_SIZE: u16 = 14;
+const DEFAULT_INDICATOR_ICON_SIZE: u16 = 12;
 const DEFAULT_INDICATOR_SPACING: u16 = 8;
 
 #[derive(Default)]
@@ -307,7 +307,7 @@ impl Application for AppState {
         if elements.len() <= 1 {
             elements.push(no_indicators_content(NoIndicatorProps {
                 icon: self.app_icons.get(APP_LOGO_ICON),
-                size: self.label_icon_size(),
+                size: self.icon_size(),
             }));
             elements.push(divider::vertical::default().into());
         }
@@ -446,13 +446,13 @@ impl AppState {
         }
     }
 
-    pub fn label_icon_size(&self) -> u16 {
+    pub fn icon_size(&self) -> u16 {
         match self.core.applet.size {
             cosmic::applet::Size::PanelSize(PanelSize::XS) => DEFAULT_INDICATOR_ICON_SIZE,
-            cosmic::applet::Size::PanelSize(PanelSize::S) => DEFAULT_INDICATOR_ICON_SIZE + 3,
-            cosmic::applet::Size::PanelSize(PanelSize::M) => DEFAULT_INDICATOR_ICON_SIZE + 6,
-            cosmic::applet::Size::PanelSize(PanelSize::L) => DEFAULT_INDICATOR_ICON_SIZE + 9,
-            cosmic::applet::Size::PanelSize(PanelSize::XL) => DEFAULT_INDICATOR_ICON_SIZE + 10,
+            cosmic::applet::Size::PanelSize(PanelSize::S) => DEFAULT_INDICATOR_ICON_SIZE + 2,
+            cosmic::applet::Size::PanelSize(PanelSize::M) => DEFAULT_INDICATOR_ICON_SIZE + 4,
+            cosmic::applet::Size::PanelSize(PanelSize::L) => DEFAULT_INDICATOR_ICON_SIZE + 6,
+            cosmic::applet::Size::PanelSize(PanelSize::XL) => DEFAULT_INDICATOR_ICON_SIZE + 8,
             _ => DEFAULT_INDICATOR_ICON_SIZE,
         }
     }
