@@ -1,11 +1,8 @@
 use crate::app::{AppState, Message};
 use crate::configuration::app_configuration::AppConfiguration;
 use crate::monitors::cpu_monitor::CpuStats;
-use crate::ui::components::indicator_label::{indicator_label, IndicatorLabelProps};
-use crate::ui::components::indicator_value::{indicator_value, IndicatorValueProps};
-use cosmic::iced::{Alignment, Color};
-use cosmic::iced_widget::Row;
-use cosmic::widget::Column;
+use crate::ui::components::indicator::{indicator, IndicatorProps, IndicatorValueItem};
+use cosmic::iced::Color;
 use cosmic::Element;
 
 impl CpuStats {
@@ -23,48 +20,28 @@ impl CpuStats {
         let display_item_color = self.label_colour(app_state);
         let font_size = app_state.font_size(horizontal);
 
-        let label = indicator_label(
-            core,
-            IndicatorLabelProps {
-                text,
-                font_size,
-                colour: display_item_color,
-            },
-        );
-
         let max_text_width = app_state
             .app_text_measurements()
             .measure(self.max_label_text(configuration), font_size)
             .unwrap_or(0.0);
 
-        let value = indicator_value(
+        let values = vec![IndicatorValueItem {
+            text: self.value(app_state.configuration()),
+            icon: None,
+        }];
+
+        indicator(
             core,
-            IndicatorValueProps {
-                text: self.value(app_state.configuration()),
+            IndicatorProps {
+                label_text: text,
+                label_colour: display_item_color,
                 font_size,
-                width: max_text_width,
+                value_width: max_text_width,
                 horizontal,
+                spacing: app_state.core().applet.suggested_padding(false),
+                values,
             },
-        );
-        let mut content: Vec<Element<Message>> = Vec::new();
-
-        if let Some(label) = label {
-            content.push(label);
-        }
-        if let Some(value) = value {
-            content.push(value);
-        }
-
-        let row: Element<Message> = if horizontal {
-            Row::from_vec(content)
-                .spacing(app_state.core().applet.suggested_padding(false))
-                .align_y(Alignment::Center)
-                .into()
-        } else {
-            Column::from_vec(content).align_x(Alignment::Center).into()
-        };
-
-        Some(row)
+        )
     }
     
     fn label(&self, app_state: &AppState) -> Option<String> {

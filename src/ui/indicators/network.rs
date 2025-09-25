@@ -3,12 +3,9 @@ use crate::configuration::app_configuration::AppConfiguration;
 use crate::monitors::network_monitor::NetworkStats;
 use crate::ui::app_colours::{BRIGHT_GREEN, BRIGHT_RED};
 use crate::ui::app_icons::{DOWN_ARROW_ICON, UP_ARROW_ICON};
-use crate::ui::components::indicator_label::{indicator_label, IndicatorLabelProps};
-use crate::ui::components::indicator_value::{indicator_value, IndicatorValueProps};
-use crate::ui::components::svg_icon::{svg_icon, SvgIconProps};
+use crate::ui::components::indicator::{indicator, IndicatorProps, IndicatorValueItem};
+use crate::ui::components::svg_icon::SvgIconProps;
 use cosmic::iced::{Alignment, Color};
-use cosmic::iced_widget::Row;
-use cosmic::widget::Column;
 use cosmic::Element;
 
 impl NetworkStats {
@@ -26,115 +23,56 @@ impl NetworkStats {
         let font_size = app_state.font_size(horizontal);
         let icon_size = app_state.icon_size();
 
-        let label = indicator_label(
-            core,
-            IndicatorLabelProps {
-                text,
-                font_size,
-                colour: display_item_color,
-            },
-        );
-
         let max_text_width = app_state
             .app_text_measurements()
             .measure(self.max_label_text(configuration), font_size)
             .unwrap_or(0.0);
 
-        let rx_value = indicator_value(
-            core,
-            IndicatorValueProps {
-                text: self.read_value(app_state.configuration()),
-                font_size,
-                width: max_text_width,
-                horizontal,
+        let mut values: Vec<IndicatorValueItem> = Vec::new();
+        values.push(IndicatorValueItem {
+            text: self.read_value(app_state.configuration()),
+            icon: if horizontal {
+                Some(SvgIconProps {
+                    icon: app_state.app_icons().get(DOWN_ARROW_ICON),
+                    size: icon_size,
+                    colour: app_state
+                        .app_colours()
+                        .get(BRIGHT_GREEN)
+                        .map(|c| Color::new(c.red, c.green, c.blue, c.alpha)),
+                })
+            } else {
+                None
             },
-        );
+        });
 
-        let rx_icon = if horizontal {
-            svg_icon(SvgIconProps {
-                icon: app_state.app_icons().get(DOWN_ARROW_ICON),
-                size: icon_size,
-                colour: app_state
-                    .app_colours()
-                    .get(BRIGHT_GREEN)
-                    .map(|c| Color::new(c.red, c.green, c.blue, c.alpha)),
-            })
-        } else {
-            None
-        };
-
-        let tx_value = indicator_value(
-            core,
-            IndicatorValueProps {
-                text: self.write_value(app_state.configuration()),
-                font_size,
-                width: max_text_width,
-                horizontal,
+        values.push(IndicatorValueItem {
+            text: self.write_value(app_state.configuration()),
+            icon: if horizontal {
+                Some(SvgIconProps {
+                    icon: app_state.app_icons().get(UP_ARROW_ICON),
+                    size: icon_size,
+                    colour: app_state
+                        .app_colours()
+                        .get(BRIGHT_RED)
+                        .map(|c| Color::new(c.red, c.green, c.blue, c.alpha)),
+                })
+            } else {
+                None
             },
-        );
+        });
 
-        let tx_icon = if horizontal {
-            svg_icon(SvgIconProps {
-                icon: app_state.app_icons().get(UP_ARROW_ICON),
-                size: icon_size,
-                colour: app_state
-                    .app_colours()
-                    .get(BRIGHT_RED)
-                    .map(|c| Color::new(c.red, c.green, c.blue, c.alpha)),
-            })
-        } else {
-            None
-        };
-
-        let mut content: Vec<Element<Message>> = Vec::new();
-
-        if let Some(label) = label {
-            content.push(label);
-        }
-        let mut read_container = Row::new()
-            .spacing(2)
-            .align_y(Alignment::Center);
-
-        if let Some(value) = rx_value {
-            read_container = read_container.push(value);
-        }
-        if let Some(icon) = rx_icon {
-            read_container = read_container.push(icon);
-        }
-
-        let mut write_container = Row::new()
-            .spacing(2)
-            .align_y(Alignment::Center);
-        
-        if let Some(value) = tx_value {
-            write_container = write_container.push(value);
-        }
-        if let Some(icon) = tx_icon {
-            write_container = write_container.push(icon)
-        }
-
-        if horizontal {
-            let mut values_container = Row::new().align_y(Alignment::Center);
-            values_container = values_container.push(read_container.align_y(Alignment::Center));
-            values_container = values_container.push(write_container.align_y(Alignment::Center));
-            content.push(values_container.into());
-        } else {
-            let mut values_container = Column::new().align_x(Alignment::Center);
-            values_container = values_container.push(read_container);
-            values_container = values_container.push(write_container);
-            content.push(values_container.into());
-        }
-
-        let row: Element<Message> = if horizontal {
-            Row::from_vec(content)
-                .spacing(app_state.core().applet.suggested_padding(false))
-                .align_y(Alignment::Center)
-                .into()
-        } else {
-            Column::from_vec(content).align_x(Alignment::Center).into()
-        };
-
-        Some(row)
+        indicator(
+            core,
+            IndicatorProps {
+                label_text: text,
+                label_colour: display_item_color,
+                font_size,
+                value_width: max_text_width,
+                horizontal,
+                spacing: app_state.core().applet.suggested_padding(false),
+                values,
+            },
+        )
     }
 
     fn label(&self, app_state: &AppState) -> Option<String> {

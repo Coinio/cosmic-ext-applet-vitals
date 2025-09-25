@@ -281,8 +281,7 @@ impl Application for AppState {
     }
 
     fn view(&self) -> Element<'_, Self::Message> {
-        let is_horizontal = true;
-        //matches!(self.core.applet.anchor, PanelAnchor::Top |       PanelAnchor::Bottom);
+        let is_horizontal = matches!(self.core.applet.anchor, PanelAnchor::Top |       PanelAnchor::Bottom);
 
         let mut elements: Vec<Element<Message>> = Vec::new();
 
