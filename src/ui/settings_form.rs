@@ -6,7 +6,7 @@ use crate::configuration::memory::MemoryConfiguration;
 use crate::configuration::network::NetworkConfiguration;
 use crate::configuration::validation::ConfigurationValidation;
 use crate::fl;
-use crate::ui::app_colours::AppColours;
+use crate::ui::app_colours::{AppColours, BRIGHT_RED};
 use cosmic::iced::{window, Background, Color, Radius};
 use cosmic::iced_widget::{container, Container};
 use cosmic::widget::{settings, Column};
@@ -129,8 +129,14 @@ impl SettingsForm {
         for (form_value_key, settings_form_item) in self.values.iter() {
             match settings_form_item.input_type {
                 SettingsFormInputType::String => {
-                    let text_input =
-                        widget::text_input(fl!("settings-empty"), &settings_form_item.value).on_input(|new_value| {
+                    let input_id = cosmic::iced::widget::text_input::Id::new(format!(
+                        "settings_input::{:?}::{}",
+                        self.settings_window_id, form_value_key
+                    ));
+
+                    let text_input = widget::text_input(fl!("settings-empty"), &settings_form_item.value)
+                        .id(input_id.into())
+                        .on_input(|new_value| {
                             Message::SettingsFormUpdate(SettingsFormEvent::StringFieldUpdated(SettingsFormEventValue {
                                 settings_window_id: self.settings_window_id,
                                 form_value_key,
@@ -140,15 +146,31 @@ impl SettingsForm {
 
                     let validator = settings_form_item.validator.unwrap_or(|_| Ok(()));
 
-                    let field = match validator(&settings_form_item.value) {
+                    let validation_result = validator(&settings_form_item.value);
+
+                    let field = match &validation_result {
                         Ok(_) => text_input.width(150),
                         Err(error_text) => text_input
                             .width(150)
-                            .error(error_text.clone())
-                            .helper_text(error_text.clone()),
+                            .error(error_text.clone()),
                     };
-
+                                        
                     column = column.add(settings::item(settings_form_item.label.clone(), field));
+
+                    if let Err(error_text) = validation_result {
+                        let red_color: Color = app_state.app_colours()
+                            .get(BRIGHT_RED)
+                            .map_or(Color::WHITE, |c| Color::new(c.red, c.green, c.blue, c.alpha));
+
+                        let error_text_widget = widget::text(error_text)
+                            .size(12)
+                            .class(cosmic::theme::Text::from(red_color));
+
+                        column = column.add(
+                            widget::container(error_text_widget)
+                                .width(cosmic::iced::Length::Fill),
+                        );
+                    }
                 }
                 SettingsFormInputType::CheckBox => {
                     let converted_value = settings_form_item.value.parse::<bool>().unwrap_or(false);
