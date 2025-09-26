@@ -25,7 +25,6 @@ for those fighting with iced/libcosmic, etc.
 
 * Allow labels to be hidden
 * Allow displayed units to be configured between SI and IEC.
-* Logging to journalctl
 
 ## Screenshots
 
