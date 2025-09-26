@@ -9,7 +9,10 @@ pub struct IndicatorValueProps {
     pub horizontal: bool,
 }
 
-pub fn indicator_value(core: &cosmic::Core, props: IndicatorValueProps) -> Option<Element<Message>> {
+pub fn indicator_value<'core>(
+    core: &'core cosmic::Core,
+    props: IndicatorValueProps,
+) -> Option<Element<'core, Message>> {
     let value_text = core.applet.text(props.text).size(props.font_size);
 
     if props.horizontal {

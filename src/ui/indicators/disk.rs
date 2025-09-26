@@ -1,8 +1,8 @@
 use crate::app::{AppState, Message};
 use crate::configuration::app_configuration::AppConfiguration;
 use crate::monitors::disk_monitor::DiskStats;
-use crate::core::app_colours::{ACCENT_GREEN, ACCENT_RED, BRIGHT_GREEN, BRIGHT_RED};
-use crate::core::app_icons::{DOWN_ARROW_ICON, READ_ICON, UP_ARROW_ICON, WRITE_ICON};
+use crate::core::app_colours::{ACCENT_GREEN, ACCENT_RED};
+use crate::core::app_icons::{READ_ICON, WRITE_ICON};
 use crate::ui::components::indicator::{indicator, IndicatorProps, IndicatorValueItem};
 use crate::ui::components::svg_icon::SvgIconProps;
 use cosmic::iced::Color;
@@ -25,7 +25,7 @@ impl DiskStats {
 
         let max_text_width = app_state
             .app_text_measurements()
-            .measure(self.max_label_text(configuration), font_size)
+            .measure(self.max_label_text(), font_size)
             .unwrap_or(0.0);
 
         let mut values: Vec<IndicatorValueItem> = Vec::new();
@@ -75,11 +75,7 @@ impl DiskStats {
             },
         )
     }
-
-    fn label(&self, app_state: &AppState) -> Option<String> {
-        Some("DISK".to_string())
-    }
-
+    
     fn label_colour(&self, app_state: &AppState) -> Color {
         app_state
             .configuration()
@@ -114,7 +110,7 @@ impl DiskStats {
         }
     }
 
-    fn max_label_text(&self, app_config: &AppConfiguration) -> &'static str {
+    fn max_label_text(&self) -> &'static str {
         "99.9MB/s"
     }
 

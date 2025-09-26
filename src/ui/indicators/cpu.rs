@@ -22,7 +22,7 @@ impl CpuStats {
 
         let max_text_width = app_state
             .app_text_measurements()
-            .measure(self.max_label_text(configuration), font_size)
+            .measure(self.max_label_text(), font_size)
             .unwrap_or(0.0);
 
         let values = vec![IndicatorValueItem {
@@ -63,7 +63,7 @@ impl CpuStats {
         }
     }
 
-    fn max_label_text(&self, app_config: &AppConfiguration) -> &'static str {
+    fn max_label_text(&self) -> &'static str {
         "99.9%"
     }
 

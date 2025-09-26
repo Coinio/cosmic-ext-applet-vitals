@@ -1,7 +1,6 @@
 use serde::{Deserialize, Serialize};
 
 const DEFAULT_INDICATOR_FONT_SIZE: u16 = 14;
-const DEFAULT_INDICATOR_ICON_SIZE: u16 = 16;
 
 /// General configuration for the app, i.e. font size.
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
@@ -15,7 +14,7 @@ pub struct GeneralConfiguration {
     pub horizontal_font_size_sm: u16,
     pub horizontal_font_size_md: u16,
     pub horizontal_font_size_lg: u16,
-    pub horizontal_font_size_xl: u16
+    pub horizontal_font_size_xl: u16,
 }
 
 impl Default for GeneralConfiguration {

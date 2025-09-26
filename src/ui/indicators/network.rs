@@ -25,7 +25,7 @@ impl NetworkStats {
 
         let max_text_width = app_state
             .app_text_measurements()
-            .measure(self.max_label_text(configuration), font_size)
+            .measure(self.max_label_text(), font_size)
             .unwrap_or(0.0);
 
         let mut values: Vec<IndicatorValueItem> = Vec::new();
@@ -75,11 +75,7 @@ impl NetworkStats {
             },
         )
     }
-
-    fn label(&self, app_state: &AppState) -> Option<String> {
-        Some("NET".to_string())
-    }
-
+    
     fn label_colour(&self, app_state: &AppState) -> Color {
         app_state
             .configuration()
@@ -114,7 +110,7 @@ impl NetworkStats {
         }
     }
 
-    fn max_label_text(&self, app_config: &AppConfiguration) -> &'static str {
+    fn max_label_text(&self) -> &'static str {
         "99.9MB/s"
     }
 

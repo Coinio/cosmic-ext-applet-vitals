@@ -44,7 +44,7 @@ pub struct SettingsForm {
 
 impl From<&CpuConfiguration> for SettingsForm {
     fn from(config: &CpuConfiguration) -> SettingsForm {
-        let mut values = build_shared_settings(
+        let values = build_shared_settings(
             config.hide_indicator,
             config.update_interval,
             config.max_samples,
@@ -62,7 +62,7 @@ impl From<&CpuConfiguration> for SettingsForm {
 
 impl From<&MemoryConfiguration> for SettingsForm {
     fn from(config: &MemoryConfiguration) -> SettingsForm {
-        let mut values = build_shared_settings(
+        let values = build_shared_settings(
             config.hide_indicator,
             config.update_interval,
             config.max_samples,
@@ -79,7 +79,7 @@ impl From<&MemoryConfiguration> for SettingsForm {
 
 impl From<&NetworkConfiguration> for SettingsForm {
     fn from(config: &NetworkConfiguration) -> SettingsForm {
-        let mut values = build_shared_settings(
+        let values = build_shared_settings(
             config.hide_indicator,
             config.update_interval,
             config.max_samples,
@@ -97,7 +97,7 @@ impl From<&NetworkConfiguration> for SettingsForm {
 
 impl From<&DiskConfiguration> for SettingsForm {
     fn from(config: &DiskConfiguration) -> SettingsForm {
-        let mut values = build_shared_settings(
+        let values = build_shared_settings(
             config.hide_indicator,
             config.update_interval,
             config.max_samples,

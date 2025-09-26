@@ -1,8 +1,10 @@
 # COSMIC Vitals
 
-A minimal applet to display basic system resource usage, i.e. CPU, Memory, Network. 
+A minimal configurable applet to display basic system resource usage, i.e. CPU, Memory, Network. 
 
-I started building this to learn some Rust and play around with Pop_OS COSMIC. It's definitely a WIP but works pretty well for my needs. Hopefully the code will be useful to somebody else fighting with iced/libcosmic, etc.
+This came from wanting a project to build to learn some Rust, being a Pop_OS COSMIC user and 
+not finding other applets that worked as I wanted. Hopefully, the code in the repo will be useful to 
+for those fighting with iced/libcosmic, etc.
 
 ## Features
 
@@ -10,17 +12,20 @@ I started building this to learn some Rust and play around with Pop_OS COSMIC. I
 * Show RAM Usage
 * Show Network upload / download. This filters out virtual devices so won't count upload / download twice when using a VPN, etc.
 * Show Disk upload / down. This counts reads / writes to logical disks, not partitions, etc.
-* Things that can be configured:
+* Horizontal / Vertical Layouts - The horizontal layout has seen a little more testing as I 
+  don't use the vertical.
+* Config:
   * Read Intervals - How often each monitor is polled
   * Max Samples - The number of samples to keep to average the readings across
   * Show / Hide each monitor
+  * Label Colours - The colours can be selected from the current theme libcosmic palette
+  * Label Text - The label text for each monitor
 
-## Things I might fix
+## Features not yet implemented
 
-* Calculate the maximum width of the labels so the indicators don't expand / contract
-* Improve the vertical layout
-* Add configurable units KiBs/MiBs/GiBs or progressively change units depending on how large / small reading is
-* Better logging into journalctl
+* Allow labels to be hidden
+* Allow displayed units to be configured between SI and IEC.
+* Logging to journalctl
 
 ## Screenshots
 

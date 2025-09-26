@@ -11,7 +11,7 @@ pub struct SvgIconProps<'a> {
     pub colour: Option<Color>,
 }
 
-pub fn svg_icon(props: SvgIconProps) -> Option<Element<'_, Message>> {
+pub fn svg_icon<'a>(props: SvgIconProps<'a>) -> Option<Element<'a, Message>> {
     match props.icon {
         None => None,
         Some(handle) => Some(Element::from(
