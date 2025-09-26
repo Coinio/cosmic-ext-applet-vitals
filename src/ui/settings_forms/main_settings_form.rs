@@ -9,7 +9,7 @@ use std::clone::Clone;
 pub struct MainSettingsForm;
 
 impl MainSettingsForm {
-    pub fn content(app_config: &'_ AppConfiguration) -> Container<'_, Message, Theme> {
+    pub fn draw(app_config: &'_ AppConfiguration) -> Container<'_, Message, Theme> {
         let mut column = widget::list_column()
             .padding(2)
             .spacing(0)

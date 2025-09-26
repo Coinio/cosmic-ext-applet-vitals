@@ -1,4 +1,4 @@
-use crate::ui::cosmic_text_measurer::CosmicTextMeasurer;
+use crate::core::cosmic_text_measurer::CosmicTextMeasurer;
 use std::collections::HashMap;
 
 /// Contains the current text measurements for the indicator labels. This is essentially a
@@ -28,6 +28,10 @@ impl AppTextMeasurements {
             .measure_single(text, font_size)
             .unwrap_or_default();
 
+        if new_measurement <= 0.0 {
+            return None;
+        }
+
         self.text_measurements
             .borrow_mut()
             .insert((text, font_size), new_measurement);
@@ -36,8 +40,7 @@ impl AppTextMeasurements {
 
     }
 
-    pub fn reset(&self) {
-        todo!()
-      //  self.text_measurements.borrow().clear();
+    pub fn _reset(&self) {
+        self.text_measurements.borrow_mut().clear();       
     }
 }

@@ -1,12 +1,12 @@
 use crate::configuration::app_configuration::{
-    DISK_READ_COLOUR_SETTING_KEY, DISK_SETTINGS_WINDOW_ID, DISK_WRITE_COLOUR_SETTING_KEY, HIDE_INDICATOR_SETTING_KEY,
+    DISK_SETTINGS_WINDOW_ID, HIDE_INDICATOR_SETTING_KEY, LABEL_COLOUR_SETTING_KEY, LABEL_TEXT_SETTING_KEY,
     MAX_SAMPLES_SETTING_KEY, UPDATE_INTERVAL_SETTING_KEY,
 };
 use crate::configuration::validation::ConfigurationValidation;
-use crate::ui::settings_form::SettingsForm;
+use crate::core::app_colours::ACCENT_ORANGE;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
-use crate::ui::app_colours::{ACCENT_GREEN, ACCENT_PINK};
+use crate::core::settings::SettingsForm;
 
 /// The configuration for the memory monitor
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
@@ -17,10 +17,10 @@ pub struct DiskConfiguration {
     pub update_interval: Duration,
     /// The number of samples to keep and average for the final result
     pub max_samples: usize,
-    /// The read indicator icon colour key
-    pub label_colour_read: Option<String>,
-    /// The write indicator icon colour key
-    pub label_colour_write: Option<String>,
+    /// The label colour
+    pub label_colour: Option<String>,
+    /// The indicator label text
+    pub label_text: Option<String>,
 }
 
 impl Default for DiskConfiguration {
@@ -29,8 +29,8 @@ impl Default for DiskConfiguration {
             hide_indicator: false,
             update_interval: Duration::from_secs(1),
             max_samples: 3,
-            label_colour_read: Some(ACCENT_GREEN.to_string()),
-            label_colour_write: Some(ACCENT_PINK.to_string()),
+            label_colour: Some(ACCENT_ORANGE.to_string()),
+            label_text: Some("DISK".to_string()),
         }
     }
 }
@@ -69,22 +69,23 @@ impl DiskConfiguration {
                     .clone(),
                 self.max_samples,
             ),
-            label_colour_read: Some(
+            label_colour: Some(
                 settings_form
                     .values
-                    .get(DISK_READ_COLOUR_SETTING_KEY)
+                    .get(LABEL_COLOUR_SETTING_KEY)
                     .expect("Read colour missing from settings form options")
                     .value
                     .clone(),
             ),
-            label_colour_write: Some(
+            label_text: Some(ConfigurationValidation::sanitise_label_text(
                 settings_form
                     .values
-                    .get(DISK_WRITE_COLOUR_SETTING_KEY)
-                    .expect("Write colour missing from settings form options")
+                    .get(LABEL_TEXT_SETTING_KEY)
+                    .expect("Label text missing from settings form options")
                     .value
                     .clone(),
-            ),
+                self.label_text.clone().unwrap_or_default(),
+            )),
         }
     }
 }

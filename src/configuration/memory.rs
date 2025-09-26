@@ -1,9 +1,9 @@
 use crate::configuration::app_configuration::*;
 use crate::configuration::validation::ConfigurationValidation;
-use crate::ui::settings_form::SettingsForm;
+use crate::core::app_colours::EXT_PURPLE;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
-use crate::ui::app_colours::EXT_PURPLE;
+use crate::core::settings::SettingsForm;
 
 /// The configuration for the memory monitor
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
@@ -16,6 +16,8 @@ pub struct MemoryConfiguration {
     pub max_samples: usize,
     /// The indicator icon colour key
     pub label_colour: Option<String>,
+    /// The indicator label text
+    pub label_text: Option<String>,
 }
 
 impl Default for MemoryConfiguration {
@@ -25,6 +27,7 @@ impl Default for MemoryConfiguration {
             update_interval: Duration::from_secs(1),
             max_samples: 2,
             label_colour: Some(EXT_PURPLE.to_string()),
+            label_text: Some("MEM".to_string()),
         }
     }
 }
@@ -71,6 +74,15 @@ impl MemoryConfiguration {
                     .value
                     .clone(),
             ),
+            label_text: Some(ConfigurationValidation::sanitise_label_text(
+                settings_form
+                    .values
+                    .get(LABEL_TEXT_SETTING_KEY)
+                    .expect("Label text missing from settings form options")
+                    .value
+                    .clone(),
+                self.label_text.clone().unwrap_or_default(),
+            )),
         }
     }
 }

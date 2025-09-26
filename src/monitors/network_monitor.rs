@@ -5,9 +5,6 @@ use log::info;
 use std::cmp;
 use std::collections::VecDeque;
 
-pub const NETWORK_STAT_RX_INDEX: usize = 0;
-pub const NETWORK_STAT_TX_INDEX: usize = 1;
-
 #[derive(Debug, Clone, Default)]
 struct NetworkSample {
     pub rx_bytes: u64,
@@ -20,22 +17,10 @@ impl NetworkSample {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub enum NetworkDirection {
-    Download,
-    Upload,
-}
-
-impl Default for NetworkDirection {
-    fn default() -> Self {
-        Self::Download
-    }
-}
-
 #[derive(Debug, Clone, Default)]
 pub struct NetworkStats {
-    pub bytes: u64,
-    pub direction: NetworkDirection,
+    pub rx_bytes: u64,
+    pub tx_bytes: u64,
 }
 
 pub struct NetworkMonitor<S: SensorReader<Output = ProcNetDevStatus>> {
@@ -57,8 +42,8 @@ impl<S: SensorReader<Output = ProcNetDevStatus>> NetworkMonitor<S> {
             max_samples: configuration.memory.max_samples,
         }
     }
-    
-    pub fn poll(&mut self) -> Result<[NetworkStats; 2], String> {
+
+    pub fn poll(&mut self) -> Result<NetworkStats, String> {
         let current = match self.sensor_reader.read() {
             Ok(value) => value,
             Err(err) => return Err(err),
@@ -100,16 +85,10 @@ impl<S: SensorReader<Output = ProcNetDevStatus>> NetworkMonitor<S> {
         let average_tx_bytes =
             self.sample_buffer.iter().map(|sample| sample.tx_bytes).sum::<u64>() / self.sample_buffer.len() as u64;
 
-        let result = [
-            NetworkStats {
-                bytes: average_rx_bytes,
-                direction: NetworkDirection::Download,
-            },
-            NetworkStats {
-                bytes: average_tx_bytes,
-                direction: NetworkDirection::Upload,
-            },
-        ];
+        let result = NetworkStats {
+            tx_bytes: average_tx_bytes,
+            rx_bytes: average_rx_bytes,
+        };
 
         Ok(result)
     }
@@ -170,12 +149,10 @@ mod tests {
         let result = monitor.poll();
 
         assert!(result.is_ok());
-        let arr = result.unwrap();
+        let result = result.unwrap();
 
-        assert_eq!(arr[NETWORK_STAT_RX_INDEX].bytes, 0);
-        assert_eq!(arr[NETWORK_STAT_RX_INDEX].direction, NetworkDirection::Download);
-        assert_eq!(arr[NETWORK_STAT_TX_INDEX].bytes, 0);
-        assert_eq!(arr[NETWORK_STAT_TX_INDEX].direction, NetworkDirection::Upload);
+        assert_eq!(result.rx_bytes, 0);
+        assert_eq!(result.tx_bytes, 0);
     }
 
     #[test]
@@ -200,12 +177,10 @@ mod tests {
         let result = monitor.poll();
 
         assert!(result.is_ok());
-        let arr = result.unwrap();
+        let result = result.unwrap();
 
-        assert_eq!(arr[NETWORK_STAT_RX_INDEX].bytes, (3000 - 2000) / 2);
-        assert_eq!(arr[NETWORK_STAT_RX_INDEX].direction, NetworkDirection::Download);
-        assert_eq!(arr[NETWORK_STAT_TX_INDEX].bytes, (1500 - 1000) / 2);
-        assert_eq!(arr[NETWORK_STAT_TX_INDEX].direction, NetworkDirection::Upload);
+        assert_eq!(result.rx_bytes, (3000 - 2000) / 2);
+        assert_eq!(result.tx_bytes, (1500 - 1000) / 2);
     }
 
     #[test]
@@ -235,16 +210,16 @@ mod tests {
         _ = monitor.poll();
 
         let result2 = monitor.poll().unwrap();
-        assert_eq!(result2[NETWORK_STAT_RX_INDEX].bytes, (6000 - 2000) / 2);
-        assert_eq!(result2[NETWORK_STAT_TX_INDEX].bytes, (3000 - 1000) / 2);
+        assert_eq!(result2.rx_bytes, (6000 - 2000) / 2);
+        assert_eq!(result2.tx_bytes, (3000 - 1000) / 2);
 
         let result3 = monitor.poll().unwrap();
-        assert_eq!(result3[NETWORK_STAT_RX_INDEX].bytes, (9000 - 4000 + 2000) / 3);
-        assert_eq!(result3[NETWORK_STAT_TX_INDEX].bytes, (6000 - 2000 + 1000) / 3);
+        assert_eq!(result3.rx_bytes, (9000 - 4000 + 2000) / 3);
+        assert_eq!(result3.tx_bytes, (6000 - 2000 + 1000) / 3);
 
         let result4 = monitor.poll().unwrap();
-        assert_eq!(result4[NETWORK_STAT_RX_INDEX].bytes, (12000 - 3000 + 1000) / 3);
-        assert_eq!(result4[NETWORK_STAT_TX_INDEX].bytes, (7000 - 3000 + 2000) / 3);
+        assert_eq!(result4.rx_bytes, (12000 - 3000 + 1000) / 3);
+        assert_eq!(result4.tx_bytes, (7000 - 3000 + 2000) / 3);
     }
 
     #[test]
