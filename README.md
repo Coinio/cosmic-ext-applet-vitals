@@ -1,4 +1,6 @@
 # COSMIC Vitals
+![Main Image](https://github.com/Coinio/cosmic-vitals/blob/main/res/screenshots/main-image.png)
+
 
 A minimal configurable applet to display basic system resource usage, i.e. CPU, Memory, Network. 
 
