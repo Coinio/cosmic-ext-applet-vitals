@@ -325,9 +325,12 @@ impl Application for AppState {
         };
 
         let padding = if is_horizontal {
-            [0, self.core.applet.suggested_padding(true)]
+            [
+                self.core.applet.suggested_padding(false),
+                self.core.applet.suggested_padding(false),
+            ]
         } else {
-            [self.core.applet.suggested_padding(true), 1]
+            [self.core.applet.suggested_padding(false), 1]
         };
 
         let button = widget::button::custom(wrapper)
