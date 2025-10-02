@@ -26,7 +26,7 @@ impl AppIcons {
     pub fn new() -> Self {
         Self {
             icons: HashMap::from([
-                (APP_LOGO_ICON, svg_handle("dev.eidolon.cosmic-vitals-applet.svg").into()),
+                (APP_LOGO_ICON, svg_handle("dev.eidolon.cosmic-ext-applet-vitals.svg").into()),
                 (DOWN_ARROW_ICON, svg_handle("arrow-download.svg").into()),
                 (UP_ARROW_ICON, svg_handle("arrow-upload.svg").into()),
                 (READ_ICON, svg_handle("read.svg").into()),

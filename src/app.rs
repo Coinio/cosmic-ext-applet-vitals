@@ -33,7 +33,7 @@ use once_cell::sync::Lazy;
 use std::collections::BTreeMap;
 use tokio_util::sync::CancellationToken;
 
-pub const GLOBAL_APP_ID: &'static str = "dev.eidolon.cosmic-vitals-applet";
+pub const GLOBAL_APP_ID: &'static str = "dev.eidolon.cosmic-ext-applet-vitals";
 
 static AUTOSIZE_MAIN_ID: Lazy<Id> = Lazy::new(|| Id::new("autosize-main"));
 

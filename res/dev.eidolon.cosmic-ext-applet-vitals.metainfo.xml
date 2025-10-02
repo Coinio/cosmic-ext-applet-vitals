@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <component type="desktop-application">
-  <id>dev.eidolon.cosmic-vitals-applet</id>
+  <id>dev.eidolon.cosmic-ext-applet-vitals</id>
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>GPL-3.0-only</project_license>
   <project_group>COSMIC</project_group>
@@ -12,8 +12,8 @@
   <description>
     <p>A minimal applet for COSMIC to display basic stats, i.e. cpu/ram usage.</p>
   </description>
-  <launchable type="desktop-id">dev.eidolon.cosmic-vitals-applet.desktop</launchable>
-  <icon type="stock">dev.eidolon.cosmic-vitals-applet.svg</icon>
+  <launchable type="desktop-id">dev.eidolon.cosmic-ext-applet-vitals.desktop</launchable>
+  <icon type="stock">dev.eidolon.cosmic-ext-applet-vitals.svg</icon>
   <screenshots>
   </screenshots>
   <provides>
@@ -21,7 +21,7 @@
       <mimetype>text/plain</mimetype>
     </mimetypes>
     <binaries>
-      <binary>cosmic-vitals-applet</binary>
+      <binary>cosmic-ext-applet-vitals</binary>
     </binaries>
   </provides>
 </component>
