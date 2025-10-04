@@ -1,6 +1,6 @@
 use crate::app::{AppState, Message};
 use crate::configuration::app_configuration::*;
-use crate::core::app_colours::{AppColours, BRIGHT_RED};
+use crate::core::app_colours::{AppColours, BRIGHT_RED, EXT_WARM_GREY};
 use crate::core::settings::{SettingsForm, SettingsFormInputType};
 use crate::ui::components::form_checkbox_input::{form_checkbox_input, FormCheckboxInputProps};
 use crate::ui::components::form_text_input::{form_text_input, FormTextInputProps};
@@ -28,6 +28,10 @@ impl SettingsForm {
                         .app_colours()
                         .get(BRIGHT_RED)
                         .map_or(Color::WHITE, |c| Color::new(c.red, c.green, c.blue, c.alpha));
+                    let helper_color: Color = app_state
+                        .app_colours()
+                        .get(EXT_WARM_GREY)
+                        .map_or(Color::WHITE, |c| Color::new(c.red, c.green, c.blue, c.alpha));
 
                     let el = form_text_input(FormTextInputProps {
                         settings_window_id: self.settings_window_id,
@@ -36,18 +40,26 @@ impl SettingsForm {
                         form_value_key,
                         validator: settings_form_item.validator,
                         error_color: red_color,
+                        helper_text: settings_form_item.helper_text.clone(),
+                        helper_text_color: helper_color,
                     });
 
                     column = column.add(el);
                 }
                 SettingsFormInputType::CheckBox => {
                     let converted_value = settings_form_item.value.parse::<bool>().unwrap_or(false);
+                    let helper_color: Color = app_state
+                        .app_colours()
+                        .get(EXT_WARM_GREY)
+                        .map_or(Color::WHITE, |c| Color::new(c.red, c.green, c.blue, c.alpha));
 
                     let el = form_checkbox_input(FormCheckboxInputProps {
                         settings_window_id: self.settings_window_id,
                         label: settings_form_item.label.clone(),
                         value: converted_value,
                         form_value_key,
+                        helper_text: settings_form_item.helper_text.clone(),
+                        helper_text_color: helper_color,
                     });
 
                     column = column.add(el);
@@ -55,6 +67,10 @@ impl SettingsForm {
                 SettingsFormInputType::ColourPicker => {
                     let palette = &app_state.core().system_theme().cosmic().palette;
                     let app_colours = AppColours::from(palette);
+                    let helper_color: Color = app_state
+                        .app_colours()
+                        .get(EXT_WARM_GREY)
+                        .map_or(Color::WHITE, |c| Color::new(c.red, c.green, c.blue, c.alpha));
 
                     let el = form_theme_colour_picker_input(FormThemeColourPickerInputProps {
                         settings_window_id: self.settings_window_id,
@@ -62,6 +78,8 @@ impl SettingsForm {
                         selected_key: settings_form_item.value.clone(),
                         form_value_key,
                         app_colours,
+                        helper_text: settings_form_item.helper_text.clone(),
+                        helper_text_color: helper_color,
                     });
 
                     column = column.add(el);

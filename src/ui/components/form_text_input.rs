@@ -12,6 +12,8 @@ pub struct FormTextInputProps<'a> {
     pub form_value_key: &'static str,
     pub validator: Option<fn(&str) -> Result<(), String>>,
     pub error_color: Color,
+    pub helper_text: Option<String>,
+    pub helper_text_color: Color,
 }
 
 pub fn form_text_input<'a>(props: FormTextInputProps<'a>) -> Element<'a, Message> {
@@ -22,6 +24,8 @@ pub fn form_text_input<'a>(props: FormTextInputProps<'a>) -> Element<'a, Message
         form_value_key,
         validator,
         error_color,
+        helper_text,
+        helper_text_color,
     } = props;
 
     let input_id = cosmic::iced::widget::text_input::Id::new(format!(
@@ -49,8 +53,15 @@ pub fn form_text_input<'a>(props: FormTextInputProps<'a>) -> Element<'a, Message
         Err(error_text) => text_input.width(150).error(error_text.clone()),
     };
 
-    let mut column = widget::column();
+    let mut column = widget::column().spacing(6);
     column = column.push(settings::item(label, field));
+
+    if let Some(helper) = helper_text {
+        let helper_text_widget = widget::text(helper)
+            .size(12)
+            .class(cosmic::theme::Text::from(helper_text_color));
+        column = column.push(widget::container(helper_text_widget).width(cosmic::iced::Length::Fill));
+    }
 
     if let Err(error_text) = validation_result {
         let error_text_widget = widget::text(error_text)

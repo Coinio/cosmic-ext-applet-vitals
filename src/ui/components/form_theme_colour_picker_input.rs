@@ -11,6 +11,8 @@ pub struct FormThemeColourPickerInputProps {
     pub selected_key: String,
     pub form_value_key: &'static str,
     pub app_colours: AppColours,
+    pub helper_text: Option<String>,
+    pub helper_text_color: Color,
 }
 
 pub fn form_theme_colour_picker_input<'a>(
@@ -22,6 +24,8 @@ pub fn form_theme_colour_picker_input<'a>(
         selected_key,
         form_value_key,
         app_colours,
+        helper_text,
+        helper_text_color,
     } = props;
 
     let mut row = widget::row().spacing(8);
@@ -66,6 +70,13 @@ pub fn form_theme_colour_picker_input<'a>(
 
     let mut colour_picker_column = widget::column().spacing(8);
     colour_picker_column = colour_picker_column.push(widget::text(label));
+    if let Some(helper) = helper_text {
+        colour_picker_column = colour_picker_column.push(
+            widget::text(helper)
+                .size(12)
+                .class(cosmic::theme::Text::from(helper_text_color)),
+        );
+    }
     colour_picker_column = colour_picker_column.push(row.wrap());
 
     colour_picker_column.into()

@@ -35,6 +35,7 @@ pub struct SettingsFormItem {
     pub value: String,
     pub input_type: SettingsFormInputType,
     pub validator: Option<fn(&str) -> Result<(), String>>,
+    pub helper_text: Option<String>,
 }
 
 pub struct SettingsForm {
@@ -127,6 +128,7 @@ impl From<&GeneralConfiguration> for SettingsForm {
                 value: config.fix_indicator_size.to_string(),
                 input_type: SettingsFormInputType::CheckBox,
                 validator: Some(ConfigurationValidation::is_valid_boolean),
+                helper_text: Some(fl!("settings-fix-indicator-size-helper")),
             },
         );
 
@@ -150,30 +152,13 @@ fn build_shared_settings(
 ) -> IndexMap<&'static str, SettingsFormItem> {
     IndexMap::from([
         (
-            LABEL_TEXT_SETTING_KEY,
-            SettingsFormItem {
-                label: fl!("settings-label-text"),
-                value: label_text.clone().unwrap_or_default(),
-                input_type: SettingsFormInputType::String,
-                validator: Some(ConfigurationValidation::is_valid_label_text),
-            },
-        ),
-        (
-            LABEL_COLOUR_SETTING_KEY,
-            SettingsFormItem {
-                label: fl!("settings-label-colour"),
-                value: label_colour.clone().unwrap_or_default(),
-                input_type: SettingsFormInputType::ColourPicker,
-                validator: None,
-            },
-        ),
-        (
             HIDE_INDICATOR_SETTING_KEY,
             SettingsFormItem {
                 label: fl!("settings-hide-indicator"),
                 value: hide_indicator.to_string(),
                 input_type: SettingsFormInputType::CheckBox,
                 validator: Some(ConfigurationValidation::is_valid_boolean),
+                helper_text: None,
             },
         ),
         (
@@ -183,6 +168,27 @@ fn build_shared_settings(
                 value: hide_label.to_string(),
                 input_type: SettingsFormInputType::CheckBox,
                 validator: Some(ConfigurationValidation::is_valid_boolean),
+                helper_text: None,
+            },
+        ),
+        (
+            LABEL_TEXT_SETTING_KEY,
+            SettingsFormItem {
+                label: fl!("settings-label-text"),
+                value: label_text.clone().unwrap_or_default(),
+                input_type: SettingsFormInputType::String,
+                validator: Some(ConfigurationValidation::is_valid_label_text),
+                helper_text: None,
+            },
+        ),
+        (
+            LABEL_COLOUR_SETTING_KEY,
+            SettingsFormItem {
+                label: fl!("settings-label-colour"),
+                value: label_colour.clone().unwrap_or_default(),
+                input_type: SettingsFormInputType::ColourPicker,
+                validator: None,
+                helper_text: None,
             },
         ),
         (
@@ -192,6 +198,7 @@ fn build_shared_settings(
                 value: update_interval.as_millis().to_string(),
                 input_type: SettingsFormInputType::String,
                 validator: Some(ConfigurationValidation::is_valid_interval),
+                helper_text: None,
             },
         ),
         (
@@ -201,6 +208,7 @@ fn build_shared_settings(
                 value: max_samples.to_string(),
                 input_type: SettingsFormInputType::String,
                 validator: Some(ConfigurationValidation::is_valid_max_samples),
+                helper_text: None,
             },
         ),
     ])

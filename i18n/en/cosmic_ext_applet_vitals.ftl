@@ -17,3 +17,4 @@ settings-label-colour = Icon Colour
 settings-label-text = Label
 settings-general-title = General Settings
 settings-fix-indicator-size = Fix Indicator Size
+settings-fix-indicator-size-helper = Fixes the width to the max possible text size to prevent jitter in the panel/dock. Turn this off if you prefer a higher density UI.
