@@ -64,10 +64,9 @@ pub fn indicator<'a>(core: &'a cosmic::Core, props: IndicatorProps<'a>) -> Optio
     }
 
     if props.horizontal {
-        // For horizontal orientation place value pairs in a row
         let mut values_container = Row::new().align_y(Alignment::Center);
         for v in value_rows {
-            values_container = values_container.push(v);
+            values_container = values_container.spacing(props.spacing).push(v);
         }
         content.push(values_container.into());
 
