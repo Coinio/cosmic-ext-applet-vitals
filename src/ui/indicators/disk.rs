@@ -7,6 +7,7 @@ use crate::ui::components::indicator::{indicator, IndicatorProps, IndicatorValue
 use crate::ui::components::svg_icon::SvgIconProps;
 use cosmic::iced::Color;
 use cosmic::Element;
+use crate::ui::indicators::format_bytes_per_second;
 
 impl DiskStats {
     pub fn draw<'app>(&self, app_state: &'app AppState, horizontal: bool) -> Option<Element<'app, Message>> {
@@ -26,7 +27,7 @@ impl DiskStats {
         let max_text_width = if configuration.general.fix_indicator_size {
             app_state
                 .app_text_measurements()
-                .measure(self.max_label_text(), font_size)
+                .measure(self.max_label_text(configuration), font_size)
         } else {
             None
         };
@@ -89,32 +90,20 @@ impl DiskStats {
             .map_or(Color::WHITE, |c| Color::new(c.red, c.green, c.blue, c.alpha))
     }
 
-    fn read_value(&self, _app_config: &AppConfiguration) -> String {
-        let mb_per_second = self.avg_bytes_read as f64 / 1_000_000.0;
-        if mb_per_second > 999.9 {
-            let gb_per_second = self.avg_bytes_read as f64 / 1_000_000_000.0;
-            format!("{:.1}GB/s", gb_per_second)
-        } else if mb_per_second > 99.9 {
-            format!("{:.0}MB/s", mb_per_second.round())
-        } else {
-            format!("{:.1}MB/s", mb_per_second)
-        }
+    fn read_value(&self, app_config: &AppConfiguration) -> String {
+        format_bytes_per_second(self.avg_bytes_read, app_config)
     }
 
-    fn write_value(&self, _app_config: &AppConfiguration) -> String {
-        let mb_per_second = self.avg_bytes_written as f64 / 1_000_000.0;
-        if mb_per_second > 999.9 {
-            let gb_per_second = self.avg_bytes_written as f64 / 1_000_000_000.0;
-            format!("{:.1}GB/s", gb_per_second)
-        } else if mb_per_second > 99.9 {
-            format!("{:.0}MB/s", mb_per_second.round())
-        } else {
-            format!("{:.1}MB/s", mb_per_second)
-        }
+    fn write_value(&self, app_config: &AppConfiguration) -> String {
+        format_bytes_per_second(self.avg_bytes_written, app_config)
     }
 
-    fn max_label_text(&self) -> &'static str {
-        "99.9MB/s"
+    fn max_label_text(&self, app_config: &AppConfiguration) -> &'static str {
+        if app_config.general.use_iec_units {
+            "99.9GiB/s"
+        } else {
+            "99.9GB/s"
+        }
     }
 
     fn is_hidden(&self, app_config: &AppConfiguration) -> bool {

@@ -27,6 +27,7 @@ pub const HIDE_LABEL_SETTING_KEY: &'static str = "settings-hide-label";
 pub const UPDATE_INTERVAL_SETTING_KEY: &'static str = "settings-update-interval";
 pub const MAX_SAMPLES_SETTING_KEY: &'static str = "settings-max-samples";
 pub const FIX_INDICATOR_SIZE_SETTING_KEY: &'static str = "settings-fix-indicator-size";
+pub const USE_IEC_UNITS_SETTING_KEY: &'static str = "settings-use-iec-units";
 
 
 #[derive(Debug, Default, Clone, CosmicConfigEntry, Eq, PartialEq)]

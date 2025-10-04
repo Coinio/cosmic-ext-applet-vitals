@@ -23,10 +23,7 @@ for those fighting with iced/libcosmic, etc.
   * Show / Hide the labels for each monitor
   * Label Colours - The colours can be selected from the current theme libcosmic palette
   * Label Text - The label text for each monitor
-
-## Features not yet implemented
-
-* Allow displayed units to be configured between SI and IEC.
+  * Switch between SI and IEC units
 
 ## Screenshots
 

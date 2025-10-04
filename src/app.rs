@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
-use crate::configuration::app_configuration::{AppConfiguration, CPU_SETTINGS_WINDOW_ID, DISK_SETTINGS_WINDOW_ID, GENERAL_SETTINGS_WINDOW_ID, MAIN_SETTINGS_WINDOW_ID, MEMORY_SETTINGS_WINDOW_ID, NETWORK_SETTINGS_WINDOW_ID};
+use crate::configuration::app_configuration::{
+    AppConfiguration, CPU_SETTINGS_WINDOW_ID, DISK_SETTINGS_WINDOW_ID, GENERAL_SETTINGS_WINDOW_ID,
+    MAIN_SETTINGS_WINDOW_ID, MEMORY_SETTINGS_WINDOW_ID, NETWORK_SETTINGS_WINDOW_ID,
+};
 use crate::core::app_colours::AppColours;
 use crate::core::app_icons::{AppIcons, APP_LOGO_ICON};
 use crate::core::app_text_measurements::AppTextMeasurements;
@@ -16,7 +19,7 @@ use crate::sensors::proc_stat_reader::ProcStatSensorReader;
 use crate::ui::components::no_indicator::{no_indicators_content, NoIndicatorProps};
 use crate::ui::settings_forms::main_settings_form::MainSettingsForm;
 use cosmic::app::{Core, Task};
-use cosmic::applet::cosmic_panel_config::{PanelAnchor, PanelSize};
+use cosmic::applet::cosmic_panel_config::PanelSize;
 use cosmic::cosmic_config::{Config, CosmicConfigEntry};
 use cosmic::iced::{window, Subscription};
 use cosmic::iced::{Alignment, Limits};

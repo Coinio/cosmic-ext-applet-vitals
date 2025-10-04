@@ -22,7 +22,7 @@ impl MemoryStats {
         let max_text_width = if configuration.general.fix_indicator_size {
             app_state
                 .app_text_measurements()
-                .measure(self.max_label_text(), font_size)
+                .measure(self.max_label_text(configuration), font_size)
         } else {
             None
         };
@@ -57,17 +57,30 @@ impl MemoryStats {
             .map_or(Color::WHITE, |c| Color::new(c.red, c.green, c.blue, c.alpha))
     }
 
-    fn value(&self, _app_config: &AppConfiguration) -> String {
-        let used_gb = self.used_kib as f64 * 1024.0 / 1_000_000_000.0;
-        if used_gb > 99.9 {
-            format!("{:.0}GB", used_gb.round())
+    fn value(&self, app_config: &AppConfiguration) -> String {
+        if app_config.general.use_iec_units {
+            let used_gib = self.used_kib as f64 / 1024.0 / 1024.0;
+            if used_gib > 99.9 {
+                format!("{:.0}GiB", used_gib.round())
+            } else {
+                format!("{:.1}GiB", used_gib)
+            }
         } else {
-            format!("{:.1}GB", used_gb)
+            let used_gb = self.used_kib as f64 * 1024.0 / 1_000_000_000.0;
+            if used_gb > 99.9 {
+                format!("{:.0}GB", used_gb.round())
+            } else {
+                format!("{:.1}GB", used_gb)
+            }
         }
     }
 
-    fn max_label_text(&self) -> &'static str {
-        "99.9GB"
+    fn max_label_text(&self, app_config: &AppConfiguration) -> &'static str {
+        if app_config.general.use_iec_units {
+            "99.9GiB"
+        } else {
+            "99.9GB"
+        }
     }
 
     fn is_hidden(&self, app_config: &AppConfiguration) -> bool {

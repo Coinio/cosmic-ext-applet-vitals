@@ -131,6 +131,16 @@ impl From<&GeneralConfiguration> for SettingsForm {
                 helper_text: Some(fl!("settings-fix-indicator-size-helper")),
             },
         );
+        values.insert(
+            crate::configuration::app_configuration::USE_IEC_UNITS_SETTING_KEY,
+            SettingsFormItem {
+                label: fl!("settings-use-iec-units"),
+                value: config.use_iec_units.to_string(),
+                input_type: SettingsFormInputType::CheckBox,
+                validator: Some(ConfigurationValidation::is_valid_boolean),
+                helper_text: Some(fl!("settings-use-iec-units-helper")),
+            },
+        );
 
         SettingsForm {
             settings_window_id: GENERAL_SETTINGS_WINDOW_ID.clone(),

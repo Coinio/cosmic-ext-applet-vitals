@@ -18,3 +18,5 @@ settings-label-text = Label
 settings-general-title = General Settings
 settings-fix-indicator-size = Fix Indicator Size
 settings-fix-indicator-size-helper = Fixes the width to the max possible text size to prevent jitter in the panel/dock. Turn this off if you prefer a higher density UI.
+settings-use-iec-units = Use IEC units instead of SI
+settings-use-iec-units-helper = Toggle between 1000-based SI units (MB, GB) and 1024-based IEC units (MiB, GiB) for all indicators.
