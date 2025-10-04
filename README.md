@@ -32,8 +32,13 @@ for those fighting with iced/libcosmic, etc.
 
 ##### Horizontal Layout Example 1
 ![Horizontal Panel Layout](https://github.com/Coinio/cosmic-vitals/blob/main/res/screenshots/horizontal-layout.png)
+
 ##### Horizontal Layout Example 2
 ![Horizontal Panel Layout 2](https://github.com/Coinio/cosmic-vitals/blob/main/res/screenshots/horizontal-layout-2.png)
+
+##### Horizontal Layout Example 2
+![Horizontal Panel Layout 3](https://github.com/Coinio/cosmic-vitals/blob/main/res/screenshots/horizontal-layout-3.png)
+
 ##### Vertical Layout
 ![Vertical Panel Layout](https://github.com/Coinio/cosmic-vitals/blob/main/res/screenshots/vertical-layout.jpg)
 ##### Main Settings Page
