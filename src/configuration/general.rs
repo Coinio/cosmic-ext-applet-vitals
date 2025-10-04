@@ -19,9 +19,8 @@ pub struct GeneralConfiguration {
     pub horizontal_font_size_md: u16,
     pub horizontal_font_size_lg: u16,
     pub horizontal_font_size_xl: u16,
-    /// When true, indicator value widths are measured and fixed based on the maximum text size;
-    /// when false, they resize
-    /// naturally.
+    /// When true, indicator value widths are measured and fixed based on their maximum text size;
+    /// when false, they resize to the text
     pub fix_indicator_size: bool,
 }
 
