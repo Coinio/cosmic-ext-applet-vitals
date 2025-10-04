@@ -1,5 +1,9 @@
 use serde::{Deserialize, Serialize};
 
+use crate::configuration::app_configuration::{GENERAL_SETTINGS_WINDOW_ID, FIX_INDICATOR_SIZE_SETTING_KEY};
+use crate::configuration::validation::ConfigurationValidation;
+use crate::core::settings::SettingsForm;
+
 const DEFAULT_INDICATOR_FONT_SIZE: u16 = 14;
 
 /// General configuration for the app, i.e. font size.
@@ -15,6 +19,10 @@ pub struct GeneralConfiguration {
     pub horizontal_font_size_md: u16,
     pub horizontal_font_size_lg: u16,
     pub horizontal_font_size_xl: u16,
+    /// When true, indicator value widths are measured and fixed based on the maximum text size;
+    /// when false, they resize
+    /// naturally.
+    pub fix_indicator_size: bool,
 }
 
 impl Default for GeneralConfiguration {
@@ -30,6 +38,28 @@ impl Default for GeneralConfiguration {
             horizontal_font_size_md: DEFAULT_INDICATOR_FONT_SIZE + 4,
             horizontal_font_size_lg: DEFAULT_INDICATOR_FONT_SIZE + 6,
             horizontal_font_size_xl: DEFAULT_INDICATOR_FONT_SIZE + 8,
+            fix_indicator_size: true,
+        }
+    }
+}
+
+impl GeneralConfiguration {
+    pub fn update(&self, settings_form: &SettingsForm) -> Self {
+        if settings_form.settings_window_id != GENERAL_SETTINGS_WINDOW_ID.clone() {
+            panic!("Attempted to update General settings from a non-general settings window.")
+        }
+
+        GeneralConfiguration {
+            fix_indicator_size: ConfigurationValidation::sanitise_boolean_input(
+                settings_form
+                    .values
+                    .get(FIX_INDICATOR_SIZE_SETTING_KEY)
+                    .expect("Fix indicator size missing from settings form options")
+                    .value
+                    .clone(),
+                self.fix_indicator_size,
+            ),
+            ..self.clone()
         }
     }
 }

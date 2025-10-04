@@ -23,10 +23,13 @@ impl NetworkStats {
         let font_size = app_state.font_size(horizontal);
         let icon_size = app_state.icon_size();
 
-        let max_text_width = app_state
-            .app_text_measurements()
-            .measure(self.max_label_text(), font_size)
-            .unwrap_or(0.0);
+        let max_text_width = if configuration.general.fix_indicator_size {
+            app_state
+                .app_text_measurements()
+                .measure(self.max_label_text(), font_size)
+        } else {
+            None
+        };
 
         let mut values: Vec<IndicatorValueItem> = Vec::new();
         values.push(IndicatorValueItem {

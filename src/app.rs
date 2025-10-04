@@ -1,9 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
-use crate::configuration::app_configuration::{
-    AppConfiguration, CPU_SETTINGS_WINDOW_ID, DISK_SETTINGS_WINDOW_ID, MAIN_SETTINGS_WINDOW_ID,
-    MEMORY_SETTINGS_WINDOW_ID, NETWORK_SETTINGS_WINDOW_ID,
-};
+use crate::configuration::app_configuration::{AppConfiguration, CPU_SETTINGS_WINDOW_ID, DISK_SETTINGS_WINDOW_ID, GENERAL_SETTINGS_WINDOW_ID, MAIN_SETTINGS_WINDOW_ID, MEMORY_SETTINGS_WINDOW_ID, NETWORK_SETTINGS_WINDOW_ID};
 use crate::core::app_colours::AppColours;
 use crate::core::app_icons::{AppIcons, APP_LOGO_ICON};
 use crate::core::app_text_measurements::AppTextMeasurements;
@@ -285,7 +282,8 @@ impl Application for AppState {
     }
 
     fn view(&self) -> Element<'_, Self::Message> {
-        let is_horizontal = matches!(self.core.applet.anchor, PanelAnchor::Top | PanelAnchor::Bottom);
+        let is_horizontal = true;
+        //matches!(self.core.applet.anchor, PanelAnchor::Top | PanelAnchor::Bottom);
 
         let mut elements: Vec<Element<Message>> = Vec::new();
 
@@ -404,8 +402,13 @@ impl AppState {
             .get(&DISK_SETTINGS_WINDOW_ID.clone())
             .expect("No disk settings form configured.");
 
+        let general_settings_form = self
+            .settings_forms
+            .get(&GENERAL_SETTINGS_WINDOW_ID.clone())
+            .expect("No general settings form configured.");
+
         self.configuration = AppConfiguration {
-            general: self.configuration.general.clone(),
+            general: self.configuration.general.update(general_settings_form),
             memory: self.configuration.memory.update(memory_settings_form),
             cpu: self.configuration.cpu.update(cpu_settings_form),
             network: self.configuration.network.update(network_settings_form),

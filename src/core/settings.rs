@@ -1,9 +1,10 @@
 use std::time::Duration;
 use cosmic::iced::window;
 use indexmap::IndexMap;
-use crate::configuration::app_configuration::{CPU_SETTINGS_WINDOW_ID, DISK_SETTINGS_WINDOW_ID, HIDE_INDICATOR_SETTING_KEY, HIDE_LABEL_SETTING_KEY, LABEL_COLOUR_SETTING_KEY, LABEL_TEXT_SETTING_KEY, MAX_SAMPLES_SETTING_KEY, MEMORY_SETTINGS_WINDOW_ID, NETWORK_SETTINGS_WINDOW_ID, UPDATE_INTERVAL_SETTING_KEY};
+use crate::configuration::app_configuration::{CPU_SETTINGS_WINDOW_ID, DISK_SETTINGS_WINDOW_ID, GENERAL_SETTINGS_WINDOW_ID, HIDE_INDICATOR_SETTING_KEY, HIDE_LABEL_SETTING_KEY, LABEL_COLOUR_SETTING_KEY, LABEL_TEXT_SETTING_KEY, MAX_SAMPLES_SETTING_KEY, MEMORY_SETTINGS_WINDOW_ID, NETWORK_SETTINGS_WINDOW_ID, UPDATE_INTERVAL_SETTING_KEY, FIX_INDICATOR_SIZE_SETTING_KEY};
 use crate::configuration::cpu::CpuConfiguration;
 use crate::configuration::disk::DiskConfiguration;
+use crate::configuration::general::GeneralConfiguration;
 use crate::configuration::memory::MemoryConfiguration;
 use crate::configuration::network::NetworkConfiguration;
 use crate::configuration::validation::ConfigurationValidation;
@@ -111,6 +112,27 @@ impl From<&DiskConfiguration> for SettingsForm {
         SettingsForm {
             settings_window_id: DISK_SETTINGS_WINDOW_ID.clone(),
             title: fl!("settings-disk-title"),
+            values,
+        }
+    }
+}
+
+impl From<&GeneralConfiguration> for SettingsForm {
+    fn from(config: &GeneralConfiguration) -> SettingsForm {
+        let mut values: IndexMap<&'static str, SettingsFormItem> = IndexMap::new();
+        values.insert(
+            FIX_INDICATOR_SIZE_SETTING_KEY,
+            SettingsFormItem {
+                label: fl!("settings-fix-indicator-size"),
+                value: config.fix_indicator_size.to_string(),
+                input_type: SettingsFormInputType::CheckBox,
+                validator: Some(ConfigurationValidation::is_valid_boolean),
+            },
+        );
+
+        SettingsForm {
+            settings_window_id: GENERAL_SETTINGS_WINDOW_ID.clone(),
+            title: fl!("settings-general-title"),
             values,
         }
     }

@@ -16,7 +16,7 @@ pub struct IndicatorProps<'a> {
     pub label_text: Option<String>,
     pub label_colour: Color,
     pub font_size: u16,
-    pub value_width: f32,
+    pub value_width: Option<f32>,
     pub horizontal: bool,
     pub spacing: u16,
     pub icon_spacing: u16,

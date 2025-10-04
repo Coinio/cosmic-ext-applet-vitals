@@ -15,3 +15,5 @@ settings-max-samples-error = Must be an integer greater than or equal to { $min 
 settings-label-text-error = Must be non-zero & shorter then { $max_length } chars
 settings-label-colour = Icon Colour
 settings-label-text = Label
+settings-general-title = General Settings
+settings-fix-indicator-size = Fix Indicator Size

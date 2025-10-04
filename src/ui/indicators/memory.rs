@@ -19,10 +19,13 @@ impl MemoryStats {
         let display_item_color = self.label_colour(app_state);
         let font_size = app_state.font_size(horizontal);
 
-        let max_text_width = app_state
-            .app_text_measurements()
-            .measure(self.max_label_text(), font_size)
-            .unwrap_or(0.0);
+        let max_text_width = if configuration.general.fix_indicator_size {
+            app_state
+                .app_text_measurements()
+                .measure(self.max_label_text(), font_size)
+        } else {
+            None
+        };
 
         let values = vec![IndicatorValueItem {
             text: self.value(app_state.configuration()),

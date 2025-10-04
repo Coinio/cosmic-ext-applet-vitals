@@ -10,6 +10,7 @@ use crate::configuration::general::GeneralConfiguration;
 use crate::core::settings::SettingsForm;
 
 pub static MAIN_SETTINGS_WINDOW_ID: Lazy<cosmic::iced::window::Id> = Lazy::new(|| cosmic::iced::window::Id::unique());
+pub static GENERAL_SETTINGS_WINDOW_ID: Lazy<cosmic::iced::window::Id> = Lazy::new(|| cosmic::iced::window::Id::unique());
 pub static CPU_SETTINGS_WINDOW_ID: Lazy<cosmic::iced::window::Id> = Lazy::new(|| cosmic::iced::window::Id::unique());
 pub static MEMORY_SETTINGS_WINDOW_ID: Lazy<cosmic::iced::window::Id> = Lazy::new(|| cosmic::iced::window::Id::unique());
 pub static NETWORK_SETTINGS_WINDOW_ID: Lazy<cosmic::iced::window::Id> =
@@ -25,6 +26,7 @@ pub const HIDE_INDICATOR_SETTING_KEY: &'static str = "settings-hide-indicator";
 pub const HIDE_LABEL_SETTING_KEY: &'static str = "settings-hide-label";
 pub const UPDATE_INTERVAL_SETTING_KEY: &'static str = "settings-update-interval";
 pub const MAX_SAMPLES_SETTING_KEY: &'static str = "settings-max-samples";
+pub const FIX_INDICATOR_SIZE_SETTING_KEY: &'static str = "settings-fix-indicator-size";
 
 
 #[derive(Debug, Default, Clone, CosmicConfigEntry, Eq, PartialEq)]
@@ -40,6 +42,7 @@ pub struct AppConfiguration {
 impl AppConfiguration {
     pub fn settings_form_options(&self) -> BTreeMap<window::Id, SettingsForm> {
         BTreeMap::from([
+            (GENERAL_SETTINGS_WINDOW_ID.clone(), SettingsForm::from(&self.general)),
             (CPU_SETTINGS_WINDOW_ID.clone(), SettingsForm::from(&self.cpu)),
             (MEMORY_SETTINGS_WINDOW_ID.clone(), SettingsForm::from(&self.memory)),
             (NETWORK_SETTINGS_WINDOW_ID.clone(), SettingsForm::from(&self.network)),        
