@@ -15,7 +15,7 @@ impl CpuStats {
             return None;
         }
 
-        let text = configuration.cpu.label_text.clone();
+        let text = if configuration.cpu.hide_label { None } else { configuration.cpu.label_text.clone() };
 
         let display_item_color = self.label_colour(app_state);
         let font_size = app_state.font_size(horizontal);

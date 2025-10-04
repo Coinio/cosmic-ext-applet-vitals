@@ -5,6 +5,7 @@ settings-disk-title = Disk Settings
 settings-network-title = Network Settings
 settings-update-interval = Update Interval (ms)
 settings-hide-indicator = Hide Indicator(s)
+settings-hide-label = Hide Label
 settings-empty = <empty>
 settings-title = Settings
 settings-max-samples = Max Samples

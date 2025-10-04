@@ -17,7 +17,7 @@ impl NetworkStats {
             return None;
         }
 
-        let text = configuration.network.label_text.clone();
+        let text = if configuration.network.hide_label { None } else { configuration.network.label_text.clone() };
 
         let display_item_color = self.label_colour(app_state);
         let font_size = app_state.font_size(horizontal);

@@ -1,7 +1,7 @@
 use std::time::Duration;
 use cosmic::iced::window;
 use indexmap::IndexMap;
-use crate::configuration::app_configuration::{CPU_SETTINGS_WINDOW_ID, DISK_SETTINGS_WINDOW_ID, HIDE_INDICATOR_SETTING_KEY, LABEL_COLOUR_SETTING_KEY, LABEL_TEXT_SETTING_KEY, MAX_SAMPLES_SETTING_KEY, MEMORY_SETTINGS_WINDOW_ID, NETWORK_SETTINGS_WINDOW_ID, UPDATE_INTERVAL_SETTING_KEY};
+use crate::configuration::app_configuration::{CPU_SETTINGS_WINDOW_ID, DISK_SETTINGS_WINDOW_ID, HIDE_INDICATOR_SETTING_KEY, HIDE_LABEL_SETTING_KEY, LABEL_COLOUR_SETTING_KEY, LABEL_TEXT_SETTING_KEY, MAX_SAMPLES_SETTING_KEY, MEMORY_SETTINGS_WINDOW_ID, NETWORK_SETTINGS_WINDOW_ID, UPDATE_INTERVAL_SETTING_KEY};
 use crate::configuration::cpu::CpuConfiguration;
 use crate::configuration::disk::DiskConfiguration;
 use crate::configuration::memory::MemoryConfiguration;
@@ -46,6 +46,7 @@ impl From<&CpuConfiguration> for SettingsForm {
     fn from(config: &CpuConfiguration) -> SettingsForm {
         let values = build_shared_settings(
             config.hide_indicator,
+            config.hide_label,
             config.update_interval,
             config.max_samples,
             config.label_colour.clone(),
@@ -64,6 +65,7 @@ impl From<&MemoryConfiguration> for SettingsForm {
     fn from(config: &MemoryConfiguration) -> SettingsForm {
         let values = build_shared_settings(
             config.hide_indicator,
+            config.hide_label,
             config.update_interval,
             config.max_samples,
             config.label_colour.clone(),
@@ -81,6 +83,7 @@ impl From<&NetworkConfiguration> for SettingsForm {
     fn from(config: &NetworkConfiguration) -> SettingsForm {
         let values = build_shared_settings(
             config.hide_indicator,
+            config.hide_label,
             config.update_interval,
             config.max_samples,
             config.label_colour.clone(),
@@ -99,6 +102,7 @@ impl From<&DiskConfiguration> for SettingsForm {
     fn from(config: &DiskConfiguration) -> SettingsForm {
         let values = build_shared_settings(
             config.hide_indicator,
+            config.hide_label,
             config.update_interval,
             config.max_samples,
             config.label_colour.clone(),
@@ -116,6 +120,7 @@ impl From<&DiskConfiguration> for SettingsForm {
 /// Extend the BTreeMap returned by this with any sensor-specific settings if required.
 fn build_shared_settings(
     hide_indicator: bool,
+    hide_label: bool,
     update_interval: Duration,
     max_samples: usize,
     label_colour: Option<String>,
@@ -145,6 +150,15 @@ fn build_shared_settings(
             SettingsFormItem {
                 label: fl!("settings-hide-indicator"),
                 value: hide_indicator.to_string(),
+                input_type: SettingsFormInputType::CheckBox,
+                validator: Some(ConfigurationValidation::is_valid_boolean),
+            },
+        ),
+        (
+            HIDE_LABEL_SETTING_KEY,
+            SettingsFormItem {
+                label: fl!("settings-hide-label"),
+                value: hide_label.to_string(),
                 input_type: SettingsFormInputType::CheckBox,
                 validator: Some(ConfigurationValidation::is_valid_boolean),
             },

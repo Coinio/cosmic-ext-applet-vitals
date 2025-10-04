@@ -1,5 +1,5 @@
 use crate::configuration::app_configuration::{
-    CPU_SETTINGS_WINDOW_ID, HIDE_INDICATOR_SETTING_KEY, LABEL_COLOUR_SETTING_KEY, LABEL_TEXT_SETTING_KEY,
+    CPU_SETTINGS_WINDOW_ID, HIDE_INDICATOR_SETTING_KEY, HIDE_LABEL_SETTING_KEY, LABEL_COLOUR_SETTING_KEY, LABEL_TEXT_SETTING_KEY,
     MAX_SAMPLES_SETTING_KEY, UPDATE_INTERVAL_SETTING_KEY,
 };
 use crate::configuration::validation::ConfigurationValidation;
@@ -13,6 +13,8 @@ use crate::core::settings::SettingsForm;
 pub struct CpuConfiguration {
     /// Whether to hide the CPU indicator from the panel
     pub hide_indicator: bool,
+    /// Whether to hide only the label for this indicator
+    pub hide_label: bool,
     /// The duration between each update interval, i.e. 5 seconds
     pub update_interval: Duration,
     /// The number of samples to keep and average for the final result
@@ -29,6 +31,7 @@ impl Default for CpuConfiguration {
             update_interval: Duration::from_secs(1),
             max_samples: 4,
             hide_indicator: false,
+            hide_label: false,
             label_colour: Some(EXT_BLUE.to_string()),
             label_text: Some("CPU".to_string()),
         }
@@ -50,6 +53,15 @@ impl CpuConfiguration {
                     .value
                     .clone(),
                 self.hide_indicator,
+            ),
+            hide_label: ConfigurationValidation::sanitise_boolean_input(
+                settings_form
+                    .values
+                    .get(HIDE_LABEL_SETTING_KEY)
+                    .expect("Hide label missing from settings form options")
+                    .value
+                    .clone(),
+                self.hide_label,
             ),
             update_interval: ConfigurationValidation::sanitise_interval_input(
                 settings_form

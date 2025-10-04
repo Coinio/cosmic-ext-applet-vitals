@@ -10,6 +10,8 @@ use crate::core::settings::SettingsForm;
 pub struct MemoryConfiguration {
     /// Whether to hide the CPU indicator from the panel
     pub hide_indicator: bool,
+    /// Whether to hide only the label for this indicator
+    pub hide_label: bool,
     /// The duration between each update interval, i.e. 5 seconds
     pub update_interval: Duration,
     /// The number of samples to keep and average for the final result
@@ -24,6 +26,7 @@ impl Default for MemoryConfiguration {
     fn default() -> Self {
         MemoryConfiguration {
             hide_indicator: false,
+            hide_label: false,
             update_interval: Duration::from_secs(1),
             max_samples: 2,
             label_colour: Some(EXT_PURPLE.to_string()),
@@ -47,6 +50,15 @@ impl MemoryConfiguration {
                     .value
                     .clone(),
                 self.hide_indicator,
+            ),
+            hide_label: ConfigurationValidation::sanitise_boolean_input(
+                settings_form
+                    .values
+                    .get(HIDE_LABEL_SETTING_KEY)
+                    .expect("Hide label missing from settings form options")
+                    .value
+                    .clone(),
+                self.hide_label,
             ),
             update_interval: ConfigurationValidation::sanitise_interval_input(
                 settings_form

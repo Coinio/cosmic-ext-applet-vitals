@@ -22,6 +22,7 @@ pub const SENSOR_MAX_LABEL_LENGTH: usize = 10;
 pub const LABEL_TEXT_SETTING_KEY: &'static str = "settings-label-text";
 pub const LABEL_COLOUR_SETTING_KEY: &'static str = "settings-label-colour";
 pub const HIDE_INDICATOR_SETTING_KEY: &'static str = "settings-hide-indicator";
+pub const HIDE_LABEL_SETTING_KEY: &'static str = "settings-hide-label";
 pub const UPDATE_INTERVAL_SETTING_KEY: &'static str = "settings-update-interval";
 pub const MAX_SAMPLES_SETTING_KEY: &'static str = "settings-max-samples";
 

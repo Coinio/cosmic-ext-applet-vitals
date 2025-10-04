@@ -20,12 +20,12 @@ for those fighting with iced/libcosmic, etc.
   * Read Intervals - How often each monitor is polled
   * Max Samples - The number of samples to keep to average the readings across
   * Show / Hide each monitor
+  * Show / Hide the labels for each monitor
   * Label Colours - The colours can be selected from the current theme libcosmic palette
   * Label Text - The label text for each monitor
 
 ## Features not yet implemented
 
-* Allow labels to be hidden
 * Allow displayed units to be configured between SI and IEC.
 
 ## Screenshots
