@@ -77,7 +77,6 @@ pub fn indicator<'a>(core: &'a cosmic::Core, props: IndicatorProps<'a>) -> Optio
                 .into(),
         )
     } else {
-        // For vertical orientation stack value pairs in a column
         let mut values_container = Column::new().align_x(Alignment::Center);
         for v in value_rows {
             values_container = values_container.push(v);
