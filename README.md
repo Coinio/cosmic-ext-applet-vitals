@@ -43,8 +43,10 @@ for those fighting with iced/libcosmic, etc.
 ![Vertical Panel Layout](https://github.com/Coinio/cosmic-vitals/blob/main/res/screenshots/vertical-layout.jpg)
 ##### Main Settings Page
 ![Main Settings Page](https://github.com/Coinio/cosmic-vitals/blob/main/res/screenshots/main-settings.png)
-##### Example Settings Page
+##### Network Settings Page
 ![Example Settings Page](https://github.com/Coinio/cosmic-vitals/blob/main/res/screenshots/example-network-settings.png)
+##### General Settings Page
+![Example Settings Page](https://github.com/Coinio/cosmic-vitals/blob/main/res/screenshots/general-settings.png)
 
 ## Install
 
