@@ -77,9 +77,9 @@ impl MemoryStats {
 
     fn max_label_text(&self, app_config: &AppConfiguration) -> &'static str {
         if app_config.general.use_iec_units {
-            "99.9GiB"
+            "99.9MiB"
         } else {
-            "99.9GB"
+            "99.9MB"
         }
     }
 
