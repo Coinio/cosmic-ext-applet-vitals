@@ -100,9 +100,9 @@ impl NetworkStats {
 
     fn max_label_text(&self, app_config: &AppConfiguration) -> &'static str {
         if app_config.general.use_iec_units {
-            "99.9GiB/s"
+            "99.9MiB/s"
         } else {
-            "99.9GB/s"
+            "99.9MB/s"
         }
     }
 

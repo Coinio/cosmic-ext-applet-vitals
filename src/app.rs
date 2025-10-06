@@ -19,7 +19,7 @@ use crate::sensors::proc_stat_reader::ProcStatSensorReader;
 use crate::ui::components::no_indicator::{no_indicators_content, NoIndicatorProps};
 use crate::ui::settings_forms::main_settings_form::MainSettingsForm;
 use cosmic::app::{Core, Task};
-use cosmic::applet::cosmic_panel_config::PanelSize;
+use cosmic::applet::cosmic_panel_config::{PanelAnchor, PanelSize};
 use cosmic::cosmic_config::{Config, CosmicConfigEntry};
 use cosmic::iced::{window, Subscription};
 use cosmic::iced::{Alignment, Limits};
@@ -285,8 +285,7 @@ impl Application for AppState {
     }
 
     fn view(&self) -> Element<'_, Self::Message> {
-        let is_horizontal = true;
-        //matches!(self.core.applet.anchor, PanelAnchor::Top | PanelAnchor::Bottom);
+        let is_horizontal = matches!(self.core.applet.anchor, PanelAnchor::Top | PanelAnchor::Bottom);
 
         let mut elements: Vec<Element<Message>> = Vec::new();
 
