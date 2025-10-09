@@ -69,7 +69,7 @@ impl CosmicTextMeasurer {
         let mut font_system = self.font_system.borrow_mut();
 
         let mut buffer = Buffer::new(&mut font_system, metrics);
-        buffer.set_text(&mut font_system, text, attrs, Shaping::Advanced);
+        buffer.set_text(&mut font_system, text, attrs, Shaping::Advanced, None);
 
         buffer
             .lines
