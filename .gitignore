@@ -2,7 +2,6 @@
 # will have compiled files and executables
 debug/
 target/
-.flatpak-builder/
 
 # Exclude Jetbrains idea folder
 .idea/
@@ -12,5 +11,3 @@ target/
 
 # MSVC Windows builds of rustc generate these, which store debugging information
 *.pdb
-
-.venv/
