@@ -53,9 +53,11 @@ To install your COSMIC applet, you will need [just](https://github.com/casey/jus
 sudo apt install just libxkbcommon-dev
 ```
 
-After just has been installed, you can build and install the appliet with these commands:
-
+After just has been installed, navigate to the root of the cosmic-ext-applet-vitals project and install the applet with these commands:
+ 
 ```sh
 just build-release
 sudo just install
 ```
+
+Then you can add the applet to the panel / dock as usual.
