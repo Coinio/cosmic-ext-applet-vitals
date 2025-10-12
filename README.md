@@ -47,9 +47,10 @@ for those fighting with iced/libcosmic, etc.
 
 ## Install
 
-To install your COSMIC applet, you will need [just](https://github.com/casey/just), if you're on Pop!\_OS, you can install it with the following command:
+To install your COSMIC applet, you will need [just](https://github.com/casey/just), if you're on Pop!\_OS, you can install it with the following commands:
 
 ```sh
+sudo apt install just libxkbcommon-dev
 sudo apt install just
 ```
 
