@@ -54,7 +54,7 @@ sudo apt install just libxkbcommon-dev
 sudo apt install just
 ```
 
-After you install it, you can run the following commands to build and install your applet:
+After just has been installed, you can build and install the appliet with these commands:
 
 ```sh
 just build-release
