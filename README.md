@@ -51,7 +51,6 @@ To install your COSMIC applet, you will need [just](https://github.com/casey/jus
 
 ```sh
 sudo apt install just libxkbcommon-dev
-sudo apt install just
 ```
 
 After just has been installed, you can build and install the appliet with these commands:
