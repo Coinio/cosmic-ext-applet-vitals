@@ -37,8 +37,8 @@ pub const GLOBAL_APP_ID: &'static str = "dev.eidolon.cosmic-ext-applet-vitals";
 
 static AUTOSIZE_MAIN_ID: Lazy<Id> = Lazy::new(|| Id::new("autosize-main"));
 
-const DEFAULT_INDICATOR_FONT_SIZE: u16 = 13;
-const DEFAULT_INDICATOR_ICON_SIZE: u16 = 12;
+const DEFAULT_INDICATOR_FONT_SIZE: u16 = 12;
+const DEFAULT_INDICATOR_ICON_SIZE: u16 = 11;
 const DEFAULT_INDICATOR_SPACING: u16 = 8;
 
 #[derive(Default)]
