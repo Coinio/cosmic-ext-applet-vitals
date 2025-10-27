@@ -47,15 +47,17 @@ for those fighting with iced/libcosmic, etc.
 
 ## Install
 
-To install your COSMIC applet, you will need [just](https://github.com/casey/just), if you're on Pop!\_OS, you can install it with the following command:
+To install your COSMIC applet, you will need [just](https://github.com/casey/just), if you're on Pop!\_OS, you can install it with the following commands:
 
 ```sh
-sudo apt install just
+sudo apt install just libxkbcommon-dev
 ```
 
-After you install it, you can run the following commands to build and install your applet:
-
+After just has been installed, navigate to the root of the cosmic-ext-applet-vitals project and install the applet with these commands:
+ 
 ```sh
 just build-release
 sudo just install
 ```
+
+Then you can add the applet to the panel / dock as usual.
