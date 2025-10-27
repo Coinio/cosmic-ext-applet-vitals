@@ -20,7 +20,9 @@ use crate::ui::components::no_indicator::{no_indicators_content, NoIndicatorProp
 use crate::ui::settings_forms::main_settings_form::MainSettingsForm;
 use cosmic::app::{Core, Task};
 use cosmic::applet::cosmic_panel_config::{PanelAnchor, PanelSize};
+use cosmic::config::{CosmicTk, COSMIC_TK};
 use cosmic::cosmic_config::{Config, CosmicConfigEntry};
+use cosmic::font::Font;
 use cosmic::iced::{window, Subscription};
 use cosmic::iced::{Alignment, Limits};
 use cosmic::iced_widget::{row, Column, Row};
@@ -37,7 +39,7 @@ pub const GLOBAL_APP_ID: &'static str = "dev.eidolon.cosmic-ext-applet-vitals";
 
 static AUTOSIZE_MAIN_ID: Lazy<Id> = Lazy::new(|| Id::new("autosize-main"));
 
-const DEFAULT_INDICATOR_FONT_SIZE: u16 = 12;
+const DEFAULT_INDICATOR_FONT_SIZE: u16 = 11;
 const DEFAULT_INDICATOR_ICON_SIZE: u16 = 11;
 const DEFAULT_INDICATOR_SPACING: u16 = 8;
 
@@ -47,6 +49,8 @@ pub struct AppState {
     core: Core,
     /// The cancellation token to stop the status updates
     monitor_cancellation_token: Option<CancellationToken>,
+    /// The active system font
+    active_interface_font: Font,
     /// The colours available to the application
     app_colours: AppColours,
     /// The icons available to the application
@@ -90,6 +94,8 @@ pub enum Message {
     SettingsFormUpdate(SettingsFormEvent),
     /// The configuration file was changed externally
     ConfigFileChanged(AppConfiguration),
+    /// The COSMIC DE theme was changed
+    ThemeChanged(CosmicTk),
 }
 
 impl Application for AppState {
@@ -121,10 +127,17 @@ impl Application for AppState {
         let app_colours = AppColours::from(&core.system_theme().cosmic().palette);
         let app_icons = AppIcons::new();
         let app_text_measurements = AppTextMeasurements::new();
+        let active_interface_font: Font = COSMIC_TK
+            .read()
+            .expect("No COSMIC_TK configuration found")
+            .interface_font
+            .clone()
+            .into();
 
         let app = AppState {
             core,
             settings_forms,
+            active_interface_font,
             app_colours,
             app_icons,
             app_text_measurements,
@@ -140,9 +153,21 @@ impl Application for AppState {
     }
 
     fn subscription(&self) -> Subscription<Self::Message> {
-        self.core()
-            .watch_config::<AppConfiguration>(Self::APP_ID)
-            .map(|update| Message::ConfigFileChanged(update.config))
+        let mut subscriptions = Vec::new();
+
+        subscriptions.push(
+            self.core()
+                .watch_config::<AppConfiguration>(Self::APP_ID)
+                .map(|update| Message::ConfigFileChanged(update.config)),
+        );
+
+        subscriptions.push(
+            self.core()
+                .watch_config("com.system76.CosmicTk")
+                .map(|tk| Message::ThemeChanged(tk.config)),
+        );
+
+        Subscription::batch(subscriptions)
     }
 
     fn update(&mut self, message: Self::Message) -> Task<Self::Message> {
@@ -280,6 +305,10 @@ impl Application for AppState {
 
                 self.update_configuration();
             }
+            Message::ThemeChanged(cosmic_tk) => {
+                self.active_interface_font = cosmic_tk.interface_font.clone().into();
+                self.app_text_measurements.reset();
+            }
         }
         Task::none()
     }
@@ -369,16 +398,17 @@ impl AppState {
     pub fn app_colours(&self) -> &AppColours {
         &self.app_colours
     }
-
     pub fn app_icons(&self) -> &AppIcons {
         &self.app_icons
     }
-
     pub fn configuration(&self) -> &AppConfiguration {
         &self.configuration
     }
     pub fn app_text_measurements(&self) -> &AppTextMeasurements {
         &self.app_text_measurements
+    }
+    pub fn active_interface_font(&self) -> &Font {
+        &self.active_interface_font
     }
 
     fn update_configuration(&mut self) {

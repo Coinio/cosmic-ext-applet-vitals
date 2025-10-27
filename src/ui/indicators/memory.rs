@@ -38,6 +38,7 @@ impl MemoryStats {
                 label_text: text,
                 label_colour: display_item_color,
                 font_size,
+                font: app_state.active_interface_font(),
                 value_width: max_text_width,
                 horizontal,
                 spacing: app_state.core().applet.suggested_padding(true),

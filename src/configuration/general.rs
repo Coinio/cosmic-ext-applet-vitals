@@ -36,7 +36,7 @@ impl Default for GeneralConfiguration {
             vertical_font_size_lg: DEFAULT_INDICATOR_FONT_SIZE,
             vertical_font_size_xl: DEFAULT_INDICATOR_FONT_SIZE,
             horizontal_font_size_xs: DEFAULT_INDICATOR_FONT_SIZE,
-            horizontal_font_size_sm: DEFAULT_INDICATOR_FONT_SIZE + 2,
+            horizontal_font_size_sm: DEFAULT_INDICATOR_FONT_SIZE,
             horizontal_font_size_md: DEFAULT_INDICATOR_FONT_SIZE + 4,
             horizontal_font_size_lg: DEFAULT_INDICATOR_FONT_SIZE + 6,
             horizontal_font_size_xl: DEFAULT_INDICATOR_FONT_SIZE + 8,

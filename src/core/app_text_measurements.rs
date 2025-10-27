@@ -40,7 +40,7 @@ impl AppTextMeasurements {
 
     }
 
-    pub fn _reset(&self) {
+    pub fn reset(&self) {
         self.text_measurements.borrow_mut().clear();       
     }
 }
