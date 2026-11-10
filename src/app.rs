@@ -32,6 +32,8 @@ use cosmic::{cosmic_config, Application, Element};
 use log::{error, info};
 use once_cell::sync::Lazy;
 use std::collections::BTreeMap;
+use std::time::Duration;
+use tokio::time::Instant;
 use tokio_util::sync::CancellationToken;
 
 pub const GLOBAL_APP_ID: &'static str = "dev.eidolon.cosmic-ext-applet-vitals";
@@ -77,6 +79,18 @@ pub struct AppState {
     settings_nav: segmented_button::SingleSelectModel,
 }
 
+/// Monitors that fall due within this window of each other are polled together, so they share one redraw.
+const MONITOR_COALESCE_WINDOW: Duration = Duration::from_millis(50);
+
+/// The results of a single monitor tick. Only the monitors that were due are populated.
+#[derive(Debug, Clone, Default)]
+pub struct StatsUpdate {
+    memory: Option<MemoryStats>,
+    cpu: Option<CpuStats>,
+    network: Option<NetworkStats>,
+    disk: Option<DiskStats>,
+}
+
 /// The messages processed by the application update
 #[derive(Debug, Clone)]
 pub enum Message {
@@ -92,14 +106,8 @@ pub enum Message {
     SettingsNavSelected(segmented_button::Entity),
     /// Start monitoring the system resources
     StartMonitoring,
-    /// The memory usage stats were updated
-    MemoryUpdate(MemoryStats),
-    /// The cpu usage stats were updated
-    CpuUpdate(CpuStats),
-    /// The network usage stats were updated
-    NetworkUpdate(NetworkStats),
-    /// The disk usage stats were updated
-    DiskUpdate(DiskStats),
+    /// One or more monitors were polled. Updates are batched so each tick causes a single redraw.
+    StatsUpdate(StatsUpdate),
     /// The user has updated the settings form
     SettingsFormUpdate(SettingsFormEvent),
     /// The configuration file was changed externally
@@ -252,62 +260,77 @@ impl Application for AppState {
                 let config = self.configuration.clone();
 
                 return cosmic::Task::stream(async_stream::stream! {
-                    let mut memory_update_interval = tokio::time::interval(config.memory.update_interval);
-                    let mut cpu_update_interval = tokio::time::interval(config.cpu.update_interval);
-                    let mut network_update_interval = tokio::time::interval(config.network.update_interval);
-                    let mut disk_update_interval = tokio::time::interval(config.disk.update_interval);
-
                     let mut memory_monitor = (!config.memory.hide_indicator)
                         .then(|| MemoryMonitor::new(ProcMemInfoSensorReader, &config));
-                    let mut cpuinfo_reader = (!config.cpu.hide_indicator)
+                    let mut cpu_monitor = (!config.cpu.hide_indicator)
                         .then(|| CpuMonitor::new(ProcStatSensorReader, &config));
                     let mut network_monitor = (!config.network.hide_indicator)
                         .then(|| NetworkMonitor::new(ProcNetDevReader, &config));
                     let mut disk_monitor = (!config.disk.hide_indicator)
                         .then(|| DiskMonitor::new(ProcDiskStatsReader, &config));
 
+                    // A single scheduler drives every monitor. Monitors that fall due at (nearly) the same
+                    // time are polled together and sent as one message, because every message rebuilds and
+                    // redraws the applet. Separate timers per monitor would wake the UI once per monitor.
+                    let start = Instant::now();
+                    let mut schedules = [
+                        memory_monitor.is_some().then_some((start, config.memory.update_interval)),
+                        cpu_monitor.is_some().then_some((start, config.cpu.update_interval)),
+                        network_monitor.is_some().then_some((start, config.network.update_interval)),
+                        disk_monitor.is_some().then_some((start, config.disk.update_interval)),
+                    ];
+
                     loop {
+                        let Some(next_due) = schedules.iter().flatten().map(|(due, _)| *due).min() else {
+                            // Every indicator is hidden, nothing to poll.
+                            cancellation_token.cancelled().await;
+                            break;
+                        };
+
                         tokio::select! {
-                            _ = memory_update_interval.tick(), if !config.memory.hide_indicator => {
-                                if let Some(memory_monitor) = memory_monitor.as_mut() {
-                                    yield Message::MemoryUpdate(memory_monitor.poll().unwrap_or_default());
+                            _ = tokio::time::sleep_until(next_due) => {},
+                            _ = cancellation_token.cancelled() => break,
+                        }
+
+                        let now = Instant::now();
+                        let mut due = [false; 4];
+
+                        for (index, schedule) in schedules.iter_mut().enumerate() {
+                            if let Some((next, interval)) = schedule {
+                                if *next <= now + MONITOR_COALESCE_WINDOW {
+                                    due[index] = true;
+                                    // Scheduling from `now` keeps coalesced monitors in step and never
+                                    // leaves missed ticks to catch up on.
+                                    *next = now + *interval;
                                 }
-                            },
-                            _ = cpu_update_interval.tick(), if !config.cpu.hide_indicator => {
-                                if let Some(cpu_monitor) = cpuinfo_reader.as_mut() {
-                                    yield Message::CpuUpdate(cpu_monitor.poll().unwrap_or_default());
-                                }
-                            },
-                            _ = network_update_interval.tick(), if !config.network.hide_indicator => {
-                                if let Some(network_monitor) = network_monitor.as_mut() {
-                                    yield Message::NetworkUpdate(network_monitor.poll().unwrap_or_default());
-                                }
-                            },
-                            _ = disk_update_interval.tick(), if !config.disk.hide_indicator => {
-                                if let Some(disk_monitor) = disk_monitor.as_mut() {
-                                    yield Message::DiskUpdate(disk_monitor.poll().unwrap_or_default());
-                                }
-                            },
-                            _ = cancellation_token.cancelled() => {
-                                break;
                             }
                         }
 
+                        let update = StatsUpdate {
+                            memory: memory_monitor.as_mut().filter(|_| due[0]).map(|m| m.poll().unwrap_or_default()),
+                            cpu: cpu_monitor.as_mut().filter(|_| due[1]).map(|m| m.poll().unwrap_or_default()),
+                            network: network_monitor.as_mut().filter(|_| due[2]).map(|m| m.poll().unwrap_or_default()),
+                            disk: disk_monitor.as_mut().filter(|_| due[3]).map(|m| m.poll().unwrap_or_default()),
+                        };
+
+                        yield Message::StatsUpdate(update);
                     }
                 })
                 .map(cosmic::Action::App);
             }
-            Message::MemoryUpdate(memory_usage) => {
-                self.memory = memory_usage;
-            }
-            Message::CpuUpdate(cpu_usage) => {
-                self.cpu = cpu_usage;
-            }
-            Message::NetworkUpdate(network_usage) => {
-                self.network = network_usage;
-            }
-            Message::DiskUpdate(disk_usage) => {
-                self.disk = disk_usage;
+            Message::StatsUpdate(update) => {
+                if let Some(memory) = update.memory {
+                    self.memory = memory;
+                }
+                if let Some(cpu) = update.cpu {
+                    self.cpu = cpu;
+                }
+                if let Some(network) = update.network {
+                    self.network = network;
+                }
+                if let Some(disk) = update.disk {
+                    self.disk = disk;
+                }
             }
             Message::ConfigFileChanged(configuration) => {
                 self.configuration = configuration;
