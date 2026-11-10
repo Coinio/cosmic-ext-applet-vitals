@@ -2,7 +2,7 @@
 
 use crate::configuration::app_configuration::{
     AppConfiguration, CPU_SETTINGS_WINDOW_ID, DISK_SETTINGS_WINDOW_ID, GENERAL_SETTINGS_WINDOW_ID,
-    MAIN_SETTINGS_WINDOW_ID, MEMORY_SETTINGS_WINDOW_ID, NETWORK_SETTINGS_WINDOW_ID,
+    MEMORY_SETTINGS_WINDOW_ID, NETWORK_SETTINGS_WINDOW_ID,
 };
 use crate::core::app_colours::AppColours;
 use crate::core::app_icons::{AppIcons, APP_LOGO_ICON};
@@ -17,18 +17,17 @@ use crate::sensors::proc_meminfo_reader::ProcMemInfoSensorReader;
 use crate::sensors::proc_net_dev_reader::ProcNetDevReader;
 use crate::sensors::proc_stat_reader::ProcStatSensorReader;
 use crate::ui::components::no_indicator::{no_indicators_content, NoIndicatorProps};
-use crate::ui::settings_forms::main_settings_form::MainSettingsForm;
+use crate::fl;
 use cosmic::app::{Core, Task};
 use cosmic::applet::cosmic_panel_config::{PanelAnchor, PanelSize};
 use cosmic::config::{CosmicTk, COSMIC_TK};
 use cosmic::cosmic_config::{Config, CosmicConfigEntry};
 use cosmic::font::Font;
 use cosmic::iced::{window, Subscription};
-use cosmic::iced::{Alignment, Limits};
-use cosmic::iced_widget::{row, Column, Row};
-use cosmic::iced_winit::commands::popup::get_popup;
+use cosmic::iced::{Alignment, Length, Size};
+use cosmic::iced_widget::{column, row, Column, Row};
 use cosmic::widget;
-use cosmic::widget::{autosize, container, divider, Id};
+use cosmic::widget::{autosize, container, divider, nav_bar, scrollable, segmented_button, Id};
 use cosmic::{cosmic_config, Application, Element};
 use log::{error, info};
 use once_cell::sync::Lazy;
@@ -42,6 +41,9 @@ static AUTOSIZE_MAIN_ID: Lazy<Id> = Lazy::new(|| Id::new("autosize-main"));
 const DEFAULT_INDICATOR_FONT_SIZE: u16 = 11;
 const DEFAULT_INDICATOR_ICON_SIZE: u16 = 11;
 const DEFAULT_INDICATOR_SPACING: u16 = 8;
+
+const SETTINGS_WINDOW_DEFAULT_SIZE: Size = Size::new(760.0, 600.0);
+const SETTINGS_WINDOW_MIN_SIZE: Size = Size::new(560.0, 400.0);
 
 #[derive(Default)]
 pub struct AppState {
@@ -69,17 +71,25 @@ pub struct AppState {
     network: NetworkStats,
     /// The current disk usage stats   
     disk: DiskStats,
-    /// The popup id.
-    popup: Option<window::Id>,
+    /// The id of the settings window, if it is currently open.
+    settings_window: Option<window::Id>,
+    /// The navigation model for the settings window sidebar. Each entry holds the id of its settings form.
+    settings_nav: segmented_button::SingleSelectModel,
 }
 
 /// The messages processed by the application update
 #[derive(Debug, Clone)]
 pub enum Message {
-    /// Toggle the main settings popup
-    SettingsPopupOpened(window::Id),
-    /// A settings popup was closed
-    SettingsPopupClosed(window::Id),
+    /// Open the settings window, or focus it if it is already open
+    OpenSettingsWindow,
+    /// Close the settings window
+    CloseSettingsWindow,
+    /// Start an interactive move of the settings window from its header bar
+    DragSettingsWindow,
+    /// A window was closed
+    WindowClosed(window::Id),
+    /// A section was selected in the settings window sidebar
+    SettingsNavSelected(segmented_button::Entity),
     /// Start monitoring the system resources
     StartMonitoring,
     /// The memory usage stats were updated
@@ -134,9 +144,12 @@ impl Application for AppState {
             .clone()
             .into();
 
+        let settings_nav = build_settings_nav(&settings_forms);
+
         let app = AppState {
             core,
             settings_forms,
+            settings_nav,
             active_interface_font,
             app_colours,
             app_icons,
@@ -149,7 +162,7 @@ impl Application for AppState {
     }
 
     fn on_close_requested(&self, id: window::Id) -> Option<Message> {
-        Some(Message::SettingsPopupClosed(id))
+        Some(Message::WindowClosed(id))
     }
 
     fn subscription(&self) -> Subscription<Self::Message> {
@@ -172,50 +185,63 @@ impl Application for AppState {
 
     fn update(&mut self, message: Self::Message) -> Task<Self::Message> {
         match message {
-            Message::SettingsPopupOpened(target_id) => {
-                info!("Opening settings popup with id: {}", target_id);
-
-                match self.popup {
-                    None => {
-                        self.popup = Some(MAIN_SETTINGS_WINDOW_ID.clone());
-                        // Ensure the configuration is up to date when we open the settings form.
-                        self.refresh_configuration_from_disk();
-                    }
-                    Some(_) => self.popup = Some(target_id),
-                };
-
-                if target_id != MAIN_SETTINGS_WINDOW_ID.clone() {
-                    return Task::none();
+            Message::OpenSettingsWindow => {
+                if let Some(id) = self.settings_window {
+                    return window::gain_focus(id);
                 }
 
-                let mut popup_settings = self.core.applet.get_popup_settings(
-                    self.core.main_window_id().unwrap(),
-                    MAIN_SETTINGS_WINDOW_ID.clone(),
-                    None,
-                    None,
-                    None,
-                );
+                info!("Opening settings window");
 
-                popup_settings.positioner.size_limits = Limits::NONE
-                    .max_width(372.0)
-                    .min_width(300.0)
-                    .min_height(200.0)
-                    .max_height(1080.0);
+                // Ensure the configuration is up to date when we open the settings form.
+                self.refresh_configuration_from_disk();
 
-                return get_popup(popup_settings);
+                // Every message rebuilds and redraws all open windows, so pause the monitors while the
+                // settings window is open. They are restarted with the new configuration when it closes.
+                self.stop_monitoring();
+
+                let (id, open) = window::open(window::Settings {
+                    size: SETTINGS_WINDOW_DEFAULT_SIZE,
+                    min_size: Some(SETTINGS_WINDOW_MIN_SIZE),
+                    decorations: false,
+                    transparent: true,
+                    resizable: true,
+                    ..Default::default()
+                });
+
+                self.settings_window = Some(id);
+
+                return Task::batch([
+                    open.discard(),
+                    self.core.set_title(Some(id), fl!("settings-title")),
+                ]);
             }
-            Message::SettingsPopupClosed(id) => {
-                if id == MAIN_SETTINGS_WINDOW_ID.clone() {
-                    info!("Closing main settings window");
-                    self.popup = None;
+            Message::CloseSettingsWindow => {
+                if let Some(id) = self.settings_window {
+                    return window::close(id);
+                }
+            }
+            Message::DragSettingsWindow => {
+                if let Some(id) = self.settings_window {
+                    return self.core.drag(Some(id));
+                }
+            }
+            Message::WindowClosed(id) => {
+                if self.settings_window == Some(id) {
+                    info!("Closing settings window");
+                    self.settings_window = None;
                     self.save_configuration();
                     return cosmic::task::message(Message::StartMonitoring);
                 }
             }
+            Message::SettingsNavSelected(entity) => {
+                self.settings_nav.activate(entity);
+            }
             Message::StartMonitoring => {
-                if let Some(token) = &self.monitor_cancellation_token {
-                    info!("Stopping previous monitors");
-                    token.cancel();
+                self.stop_monitoring();
+
+                if self.settings_window.is_some() {
+                    info!("Settings window is open, monitoring will start when it closes");
+                    return Task::none();
                 }
 
                 info!("Starting monitoring");
@@ -365,24 +391,60 @@ impl Application for AppState {
         let button = widget::button::custom(wrapper)
             .class(cosmic::theme::Button::AppletIcon)
             .padding(padding)
-            .on_press(Message::SettingsPopupOpened(MAIN_SETTINGS_WINDOW_ID.clone()));
+            .on_press(Message::OpenSettingsWindow);
 
         autosize::autosize(container(button), AUTOSIZE_MAIN_ID.clone()).into()
     }
 
-    fn view_window(&'_ self, _id: window::Id) -> Element<'_, Self::Message> {
-        let content_id = self.popup.unwrap_or_else(|| MAIN_SETTINGS_WINDOW_ID.clone());
+    fn view_window(&'_ self, id: window::Id) -> Element<'_, Self::Message> {
+        if self.settings_window != Some(id) {
+            return container(row![]).into();
+        }
 
-        let content = if content_id == MAIN_SETTINGS_WINDOW_ID.clone() {
-            MainSettingsForm::draw(self.configuration())
-        } else {
-            match self.settings_forms.get(&content_id) {
-                None => container(row!["No settings window configured."]),
-                Some(form) => form.draw(&self),
-            }
+        let focused = self.core.focused_window() == Some(id);
+
+        let header = widget::header_bar()
+            .title(fl!("settings-title"))
+            .focused(focused)
+            .on_drag(Message::DragSettingsWindow)
+            .on_close(Message::CloseSettingsWindow);
+
+        let nav = nav_bar(&self.settings_nav, Message::SettingsNavSelected)
+            .into_container()
+            .width(Length::Fixed(220.0))
+            .height(Length::Fill);
+
+        let form: Element<Message> = match self
+            .settings_nav
+            .active_data::<window::Id>()
+            .and_then(|form_id| self.settings_forms.get(form_id))
+        {
+            None => container(row!["No settings window configured."]).into(),
+            Some(form) => scrollable(container(form.draw(&self)).width(Length::Fill).padding([0, 16, 16, 0]))
+                .width(Length::Fill)
+                .height(Length::Fill)
+                .into(),
         };
 
-        self.core.applet.popup_container(content).into()
+        let body = row![nav, form].spacing(16).padding([8, 8, 0, 8]);
+
+        container(column![header, body])
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .class(cosmic::theme::Container::custom(|theme| {
+                let cosmic = theme.cosmic();
+                container::Style {
+                    text_color: Some(cosmic.background.on.into()),
+                    icon_color: Some(cosmic.background.on.into()),
+                    background: Some(cosmic::iced::Color::from(cosmic.background.base).into()),
+                    border: cosmic::iced::Border {
+                        radius: cosmic.corner_radii.radius_s.into(),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                }
+            }))
+            .into()
     }
 
     fn style(&self) -> Option<cosmic::iced_runtime::Appearance> {
@@ -409,6 +471,13 @@ impl AppState {
     }
     pub fn active_interface_font(&self) -> &Font {
         &self.active_interface_font
+    }
+
+    fn stop_monitoring(&mut self) {
+        if let Some(token) = self.monitor_cancellation_token.take() {
+            info!("Stopping monitors");
+            token.cancel();
+        }
     }
 
     fn update_configuration(&mut self) {
@@ -458,6 +527,7 @@ impl AppState {
 
             self.configuration = loaded;
             self.settings_forms = self.configuration.settings_form_options();
+            self.settings_nav = build_settings_nav(&self.settings_forms);
         } else {
             error!("Failed to create config context for reload");
         }
@@ -511,4 +581,18 @@ impl AppState {
             _ => DEFAULT_INDICATOR_ICON_SIZE,
         }
     }
+}
+
+/// Build the settings window sidebar, with one entry per settings form. The first entry is selected.
+fn build_settings_nav(settings_forms: &BTreeMap<window::Id, SettingsForm>) -> segmented_button::SingleSelectModel {
+    let mut model = segmented_button::SingleSelectModel::default();
+
+    for (index, (form_id, form)) in settings_forms.iter().enumerate() {
+        let entity = model.insert().text(form.title.clone()).data(*form_id);
+        if index == 0 {
+            entity.activate();
+        }
+    }
+
+    model
 }

@@ -1,16 +1,16 @@
 use crate::configuration::cpu::CpuConfiguration;
+use crate::configuration::disk::DiskConfiguration;
+use crate::configuration::general::GeneralConfiguration;
 use crate::configuration::memory::MemoryConfiguration;
 use crate::configuration::network::NetworkConfiguration;
+use crate::core::settings::SettingsForm;
 use cosmic::cosmic_config::{self, cosmic_config_derive::CosmicConfigEntry, CosmicConfigEntry};
 use cosmic::iced::window;
 use once_cell::sync::Lazy;
 use std::collections::BTreeMap;
-use crate::configuration::disk::DiskConfiguration;
-use crate::configuration::general::GeneralConfiguration;
-use crate::core::settings::SettingsForm;
 
-pub static MAIN_SETTINGS_WINDOW_ID: Lazy<cosmic::iced::window::Id> = Lazy::new(|| cosmic::iced::window::Id::unique());
-pub static GENERAL_SETTINGS_WINDOW_ID: Lazy<cosmic::iced::window::Id> = Lazy::new(|| cosmic::iced::window::Id::unique());
+pub static GENERAL_SETTINGS_WINDOW_ID: Lazy<cosmic::iced::window::Id> =
+    Lazy::new(|| cosmic::iced::window::Id::unique());
 pub static CPU_SETTINGS_WINDOW_ID: Lazy<cosmic::iced::window::Id> = Lazy::new(|| cosmic::iced::window::Id::unique());
 pub static MEMORY_SETTINGS_WINDOW_ID: Lazy<cosmic::iced::window::Id> = Lazy::new(|| cosmic::iced::window::Id::unique());
 pub static NETWORK_SETTINGS_WINDOW_ID: Lazy<cosmic::iced::window::Id> =
@@ -29,7 +29,6 @@ pub const MAX_SAMPLES_SETTING_KEY: &'static str = "settings-max-samples";
 pub const FIX_INDICATOR_SIZE_SETTING_KEY: &'static str = "settings-fix-indicator-size";
 pub const USE_IEC_UNITS_SETTING_KEY: &'static str = "settings-use-iec-units";
 
-
 #[derive(Debug, Default, Clone, CosmicConfigEntry, Eq, PartialEq)]
 #[version = 1]
 pub struct AppConfiguration {
@@ -37,7 +36,7 @@ pub struct AppConfiguration {
     pub cpu: CpuConfiguration,
     pub memory: MemoryConfiguration,
     pub network: NetworkConfiguration,
-    pub disk: DiskConfiguration
+    pub disk: DiskConfiguration,
 }
 
 impl AppConfiguration {
@@ -46,8 +45,8 @@ impl AppConfiguration {
             (GENERAL_SETTINGS_WINDOW_ID.clone(), SettingsForm::from(&self.general)),
             (CPU_SETTINGS_WINDOW_ID.clone(), SettingsForm::from(&self.cpu)),
             (MEMORY_SETTINGS_WINDOW_ID.clone(), SettingsForm::from(&self.memory)),
-            (NETWORK_SETTINGS_WINDOW_ID.clone(), SettingsForm::from(&self.network)),        
-            (DISK_SETTINGS_WINDOW_ID.clone(), SettingsForm::from(&self.disk))
+            (NETWORK_SETTINGS_WINDOW_ID.clone(), SettingsForm::from(&self.network)),
+            (DISK_SETTINGS_WINDOW_ID.clone(), SettingsForm::from(&self.disk)),
         ])
     }
 }

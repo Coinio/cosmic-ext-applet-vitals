@@ -1,5 +1,4 @@
 use crate::app::{AppState, Message};
-use crate::configuration::app_configuration::*;
 use crate::core::app_colours::{AppColours, BRIGHT_RED, EXT_WARM_GREY};
 use crate::core::settings::{SettingsForm, SettingsFormInputType};
 use crate::ui::components::form_checkbox_input::{form_checkbox_input, FormCheckboxInputProps};
@@ -9,17 +8,13 @@ use crate::ui::components::form_theme_colour_picker_input::{
 };
 use cosmic::iced::Color;
 use cosmic::iced_widget::{container, Container};
-use cosmic::widget::settings;
 use cosmic::{widget, Theme};
 
 impl SettingsForm {
     pub fn draw(&self, app_state: &AppState) -> Container<'_, Message, Theme> {
         let mut column = widget::list_column().padding(2).spacing(0).divider_padding(2);
 
-        let back_button = widget::button::custom(widget::icon::from_name("go-previous-symbolic").size(16).icon())
-            .on_press(Message::SettingsPopupOpened(MAIN_SETTINGS_WINDOW_ID.clone()));
-
-        column = column.add(settings::item(self.title.clone(), back_button));
+        column = column.add(widget::text::title4(self.title.clone()));
 
         for (form_value_key, settings_form_item) in self.values.iter() {
             match settings_form_item.input_type {
