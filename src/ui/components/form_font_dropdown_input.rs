@@ -1,4 +1,4 @@
-use crate::app::Message;
+use crate::settings_app::Message;
 use crate::core::app_fonts::FontOptions;
 use crate::core::settings::{SettingsFormEvent, SettingsFormEventValue};
 use cosmic::iced::{window, Color, Length};

@@ -1,4 +1,4 @@
-use crate::app::{ColourPickerTarget, Message};
+use crate::settings_app::{ColourPickerTarget, Message};
 use crate::core::app_colours::{AppColour, PRESET_COLOURS};
 use crate::core::settings::{SettingsFormEvent, SettingsFormEventValue};
 use crate::fl;

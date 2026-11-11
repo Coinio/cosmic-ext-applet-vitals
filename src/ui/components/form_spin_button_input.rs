@@ -1,4 +1,4 @@
-use crate::app::Message;
+use crate::settings_app::Message;
 use crate::core::settings::{SettingsFormEvent, SettingsFormEventValue};
 use cosmic::iced::{window, Color, Length};
 use cosmic::widget::{self, settings};

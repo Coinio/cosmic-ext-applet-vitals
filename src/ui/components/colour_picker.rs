@@ -1,4 +1,4 @@
-use crate::app::Message;
+use crate::settings_app::Message;
 use crate::core::app_colours::{parse_hex, to_hex};
 use crate::fl;
 use crate::ui::components::gradient_pad::GradientPad;

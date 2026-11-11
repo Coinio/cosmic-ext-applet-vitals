@@ -1,4 +1,4 @@
-use crate::app::{AppState, Message};
+use crate::settings_app::{Message, SettingsApp};
 use crate::core::app_colours::{AppColour, BRIGHT_RED, EXT_WARM_GREY};
 use crate::core::settings::{SettingsForm, SettingsFormInputType};
 use crate::ui::components::form_checkbox_input::{form_checkbox_input, FormCheckboxInputProps};
@@ -13,7 +13,7 @@ use cosmic::iced_widget::{container, Container};
 use cosmic::{widget, Theme};
 
 impl SettingsForm {
-    pub fn draw<'a>(&'a self, app_state: &'a AppState) -> Container<'a, Message, Theme> {
+    pub fn draw<'a>(&'a self, app_state: &'a SettingsApp) -> Container<'a, Message, Theme> {
         let theme = app_state.core().system_theme().cosmic();
         let mut column = widget::list_column().padding(2).spacing(0).divider_padding(2);
 

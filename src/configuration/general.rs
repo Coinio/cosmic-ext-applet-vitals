@@ -87,6 +87,26 @@ impl FontSizeSlot {
 
         Some(FontSizeSlot { horizontal, size })
     }
+
+    /// The command line argument that passes this slot to the settings window, e.g. `horizontal-M`.
+    pub fn to_arg(&self) -> String {
+        let orientation = if self.horizontal { "horizontal" } else { "vertical" };
+        format!("{orientation}-{}", self.size.label())
+    }
+
+    pub fn from_arg(arg: &str) -> Option<Self> {
+        let (orientation, size) = arg.split_once('-')?;
+        let horizontal = match orientation {
+            "horizontal" => true,
+            "vertical" => false,
+            _ => return None,
+        };
+        let size = [PanelSizeName::XS, PanelSizeName::S, PanelSizeName::M, PanelSizeName::L, PanelSizeName::XL]
+            .into_iter()
+            .find(|name| name.label() == size)?;
+
+        Some(FontSizeSlot { horizontal, size })
+    }
 }
 
 /// General configuration for the app, i.e. font size.
@@ -209,6 +229,20 @@ impl GeneralConfiguration {
 #[cfg(test)]
 mod tests {
     use super::{FontSizeSlot, GeneralConfiguration, IndicatorFont, PanelSizeName};
+
+    #[test]
+    fn font_size_slot_round_trips_through_arg() {
+        for horizontal in [true, false] {
+            for size in [PanelSizeName::XS, PanelSizeName::S, PanelSizeName::M, PanelSizeName::L, PanelSizeName::XL] {
+                let slot = FontSizeSlot { horizontal, size };
+                assert_eq!(FontSizeSlot::from_arg(&slot.to_arg()), Some(slot));
+            }
+        }
+
+        assert_eq!(FontSizeSlot::from_arg("horizontal-XXL"), None);
+        assert_eq!(FontSizeSlot::from_arg("diagonal-M"), None);
+        assert_eq!(FontSizeSlot::from_arg(""), None);
+    }
     use crate::configuration::app_configuration::FONT_SIZE_SETTING_KEY;
     use crate::core::settings::SettingsForm;
     use cosmic::applet::cosmic_panel_config::PanelSize;

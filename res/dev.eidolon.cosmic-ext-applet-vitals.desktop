@@ -11,3 +11,5 @@ MimeType=inode/directory;
 NoDisplay=true
 X-CosmicApplet=true
 X-CosmicHoverPopup=Auto
+# Passes the desktop WAYLAND_DISPLAY through, so the settings window can open on the desktop rather than in the panel
+X-HostWaylandDisplay=true

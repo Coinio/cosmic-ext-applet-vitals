@@ -1,15 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
-use crate::configuration::app_configuration::{
-    AppConfiguration, CPU_SETTINGS_WINDOW_ID, DISK_SETTINGS_WINDOW_ID, GENERAL_SETTINGS_WINDOW_ID,
-    MEMORY_SETTINGS_WINDOW_ID, NETWORK_SETTINGS_WINDOW_ID,
-};
+use crate::configuration::app_configuration::AppConfiguration;
 use crate::configuration::general::FontSizeSlot;
-use crate::core::app_colours::AppColour;
-use crate::core::app_fonts::{self, FontOptions};
+use crate::core::app_fonts;
 use crate::core::app_icons::{AppIcons, APP_LOGO_ICON};
 use crate::core::app_text_measurements::AppTextMeasurements;
-use crate::core::settings::{SettingsForm, SettingsFormEvent};
 use crate::monitors::cpu_monitor::{CpuMonitor, CpuStats};
 use crate::monitors::disk_monitor::{DiskMonitor, DiskStats};
 use crate::monitors::memory_monitor::{MemoryMonitor, MemoryStats};
@@ -18,23 +13,22 @@ use crate::sensors::proc_disk_stats_reader::ProcDiskStatsReader;
 use crate::sensors::proc_meminfo_reader::ProcMemInfoSensorReader;
 use crate::sensors::proc_net_dev_reader::ProcNetDevReader;
 use crate::sensors::proc_stat_reader::ProcStatSensorReader;
-use crate::ui::components::colour_picker::{ColourPickerEvent, ColourPickerState};
+use crate::settings_app::SETTINGS_FLAG;
 use crate::ui::components::no_indicator::{no_indicators_content, NoIndicatorProps};
-use crate::fl;
 use cosmic::app::{Core, Task};
 use cosmic::applet::cosmic_panel_config::{PanelAnchor, PanelSize};
 use cosmic::config::{CosmicTk, COSMIC_TK};
-use cosmic::cosmic_config::{Config, CosmicConfigEntry};
+use cosmic::cosmic_config::CosmicConfigEntry;
 use cosmic::font::Font;
-use cosmic::iced::{window, Subscription};
-use cosmic::iced::{Alignment, Length, Size};
-use cosmic::iced_widget::{column, row, Column, Row};
+use cosmic::iced::Alignment;
+use cosmic::iced::Subscription;
+use cosmic::iced_widget::{Column, Row};
 use cosmic::widget;
-use cosmic::widget::{autosize, container, divider, nav_bar, scrollable, segmented_button, Id};
+use cosmic::widget::{autosize, container, divider, Id};
 use cosmic::{cosmic_config, Application, Element};
-use log::{error, info};
+use log::{error, info, warn};
 use once_cell::sync::Lazy;
-use std::collections::BTreeMap;
+use std::process::{Child, Command, Stdio};
 use std::time::Duration;
 use tokio::time::Instant;
 use tokio_util::sync::CancellationToken;
@@ -47,9 +41,6 @@ const DEFAULT_INDICATOR_FONT_SIZE: u16 = 11;
 const DEFAULT_INDICATOR_ICON_SIZE: u16 = 11;
 const DEFAULT_INDICATOR_SPACING: u16 = 8;
 
-const SETTINGS_WINDOW_DEFAULT_SIZE: Size = Size::new(760.0, 600.0);
-const SETTINGS_WINDOW_MIN_SIZE: Size = Size::new(560.0, 400.0);
-
 #[derive(Default)]
 pub struct AppState {
     /// Application state which is managed by the COSMIC runtime.
@@ -58,16 +49,12 @@ pub struct AppState {
     monitor_cancellation_token: Option<CancellationToken>,
     interface_font: Font,
     indicator_font: Font,
-    /// Only populated while the settings window is open.
-    font_options: FontOptions,
     /// The icons available to the application
     app_icons: AppIcons,
     /// The text measurements for indicator labels to prevent jittering as labels change size
     app_text_measurements: AppTextMeasurements,
     /// The application configuration
     configuration: AppConfiguration,
-    /// The settings forms that are available for configuration of the monitors.
-    settings_forms: BTreeMap<window::Id, SettingsForm>,
     /// The current memory usage stats
     memory: MemoryStats,
     /// The current cpu usage stats
@@ -76,25 +63,8 @@ pub struct AppState {
     network: NetworkStats,
     /// The current disk usage stats   
     disk: DiskStats,
-    /// The id of the settings window, if it is currently open.
-    settings_window: Option<window::Id>,
-    /// The navigation model for the settings window sidebar. Each entry holds the id of its settings form.
-    settings_nav: segmented_button::SingleSelectModel,
-    /// The custom colour picker, while it is open for one of the settings form colour fields.
-    custom_colour_picker: Option<CustomColourPicker>,
-}
-
-/// The settings form field that a custom colour picker edits.
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct ColourPickerTarget {
-    pub settings_window_id: window::Id,
-    pub form_value_key: &'static str,
-}
-
-/// Only one custom colour picker is open at a time, so it remembers which field it is for.
-struct CustomColourPicker {
-    target: ColourPickerTarget,
-    state: ColourPickerState,
+    /// The settings window process, if one has been launched. See [`crate::settings_app`] for why it is separate.
+    settings_process: Option<Child>,
 }
 
 /// Monitors that fall due within this window of each other are polled together, so they share one redraw.
@@ -112,30 +82,16 @@ pub struct StatsUpdate {
 /// The messages processed by the application update
 #[derive(Debug, Clone)]
 pub enum Message {
-    /// Open the settings window, or focus it if it is already open
+    /// Open the settings window, unless it is already open
     OpenSettingsWindow,
-    /// Close the settings window
-    CloseSettingsWindow,
-    /// Start an interactive move of the settings window from its header bar
-    DragSettingsWindow,
-    /// A window was closed
-    WindowClosed(window::Id),
-    /// A section was selected in the settings window sidebar
-    SettingsNavSelected(segmented_button::Entity),
     /// Start monitoring the system resources
     StartMonitoring,
     /// One or more monitors were polled. Updates are batched so each tick causes a single redraw.
     StatsUpdate(StatsUpdate),
-    /// The user has updated the settings form
-    SettingsFormUpdate(SettingsFormEvent),
     /// The configuration file was changed externally
     ConfigFileChanged(AppConfiguration),
     /// The COSMIC DE theme was changed
     ThemeChanged(CosmicTk),
-    /// Open the custom colour picker for a settings form field, or close it if it is already open for that field
-    ToggleCustomColourPicker(ColourPickerTarget),
-    /// The user interacted with the open custom colour picker
-    CustomColourPicker(ColourPickerEvent),
 }
 
 impl Application for AppState {
@@ -163,7 +119,6 @@ impl Application for AppState {
             })
             .unwrap_or_default();
 
-        let settings_forms = configuration.settings_form_options(font_size_slot(&core));
         let app_icons = AppIcons::new();
         let app_text_measurements = AppTextMeasurements::new();
 
@@ -173,12 +128,8 @@ impl Application for AppState {
             .unwrap_or_default();
         let indicator_font = app_fonts::resolve_font(&configuration.general.font, &interface_font);
 
-        let settings_nav = build_settings_nav(&settings_forms);
-
         let app = AppState {
             core,
-            settings_forms,
-            settings_nav,
             interface_font,
             indicator_font,
             app_icons,
@@ -188,10 +139,6 @@ impl Application for AppState {
         };
 
         (app, cosmic::task::message(Message::StartMonitoring))
-    }
-
-    fn on_close_requested(&self, id: window::Id) -> Option<Message> {
-        Some(Message::WindowClosed(id))
     }
 
     fn subscription(&self) -> Subscription<Self::Message> {
@@ -214,68 +161,9 @@ impl Application for AppState {
 
     fn update(&mut self, message: Self::Message) -> Task<Self::Message> {
         match message {
-            Message::OpenSettingsWindow => {
-                if let Some(id) = self.settings_window {
-                    return window::gain_focus(id);
-                }
-
-                info!("Opening settings window");
-
-                // Ensure the configuration is up to date when we open the settings form.
-                self.refresh_configuration_from_disk();
-                self.font_options = FontOptions::new(&self.configuration.general.font);
-
-                // Every message rebuilds and redraws all open windows, so pause the monitors while the
-                // settings window is open. They are restarted with the new configuration when it closes.
-                self.stop_monitoring();
-
-                let (id, open) = window::open(window::Settings {
-                    size: SETTINGS_WINDOW_DEFAULT_SIZE,
-                    min_size: Some(SETTINGS_WINDOW_MIN_SIZE),
-                    decorations: false,
-                    transparent: true,
-                    resizable: true,
-                    ..Default::default()
-                });
-
-                self.settings_window = Some(id);
-
-                return Task::batch([
-                    open.discard(),
-                    self.core.set_title(Some(id), fl!("settings-title")),
-                ]);
-            }
-            Message::CloseSettingsWindow => {
-                if let Some(id) = self.settings_window {
-                    return window::close(id);
-                }
-            }
-            Message::DragSettingsWindow => {
-                if let Some(id) = self.settings_window {
-                    return self.core.drag(Some(id));
-                }
-            }
-            Message::WindowClosed(id) => {
-                if self.settings_window == Some(id) {
-                    info!("Closing settings window");
-                    self.settings_window = None;
-                    self.custom_colour_picker = None;
-                    self.font_options = FontOptions::default();
-                    self.save_configuration();
-                    return cosmic::task::message(Message::StartMonitoring);
-                }
-            }
-            Message::SettingsNavSelected(entity) => {
-                self.settings_nav.activate(entity);
-                self.custom_colour_picker = None;
-            }
+            Message::OpenSettingsWindow => self.open_settings_window(),
             Message::StartMonitoring => {
                 self.stop_monitoring();
-
-                if self.settings_window.is_some() {
-                    info!("Settings window is open, monitoring will start when it closes");
-                    return Task::none();
-                }
 
                 info!("Starting monitoring");
 
@@ -362,58 +250,6 @@ impl Application for AppState {
                 self.refresh_indicator_font();
                 return cosmic::task::message(Message::StartMonitoring);
             }
-            Message::SettingsFormUpdate(settings_form_event) => {
-                match settings_form_event {
-                    SettingsFormEvent::StringFieldUpdated(value) | SettingsFormEvent::CheckBoxUpdated(value) => {
-                        // Choosing a preset colour replaces whatever was being picked in the custom picker.
-                        let target = ColourPickerTarget {
-                            settings_window_id: value.settings_window_id,
-                            form_value_key: value.form_value_key,
-                        };
-                        if self.custom_colour_picker.as_ref().is_some_and(|picker| picker.target == target) {
-                            self.custom_colour_picker = None;
-                        }
-
-                        self.set_form_value(target, value.value);
-                    }
-                }
-
-                self.update_configuration();
-            }
-            Message::ToggleCustomColourPicker(target) => {
-                if self.custom_colour_picker.take().is_some_and(|picker| picker.target == target) {
-                    return Task::none();
-                }
-
-                let theme = self.core.system_theme().cosmic();
-                let current = self
-                    .settings_form_value(target)
-                    .and_then(AppColour::parse)
-                    .unwrap_or(AppColour::ThemeAccent)
-                    .resolve(theme);
-
-                self.custom_colour_picker = Some(CustomColourPicker {
-                    target,
-                    state: ColourPickerState::new(current),
-                });
-            }
-            Message::CustomColourPicker(event) => match event {
-                ColourPickerEvent::Cancel => {
-                    self.custom_colour_picker = None;
-                }
-                ColourPickerEvent::Apply => {
-                    if let Some(picker) = self.custom_colour_picker.take() {
-                        let colour = AppColour::Custom(picker.state.colour());
-                        self.set_form_value(picker.target, colour.to_config_value());
-                        self.update_configuration();
-                    }
-                }
-                event => {
-                    if let Some(picker) = self.custom_colour_picker.as_mut() {
-                        picker.state.update(event);
-                    }
-                }
-            },
             Message::ThemeChanged(cosmic_tk) => {
                 self.interface_font = cosmic_tk.interface_font.into();
                 self.refresh_indicator_font();
@@ -480,57 +316,6 @@ impl Application for AppState {
         autosize::autosize(container(button), AUTOSIZE_MAIN_ID.clone()).into()
     }
 
-    fn view_window(&'_ self, id: window::Id) -> Element<'_, Self::Message> {
-        if self.settings_window != Some(id) {
-            return container(row![]).into();
-        }
-
-        let focused = self.core.focused_window() == Some(id);
-
-        let header = widget::header_bar()
-            .title(fl!("settings-title"))
-            .focused(focused)
-            .on_drag(Message::DragSettingsWindow)
-            .on_close(Message::CloseSettingsWindow);
-
-        let nav = nav_bar(&self.settings_nav, Message::SettingsNavSelected)
-            .into_container()
-            .width(Length::Fixed(220.0))
-            .height(Length::Fill);
-
-        let form: Element<Message> = match self
-            .settings_nav
-            .active_data::<window::Id>()
-            .and_then(|form_id| self.settings_forms.get(form_id))
-        {
-            None => container(row!["No settings window configured."]).into(),
-            Some(form) => scrollable(container(form.draw(&self)).width(Length::Fill).padding([0, 16, 16, 0]))
-                .width(Length::Fill)
-                .height(Length::Fill)
-                .into(),
-        };
-
-        let body = row![nav, form].spacing(16).padding([8, 8, 0, 8]);
-
-        container(column![header, body])
-            .width(Length::Fill)
-            .height(Length::Fill)
-            .class(cosmic::theme::Container::custom(|theme| {
-                let cosmic = theme.cosmic();
-                container::Style {
-                    text_color: Some(cosmic.background.on.into()),
-                    icon_color: Some(cosmic.background.on.into()),
-                    background: Some(cosmic::iced::Color::from(cosmic.background.base).into()),
-                    border: cosmic::iced::Border {
-                        radius: cosmic.corner_radii.radius_s.into(),
-                        ..Default::default()
-                    },
-                    ..Default::default()
-                }
-            }))
-            .into()
-    }
-
     fn style(&self) -> Option<cosmic::iced_runtime::Appearance> {
         Some(cosmic::applet::style())
     }
@@ -541,21 +326,6 @@ impl AppState {
         &self.core
     }
 
-    /// The custom colour picker, if it is open for the given settings form field.
-    pub fn custom_colour_picker(
-        &self,
-        settings_window_id: window::Id,
-        form_value_key: &'static str,
-    ) -> Option<&ColourPickerState> {
-        let target = ColourPickerTarget {
-            settings_window_id,
-            form_value_key,
-        };
-        self.custom_colour_picker
-            .as_ref()
-            .filter(|picker| picker.target == target)
-            .map(|picker| &picker.state)
-    }
     pub fn app_icons(&self) -> &AppIcons {
         &self.app_icons
     }
@@ -568,9 +338,6 @@ impl AppState {
     pub fn indicator_font(&self) -> &Font {
         &self.indicator_font
     }
-    pub fn font_options(&self) -> &FontOptions {
-        &self.font_options
-    }
 
     fn stop_monitoring(&mut self) {
         if let Some(token) = self.monitor_cancellation_token.take() {
@@ -579,95 +346,57 @@ impl AppState {
         }
     }
 
-    fn settings_form_value(&self, target: ColourPickerTarget) -> Option<&str> {
-        self.settings_forms
-            .get(&target.settings_window_id)
-            .and_then(|form| form.values.get(target.form_value_key))
-            .map(|item| item.value.as_str())
-    }
+    /// Launch the settings window as a separate process, unless it is already running.
+    fn open_settings_window(&mut self) {
+        if let Some(child) = self.settings_process.as_mut() {
+            match child.try_wait() {
+                Ok(None) => {
+                    info!("Settings window is already open");
+                    return;
+                }
+                // It has exited, and is now reaped. Launch a new one.
+                Ok(Some(_)) => {}
+                Err(err) => error!("Failed to check whether the settings window is open: {}", err),
+            }
+        }
 
-    fn set_form_value(&mut self, target: ColourPickerTarget, value: String) {
-        let form = self.settings_forms.get_mut(&target.settings_window_id).expect(
-            format!("No settings form configured with key: {}", target.settings_window_id).as_str(),
-        );
-
-        let settings_form_item = form
-            .values
-            .get_mut(target.form_value_key)
-            .expect(format!("No form row with key: {}", target.form_value_key).as_str());
-
-        settings_form_item.value = value;
-    }
-
-    fn update_configuration(&mut self) {
-        info!("Updating configuration: {:?}", self.configuration);
-
-        let memory_settings_form = self
-            .settings_forms
-            .get(&MEMORY_SETTINGS_WINDOW_ID.clone())
-            .expect("No memory settings form configured.");
-
-        let cpu_settings_form = self
-            .settings_forms
-            .get(&CPU_SETTINGS_WINDOW_ID.clone())
-            .expect("No cpu settings form configured.");
-
-        let network_settings_form = self
-            .settings_forms
-            .get(&NETWORK_SETTINGS_WINDOW_ID.clone())
-            .expect("No network settings form configured.");
-
-        let disk_settings_form = self
-            .settings_forms
-            .get(&DISK_SETTINGS_WINDOW_ID.clone())
-            .expect("No disk settings form configured.");
-
-        let general_settings_form = self
-            .settings_forms
-            .get(&GENERAL_SETTINGS_WINDOW_ID.clone())
-            .expect("No general settings form configured.");
-
-        self.configuration = AppConfiguration {
-            general: self.configuration.general.update(general_settings_form, font_size_slot(&self.core)),
-            memory: self.configuration.memory.update(memory_settings_form),
-            cpu: self.configuration.cpu.update(cpu_settings_form),
-            network: self.configuration.network.update(network_settings_form),
-            disk: self.configuration.disk.update(disk_settings_form),
-            ..Default::default()
+        let executable = match std::env::current_exe() {
+            Ok(executable) => executable,
+            Err(err) => {
+                error!("Failed to find the applet executable to open the settings window: {}", err);
+                return;
+            }
         };
 
-        self.refresh_indicator_font();
+        // The panel only passes WAYLAND_DISPLAY to applets whose desktop entry sets X-HostWaylandDisplay. Without it,
+        // the settings window can't reach the desktop compositor.
+        if std::env::var_os("WAYLAND_DISPLAY").is_none() {
+            warn!("WAYLAND_DISPLAY is not set, the settings window may fail to open");
+        }
+
+        info!("Opening settings window");
+
+        let mut command = Command::new(executable);
+        command.arg(SETTINGS_FLAG);
+        if let Some(slot) = font_size_slot(&self.core) {
+            command.arg(slot.to_arg());
+        }
+
+        // The privileged socket belongs to the applet, the settings window has no use for it.
+        command
+            .env_remove("X_PRIVILEGED_WAYLAND_SOCKET")
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null());
+
+        match command.spawn() {
+            Ok(child) => self.settings_process = Some(child),
+            Err(err) => error!("Failed to open the settings window: {}", err),
+        }
     }
 
     fn refresh_indicator_font(&mut self) {
         self.indicator_font = app_fonts::resolve_font(&self.configuration.general.font, &self.interface_font);
-    }
-
-    fn refresh_configuration_from_disk(&mut self) {
-        if let Ok(helper) = Config::new(Self::APP_ID, AppConfiguration::VERSION) {
-            let loaded = AppConfiguration::get_entry(&helper).unwrap_or_else(|(errs, cfg)| {
-                error!("Errors while loading configuration: {:?}", errs);
-                cfg
-            });
-
-            self.configuration = loaded;
-            self.settings_forms = self.configuration.settings_form_options(font_size_slot(&self.core));
-            self.settings_nav = build_settings_nav(&self.settings_forms);
-            self.custom_colour_picker = None;
-            self.refresh_indicator_font();
-        } else {
-            error!("Failed to create config context for reload");
-        }
-    }
-
-    fn save_configuration(&self) {
-        info!("Saving configuration");
-
-        if let Ok(helper) = Config::new(Self::APP_ID, AppConfiguration::VERSION) {
-            if let Err(err) = self.configuration.write_entry(&helper) {
-                error!("Failed to save configuration: {}", err);
-            }
-        }
     }
 
     pub fn font_size(&self, horizontal: bool) -> u16 {
@@ -694,18 +423,4 @@ fn is_horizontal(core: &Core) -> bool {
 /// The font size slot for the panel/dock the applet is running in, which is the one the settings form edits.
 fn font_size_slot(core: &Core) -> Option<FontSizeSlot> {
     FontSizeSlot::from_applet_size(&core.applet.size, is_horizontal(core))
-}
-
-/// Build the settings window sidebar, with one entry per settings form. The first entry is selected.
-fn build_settings_nav(settings_forms: &BTreeMap<window::Id, SettingsForm>) -> segmented_button::SingleSelectModel {
-    let mut model = segmented_button::SingleSelectModel::default();
-
-    for (index, (form_id, form)) in settings_forms.iter().enumerate() {
-        let entity = model.insert().text(form.title.clone()).data(*form_id);
-        if index == 0 {
-            entity.activate();
-        }
-    }
-
-    model
 }

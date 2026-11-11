@@ -1,4 +1,4 @@
-use crate::app::Message;
+use crate::settings_app::Message;
 use cosmic::iced::window;
 use cosmic::widget::{self, settings};
 use cosmic::Element;

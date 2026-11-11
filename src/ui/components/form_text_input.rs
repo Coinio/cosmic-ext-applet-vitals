@@ -1,4 +1,4 @@
-use crate::app::Message;
+use crate::settings_app::Message;
 use crate::fl;
 use cosmic::iced::{window, Color};
 use cosmic::widget::{self, settings};
