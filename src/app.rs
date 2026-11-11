@@ -150,8 +150,6 @@ impl Application for AppState {
         let app_icons = AppIcons::new();
         let app_text_measurements = AppTextMeasurements::new();
 
-        // Must happen before anything is rendered or measured.
-        app_fonts::load_embedded_fonts();
         let interface_font: Font = COSMIC_TK
             .read()
             .map(|cosmic_tk| cosmic_tk.interface_font.clone().into())

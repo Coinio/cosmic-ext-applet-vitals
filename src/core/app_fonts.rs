@@ -5,32 +5,14 @@ use cosmic::font::Font;
 use cosmic::iced::font::{Stretch, Style, Weight};
 use cosmic::iced_renderer::graphics::text::font_system;
 use log::error;
-use std::borrow::Cow;
 use std::collections::BTreeSet;
 use std::sync::Arc;
-
-pub const DEFAULT_FONT_FAMILY: &str = "JetBrains Mono";
-
-const DEFAULT_FONT_BYTES: &[u8] = include_bytes!("../../res/fonts/JetBrainsMono-Regular.ttf");
-/// cosmic-text can't synthesise bold, so the bold face is bundled for the labels.
-const DEFAULT_BOLD_FONT_BYTES: &[u8] = include_bytes!("../../res/fonts/JetBrainsMono-Bold.ttf");
 
 /// Internal iced fonts that shouldn't be offered to the user.
 const HIDDEN_FONT_FAMILIES: &[&str] = &["Iced-Icons"];
 
-pub fn load_embedded_fonts() {
-    match font_system().write() {
-        Ok(mut font_system) => {
-            font_system.load_font(Cow::Borrowed(DEFAULT_FONT_BYTES));
-            font_system.load_font(Cow::Borrowed(DEFAULT_BOLD_FONT_BYTES));
-        }
-        Err(err) => error!("Failed to load the embedded fonts: {}", err),
-    }
-}
-
 pub fn resolve_font(choice: &IndicatorFont, interface_font: &Font) -> Font {
     match choice {
-        IndicatorFont::Default => Font::with_name(DEFAULT_FONT_FAMILY),
         IndicatorFont::System => *interface_font,
         // FontConfig interns the family name, giving iced its &'static str without leaking on every reload.
         IndicatorFont::Family(family) => FontConfig {
@@ -43,7 +25,8 @@ pub fn resolve_font(choice: &IndicatorFont, interface_font: &Font) -> Font {
     }
 }
 
-/// The labels use the indicator font, optionally in bold. Fonts without a bold face fall back to their nearest weight.
+/// The labels use the indicator font, optionally in bold. cosmic-text can't synthesise bold, so fonts without a
+/// bold face fall back to their nearest weight.
 pub fn label_font(indicator_font: &Font, bold: bool) -> Font {
     if bold {
         Font {
@@ -74,14 +57,8 @@ impl FontOptions {
             }
         }
 
-        let mut labels = vec![
-            fl!("settings-font-default"),
-            fl!("settings-font-system"),
-        ];
-        let mut values = vec![
-            IndicatorFont::Default.to_form_value(),
-            IndicatorFont::System.to_form_value(),
-        ];
+        let mut labels = vec![fl!("settings-font-system")];
+        let mut values = vec![IndicatorFont::System.to_form_value()];
 
         for family in families {
             values.push(IndicatorFont::Family(family.clone()).to_form_value());
@@ -126,61 +103,21 @@ fn sort_families(families: &mut [String]) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::cosmic_text_measurer::CosmicTextMeasurer;
-
-    #[test]
-    fn embedded_default_font_is_available() {
-        load_embedded_fonts();
-
-        assert!(installed_font_families().iter().any(|family| family == DEFAULT_FONT_FAMILY));
-
-        // Only equal if the monospaced font was used rather than a proportional fallback.
-        let font = resolve_font(&IndicatorFont::Default, &Font::default());
-        let measurer = CosmicTextMeasurer::default();
-        let narrow = measurer.measure_single("iiiii", 14, &font).expect("Failed to measure text");
-        let wide = measurer.measure_single("MMMMM", 14, &font).expect("Failed to measure text");
-        assert_eq!(narrow, wide);
-    }
-
-    #[test]
-    fn embedded_default_bold_font_is_available() {
-        load_embedded_fonts();
-
-        use cosmic::iced_renderer::graphics::text::cosmic_text::fontdb::{Family, Query, Weight as DbWeight};
-
-        let resolve_weight = |weight: DbWeight| {
-            let mut font_system = font_system().write().expect("Failed to read the font system");
-            let db = font_system.raw().db();
-            let id = db
-                .query(&Query {
-                    families: &[Family::Name(DEFAULT_FONT_FAMILY)],
-                    weight,
-                    ..Default::default()
-                })
-                .expect("The default font family is missing");
-            db.face(id).expect("The matched face is missing").weight
-        };
-
-        // The bundled bold face is tagged as 558, rather than 700, so check it's picked over the regular face.
-        assert_eq!(resolve_weight(DbWeight::NORMAL), DbWeight::NORMAL);
-        assert!(resolve_weight(DbWeight::BOLD) > DbWeight::NORMAL);
-    }
 
     #[test]
     fn label_font_is_bold_only_when_enabled() {
-        let font = resolve_font(&IndicatorFont::Default, &Font::default());
+        let font = Font::with_name("Open Sans");
 
         assert_eq!(label_font(&font, true), Font { weight: Weight::Bold, ..font });
         assert_eq!(label_font(&font, false), font);
     }
 
     #[test]
-    fn font_options_start_with_default_and_system() {
-        let options = FontOptions::new(&IndicatorFont::Default);
+    fn font_options_start_with_system() {
+        let options = FontOptions::new(&IndicatorFont::System);
 
         assert_eq!(options.labels.len(), options.values.len());
-        assert_eq!(options.position(&IndicatorFont::Default.to_form_value()), Some(0));
-        assert_eq!(options.position(&IndicatorFont::System.to_form_value()), Some(1));
+        assert_eq!(options.position(&IndicatorFont::System.to_form_value()), Some(0));
         assert!(!options.labels.iter().any(|label| HIDDEN_FONT_FAMILIES.contains(&label.as_str())));
     }
 

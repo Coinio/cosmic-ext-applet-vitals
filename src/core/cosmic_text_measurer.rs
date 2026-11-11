@@ -3,7 +3,7 @@ use cosmic::iced_renderer::graphics::text::cosmic_text;
 use cosmic::iced_renderer::graphics::text::cosmic_text::{Attrs, Buffer, Metrics, Shaping};
 use cosmic::iced_renderer::graphics::text::font_system;
 
-/// Uses iced's global font system so measurements match rendering and include the bundled font.
+/// Uses iced's global font system so measurements match rendering.
 #[derive(Default)]
 pub struct CosmicTextMeasurer;
 

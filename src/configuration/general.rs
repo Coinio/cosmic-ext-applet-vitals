@@ -8,25 +8,21 @@ use crate::core::settings::SettingsForm;
 
 const DEFAULT_INDICATOR_FONT_SIZE: u16 = 14;
 
-const FONT_FORM_VALUE_DEFAULT: &str = "default";
 const FONT_FORM_VALUE_SYSTEM: &str = "system";
 const FONT_FORM_VALUE_FAMILY_PREFIX: &str = "family:";
 
 #[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize)]
 pub enum IndicatorFont {
-    /// The bundled JetBrains Mono
-    #[default]
-    Default,
     /// The COSMIC interface font
+    #[default]
     System,
     Family(String),
 }
 
 impl IndicatorFont {
-    /// Family names are prefixed so a font called "default" or "system" can't clash with those options.
+    /// Family names are prefixed so a font called "system" can't clash with that option.
     pub fn to_form_value(&self) -> String {
         match self {
-            IndicatorFont::Default => FONT_FORM_VALUE_DEFAULT.to_string(),
             IndicatorFont::System => FONT_FORM_VALUE_SYSTEM.to_string(),
             IndicatorFont::Family(family) => format!("{FONT_FORM_VALUE_FAMILY_PREFIX}{family}"),
         }
@@ -34,7 +30,6 @@ impl IndicatorFont {
 
     pub fn from_form_value(value: &str) -> Option<Self> {
         match value {
-            FONT_FORM_VALUE_DEFAULT => Some(IndicatorFont::Default),
             FONT_FORM_VALUE_SYSTEM => Some(IndicatorFont::System),
             _ => value
                 .strip_prefix(FONT_FORM_VALUE_FAMILY_PREFIX)
@@ -84,7 +79,7 @@ impl Default for GeneralConfiguration {
             horizontal_font_size_xl: DEFAULT_INDICATOR_FONT_SIZE + 8,
             fix_indicator_size: true,
             use_iec_units: false,
-            font: IndicatorFont::Default,
+            font: IndicatorFont::System,
             bold_labels: true,
         }
     }
@@ -141,7 +136,6 @@ mod tests {
     #[test]
     fn font_form_value_round_trips() {
         for font in [
-            IndicatorFont::Default,
             IndicatorFont::System,
             IndicatorFont::Family("JetBrains Mono".to_string()),
             IndicatorFont::Family("system".to_string()),

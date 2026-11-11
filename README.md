@@ -24,7 +24,7 @@ for those fighting with iced/libcosmic, etc.
   * Label Colours - The colours can be selected from the current theme libcosmic palette
   * Label Text - The label text for each monitor
   * Switch between SI and IEC units
-  * Font - Uses the bundled JetBrains Mono by default, or switch to the COSMIC system font or any installed font
+  * Font - Uses the COSMIC system font by default, or switch to any installed font. See [Fonts](#fonts)
   * Bold Labels - Labels are bold by default, this can be turned off in the general settings
 
 ## Screenshots
@@ -66,5 +66,23 @@ Then you can add the applet to the panel / dock as usual.
 
 ## Fonts
 
-This applet bundles [JetBrains Mono](https://github.com/JetBrains/JetBrainsMono), which is licensed under the
-SIL Open Font License 1.1. See [res/fonts/JetBrainsMono-OFL.txt](res/fonts/JetBrainsMono-OFL.txt).
+The indicators use the COSMIC system font by default. For the best results, a monospaced font is recommended, as
+every digit is the same width and the values won't shift around as they update. The applet was designed around
+[JetBrains Mono](https://www.jetbrains.com/lp/mono/), which can be installed from most distribution repositories:
+
+```sh
+# Pop!_OS / Ubuntu / Debian
+sudo apt install fonts-jetbrains-mono
+
+# Fedora
+sudo dnf install jetbrains-mono-fonts
+
+# Arch
+sudo pacman -S ttf-jetbrains-mono
+```
+
+Or download it from the [JetBrains Mono releases](https://github.com/JetBrains/JetBrainsMono/releases). Then select it
+under **Settings > General > Font**. If a newly installed font doesn't show up in the list, log out and back in so
+the panel reloads its fonts.
+
+Bold labels need the font to have a bold style. Fonts without one use their nearest available weight.
