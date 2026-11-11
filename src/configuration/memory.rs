@@ -1,6 +1,6 @@
 use crate::configuration::app_configuration::*;
 use crate::configuration::validation::ConfigurationValidation;
-use crate::core::app_colours::EXT_PURPLE;
+use crate::core::app_colours::ACCENT_PURPLE;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 use crate::core::settings::SettingsForm;
@@ -27,7 +27,7 @@ impl Default for MemoryConfiguration {
             hide_icon: false,
             update_interval: Duration::from_secs(1),
             max_samples: 2,
-            icon_colour: Some(EXT_PURPLE.to_string()),
+            icon_colour: Some(ACCENT_PURPLE.to_string()),
         }
     }
 }

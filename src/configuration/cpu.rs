@@ -3,7 +3,7 @@ use crate::configuration::app_configuration::{
     MAX_SAMPLES_SETTING_KEY, UPDATE_INTERVAL_SETTING_KEY,
 };
 use crate::configuration::validation::ConfigurationValidation;
-use crate::core::app_colours::EXT_BLUE;
+use crate::core::app_colours::ACCENT_BLUE;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 use crate::core::settings::SettingsForm;
@@ -30,7 +30,7 @@ impl Default for CpuConfiguration {
             max_samples: 4,
             hide_indicator: false,
             hide_icon: false,
-            icon_colour: Some(EXT_BLUE.to_string()),
+            icon_colour: Some(ACCENT_BLUE.to_string()),
         }
     }
 }

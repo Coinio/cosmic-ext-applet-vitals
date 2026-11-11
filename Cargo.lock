@@ -1062,6 +1062,7 @@ dependencies = [
  "libcosmic",
  "log",
  "once_cell",
+ "ron",
  "rust-embed",
  "serde",
  "systemd-journal-logger",

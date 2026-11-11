@@ -4,7 +4,7 @@ use crate::core::app_icons::CPU_ICON;
 use crate::monitors::cpu_monitor::CpuStats;
 use crate::ui::components::indicator::{indicator, IndicatorProps, IndicatorValueItem};
 use cosmic::Element;
-use crate::ui::indicators::{text_line_metrics, themed_icon};
+use crate::ui::indicators::{configured_colour, text_line_metrics, themed_icon};
 
 impl CpuStats {
 
@@ -21,7 +21,7 @@ impl CpuStats {
         let icon = if configuration.cpu.hide_icon {
             None
         } else {
-            Some(themed_icon(app_state, CPU_ICON, configuration.cpu.icon_colour.as_deref(), font_size))
+            Some(themed_icon(app_state, CPU_ICON, configured_colour(configuration.cpu.icon_colour.as_deref()), font_size))
         };
 
         let max_text_width = if configuration.general.fix_indicator_size {

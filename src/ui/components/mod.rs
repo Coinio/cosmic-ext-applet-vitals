@@ -4,6 +4,8 @@ pub mod svg_icon;
 pub mod indicator;
 pub mod form_text_input;
 pub mod form_checkbox_input;
+pub mod colour_picker;
 pub mod form_theme_colour_picker_input;
+pub mod gradient_pad;
 pub mod form_font_dropdown_input;
 pub mod form_spin_button_input;

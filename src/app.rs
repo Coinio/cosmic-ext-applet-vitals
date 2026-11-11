@@ -5,7 +5,7 @@ use crate::configuration::app_configuration::{
     MEMORY_SETTINGS_WINDOW_ID, NETWORK_SETTINGS_WINDOW_ID,
 };
 use crate::configuration::general::FontSizeSlot;
-use crate::core::app_colours::AppColours;
+use crate::core::app_colours::AppColour;
 use crate::core::app_fonts::{self, FontOptions};
 use crate::core::app_icons::{AppIcons, APP_LOGO_ICON};
 use crate::core::app_text_measurements::AppTextMeasurements;
@@ -18,6 +18,7 @@ use crate::sensors::proc_disk_stats_reader::ProcDiskStatsReader;
 use crate::sensors::proc_meminfo_reader::ProcMemInfoSensorReader;
 use crate::sensors::proc_net_dev_reader::ProcNetDevReader;
 use crate::sensors::proc_stat_reader::ProcStatSensorReader;
+use crate::ui::components::colour_picker::{ColourPickerEvent, ColourPickerState};
 use crate::ui::components::no_indicator::{no_indicators_content, NoIndicatorProps};
 use crate::fl;
 use cosmic::app::{Core, Task};
@@ -59,8 +60,6 @@ pub struct AppState {
     indicator_font: Font,
     /// Only populated while the settings window is open.
     font_options: FontOptions,
-    /// The colours available to the application
-    app_colours: AppColours,
     /// The icons available to the application
     app_icons: AppIcons,
     /// The text measurements for indicator labels to prevent jittering as labels change size
@@ -81,6 +80,21 @@ pub struct AppState {
     settings_window: Option<window::Id>,
     /// The navigation model for the settings window sidebar. Each entry holds the id of its settings form.
     settings_nav: segmented_button::SingleSelectModel,
+    /// The custom colour picker, while it is open for one of the settings form colour fields.
+    custom_colour_picker: Option<CustomColourPicker>,
+}
+
+/// The settings form field that a custom colour picker edits.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ColourPickerTarget {
+    pub settings_window_id: window::Id,
+    pub form_value_key: &'static str,
+}
+
+/// Only one custom colour picker is open at a time, so it remembers which field it is for.
+struct CustomColourPicker {
+    target: ColourPickerTarget,
+    state: ColourPickerState,
 }
 
 /// Monitors that fall due within this window of each other are polled together, so they share one redraw.
@@ -118,6 +132,10 @@ pub enum Message {
     ConfigFileChanged(AppConfiguration),
     /// The COSMIC DE theme was changed
     ThemeChanged(CosmicTk),
+    /// Open the custom colour picker for a settings form field, or close it if it is already open for that field
+    ToggleCustomColourPicker(ColourPickerTarget),
+    /// The user interacted with the open custom colour picker
+    CustomColourPicker(ColourPickerEvent),
 }
 
 impl Application for AppState {
@@ -146,7 +164,6 @@ impl Application for AppState {
             .unwrap_or_default();
 
         let settings_forms = configuration.settings_form_options(font_size_slot(&core));
-        let app_colours = AppColours::from(&core.system_theme().cosmic().palette);
         let app_icons = AppIcons::new();
         let app_text_measurements = AppTextMeasurements::new();
 
@@ -164,7 +181,6 @@ impl Application for AppState {
             settings_nav,
             interface_font,
             indicator_font,
-            app_colours,
             app_icons,
             app_text_measurements,
             configuration,
@@ -243,6 +259,7 @@ impl Application for AppState {
                 if self.settings_window == Some(id) {
                     info!("Closing settings window");
                     self.settings_window = None;
+                    self.custom_colour_picker = None;
                     self.font_options = FontOptions::default();
                     self.save_configuration();
                     return cosmic::task::message(Message::StartMonitoring);
@@ -250,6 +267,7 @@ impl Application for AppState {
             }
             Message::SettingsNavSelected(entity) => {
                 self.settings_nav.activate(entity);
+                self.custom_colour_picker = None;
             }
             Message::StartMonitoring => {
                 self.stop_monitoring();
@@ -347,21 +365,55 @@ impl Application for AppState {
             Message::SettingsFormUpdate(settings_form_event) => {
                 match settings_form_event {
                     SettingsFormEvent::StringFieldUpdated(value) | SettingsFormEvent::CheckBoxUpdated(value) => {
-                        let form = self.settings_forms.get_mut(&value.settings_window_id).expect(
-                            format!("No settings form configured with key: {}", value.settings_window_id).as_str(),
-                        );
+                        // Choosing a preset colour replaces whatever was being picked in the custom picker.
+                        let target = ColourPickerTarget {
+                            settings_window_id: value.settings_window_id,
+                            form_value_key: value.form_value_key,
+                        };
+                        if self.custom_colour_picker.as_ref().is_some_and(|picker| picker.target == target) {
+                            self.custom_colour_picker = None;
+                        }
 
-                        let settings_form_item = form
-                            .values
-                            .get_mut(value.form_value_key)
-                            .expect(format!("No form row with key: {}", value.form_value_key).as_str());
-
-                        settings_form_item.value = value.value;
+                        self.set_form_value(target, value.value);
                     }
                 }
 
                 self.update_configuration();
             }
+            Message::ToggleCustomColourPicker(target) => {
+                if self.custom_colour_picker.take().is_some_and(|picker| picker.target == target) {
+                    return Task::none();
+                }
+
+                let theme = self.core.system_theme().cosmic();
+                let current = self
+                    .settings_form_value(target)
+                    .and_then(AppColour::parse)
+                    .unwrap_or(AppColour::ThemeAccent)
+                    .resolve(theme);
+
+                self.custom_colour_picker = Some(CustomColourPicker {
+                    target,
+                    state: ColourPickerState::new(current),
+                });
+            }
+            Message::CustomColourPicker(event) => match event {
+                ColourPickerEvent::Cancel => {
+                    self.custom_colour_picker = None;
+                }
+                ColourPickerEvent::Apply => {
+                    if let Some(picker) = self.custom_colour_picker.take() {
+                        let colour = AppColour::Custom(picker.state.colour());
+                        self.set_form_value(picker.target, colour.to_config_value());
+                        self.update_configuration();
+                    }
+                }
+                event => {
+                    if let Some(picker) = self.custom_colour_picker.as_mut() {
+                        picker.state.update(event);
+                    }
+                }
+            },
             Message::ThemeChanged(cosmic_tk) => {
                 self.interface_font = cosmic_tk.interface_font.into();
                 self.refresh_indicator_font();
@@ -489,8 +541,20 @@ impl AppState {
         &self.core
     }
 
-    pub fn app_colours(&self) -> &AppColours {
-        &self.app_colours
+    /// The custom colour picker, if it is open for the given settings form field.
+    pub fn custom_colour_picker(
+        &self,
+        settings_window_id: window::Id,
+        form_value_key: &'static str,
+    ) -> Option<&ColourPickerState> {
+        let target = ColourPickerTarget {
+            settings_window_id,
+            form_value_key,
+        };
+        self.custom_colour_picker
+            .as_ref()
+            .filter(|picker| picker.target == target)
+            .map(|picker| &picker.state)
     }
     pub fn app_icons(&self) -> &AppIcons {
         &self.app_icons
@@ -513,6 +577,26 @@ impl AppState {
             info!("Stopping monitors");
             token.cancel();
         }
+    }
+
+    fn settings_form_value(&self, target: ColourPickerTarget) -> Option<&str> {
+        self.settings_forms
+            .get(&target.settings_window_id)
+            .and_then(|form| form.values.get(target.form_value_key))
+            .map(|item| item.value.as_str())
+    }
+
+    fn set_form_value(&mut self, target: ColourPickerTarget, value: String) {
+        let form = self.settings_forms.get_mut(&target.settings_window_id).expect(
+            format!("No settings form configured with key: {}", target.settings_window_id).as_str(),
+        );
+
+        let settings_form_item = form
+            .values
+            .get_mut(target.form_value_key)
+            .expect(format!("No form row with key: {}", target.form_value_key).as_str());
+
+        settings_form_item.value = value;
     }
 
     fn update_configuration(&mut self) {
@@ -569,6 +653,7 @@ impl AppState {
             self.configuration = loaded;
             self.settings_forms = self.configuration.settings_form_options(font_size_slot(&self.core));
             self.settings_nav = build_settings_nav(&self.settings_forms);
+            self.custom_colour_picker = None;
             self.refresh_indicator_font();
         } else {
             error!("Failed to create config context for reload");

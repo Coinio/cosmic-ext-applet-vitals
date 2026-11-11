@@ -1,7 +1,7 @@
 use std::time::Duration;
 use cosmic::iced::window;
 use indexmap::IndexMap;
-use crate::configuration::app_configuration::{CPU_SETTINGS_WINDOW_ID, DISK_SETTINGS_WINDOW_ID, GENERAL_SETTINGS_WINDOW_ID, HIDE_INDICATOR_SETTING_KEY, HIDE_ICON_SETTING_KEY, ICON_COLOUR_SETTING_KEY, MAX_SAMPLES_SETTING_KEY, MEMORY_SETTINGS_WINDOW_ID, NETWORK_SETTINGS_WINDOW_ID, UPDATE_INTERVAL_SETTING_KEY, FIX_INDICATOR_SIZE_SETTING_KEY, FONT_SETTING_KEY, FONT_SIZE_SETTING_KEY};
+use crate::configuration::app_configuration::{CPU_SETTINGS_WINDOW_ID, DISK_SETTINGS_WINDOW_ID, GENERAL_SETTINGS_WINDOW_ID, HIDE_INDICATOR_SETTING_KEY, HIDE_ICON_SETTING_KEY, ICON_COLOUR_SETTING_KEY, DOWNLOAD_COLOUR_SETTING_KEY, UPLOAD_COLOUR_SETTING_KEY, READ_COLOUR_SETTING_KEY, WRITE_COLOUR_SETTING_KEY, MAX_SAMPLES_SETTING_KEY, MEMORY_SETTINGS_WINDOW_ID, NETWORK_SETTINGS_WINDOW_ID, UPDATE_INTERVAL_SETTING_KEY, FIX_INDICATOR_SIZE_SETTING_KEY, FONT_SETTING_KEY, FONT_SIZE_SETTING_KEY};
 use crate::configuration::cpu::CpuConfiguration;
 use crate::configuration::disk::DiskConfiguration;
 use crate::configuration::general::{
@@ -55,6 +55,7 @@ impl From<&CpuConfiguration> for SettingsForm {
         let values = build_shared_settings(
             config.hide_indicator,
             Some((config.hide_icon, config.icon_colour.clone())),
+            Vec::new(),
             config.update_interval,
             config.max_samples,
         );
@@ -72,6 +73,7 @@ impl From<&MemoryConfiguration> for SettingsForm {
         let values = build_shared_settings(
             config.hide_indicator,
             Some((config.hide_icon, config.icon_colour.clone())),
+            Vec::new(),
             config.update_interval,
             config.max_samples,
         );
@@ -88,6 +90,10 @@ impl From<&NetworkConfiguration> for SettingsForm {
         let values = build_shared_settings(
             config.hide_indicator,
             None,
+            vec![
+                colour_setting(DOWNLOAD_COLOUR_SETTING_KEY, fl!("settings-download-colour"), &config.download_colour),
+                colour_setting(UPLOAD_COLOUR_SETTING_KEY, fl!("settings-upload-colour"), &config.upload_colour),
+            ],
             config.update_interval,
             config.max_samples,
         );
@@ -105,6 +111,10 @@ impl From<&DiskConfiguration> for SettingsForm {
         let values = build_shared_settings(
             config.hide_indicator,
             None,
+            vec![
+                colour_setting(READ_COLOUR_SETTING_KEY, fl!("settings-read-colour"), &config.read_colour),
+                colour_setting(WRITE_COLOUR_SETTING_KEY, fl!("settings-write-colour"), &config.write_colour),
+            ],
             config.update_interval,
             config.max_samples,
         );
@@ -177,9 +187,11 @@ impl SettingsForm {
 // This is used to build the shared settings between all the settings forms.
 /// Extend the map returned by this with any sensor-specific settings if required.
 /// `icon` is the indicator's (hide icon, icon colour) settings, for indicators that have an icon.
+/// `colours` are any further colour settings, shown after the icon settings.
 fn build_shared_settings(
     hide_indicator: bool,
     icon: Option<(bool, Option<String>)>,
+    colours: Vec<(&'static str, SettingsFormItem)>,
     update_interval: Duration,
     max_samples: usize,
 ) -> IndexMap<&'static str, SettingsFormItem> {
@@ -217,6 +229,8 @@ fn build_shared_settings(
         );
     }
 
+    settings.extend(colours);
+
     settings.extend([
         (
             UPDATE_INTERVAL_SETTING_KEY,
@@ -241,4 +255,17 @@ fn build_shared_settings(
     ]);
 
     settings
+}
+
+fn colour_setting(key: &'static str, label: String, colour: &Option<String>) -> (&'static str, SettingsFormItem) {
+    (
+        key,
+        SettingsFormItem {
+            label,
+            value: colour.clone().unwrap_or_default(),
+            input_type: SettingsFormInputType::ColourPicker,
+            validator: None,
+            helper_text: None,
+        },
+    )
 }

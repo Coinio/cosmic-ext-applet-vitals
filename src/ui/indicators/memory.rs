@@ -4,7 +4,7 @@ use crate::core::app_icons::MEMORY_ICON;
 use crate::monitors::memory_monitor::MemoryStats;
 use crate::ui::components::indicator::{indicator, IndicatorProps, IndicatorValueItem};
 use cosmic::Element;
-use crate::ui::indicators::{text_line_metrics, themed_icon};
+use crate::ui::indicators::{configured_colour, text_line_metrics, themed_icon};
 
 impl MemoryStats {
     pub fn draw<'app>(&self, app_state: &'app AppState, horizontal: bool) -> Option<Element<'app, Message>> {
@@ -20,7 +20,7 @@ impl MemoryStats {
         let icon = if configuration.memory.hide_icon {
             None
         } else {
-            Some(themed_icon(app_state, MEMORY_ICON, configuration.memory.icon_colour.as_deref(), font_size))
+            Some(themed_icon(app_state, MEMORY_ICON, configured_colour(configuration.memory.icon_colour.as_deref()), font_size))
         };
 
         let max_text_width = if configuration.general.fix_indicator_size {

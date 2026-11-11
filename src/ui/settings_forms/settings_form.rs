@@ -1,5 +1,5 @@
 use crate::app::{AppState, Message};
-use crate::core::app_colours::{AppColours, BRIGHT_RED, EXT_WARM_GREY};
+use crate::core::app_colours::{AppColour, BRIGHT_RED, EXT_WARM_GREY};
 use crate::core::settings::{SettingsForm, SettingsFormInputType};
 use crate::ui::components::form_checkbox_input::{form_checkbox_input, FormCheckboxInputProps};
 use crate::ui::components::form_font_dropdown_input::{form_font_dropdown_input, FormFontDropdownInputProps};
@@ -14,6 +14,7 @@ use cosmic::{widget, Theme};
 
 impl SettingsForm {
     pub fn draw<'a>(&'a self, app_state: &'a AppState) -> Container<'a, Message, Theme> {
+        let theme = app_state.core().system_theme().cosmic();
         let mut column = widget::list_column().padding(2).spacing(0).divider_padding(2);
 
         column = column.add(widget::text::title4(self.title.clone()));
@@ -21,14 +22,8 @@ impl SettingsForm {
         for (form_value_key, settings_form_item) in self.values.iter() {
             match settings_form_item.input_type {
                 SettingsFormInputType::String => {
-                    let red_color: Color = app_state
-                        .app_colours()
-                        .get(BRIGHT_RED)
-                        .map_or(Color::WHITE, |c| Color::new(c.red, c.green, c.blue, c.alpha));
-                    let helper_color: Color = app_state
-                        .app_colours()
-                        .get(EXT_WARM_GREY)
-                        .map_or(Color::WHITE, |c| Color::new(c.red, c.green, c.blue, c.alpha));
+                    let red_color: Color = AppColour::Palette(BRIGHT_RED).resolve(theme);
+                    let helper_color: Color = AppColour::Palette(EXT_WARM_GREY).resolve(theme);
 
                     let el = form_text_input(FormTextInputProps {
                         settings_window_id: self.settings_window_id,
@@ -45,10 +40,7 @@ impl SettingsForm {
                 }
                 SettingsFormInputType::CheckBox => {
                     let converted_value = settings_form_item.value.parse::<bool>().unwrap_or(false);
-                    let helper_color: Color = app_state
-                        .app_colours()
-                        .get(EXT_WARM_GREY)
-                        .map_or(Color::WHITE, |c| Color::new(c.red, c.green, c.blue, c.alpha));
+                    let helper_color: Color = AppColour::Palette(EXT_WARM_GREY).resolve(theme);
 
                     let el = form_checkbox_input(FormCheckboxInputProps {
                         settings_window_id: self.settings_window_id,
@@ -62,30 +54,22 @@ impl SettingsForm {
                     column = column.add(el);
                 }
                 SettingsFormInputType::ColourPicker => {
-                    let palette = &app_state.core().system_theme().cosmic().palette;
-                    let app_colours = AppColours::from(palette);
-                    let helper_color: Color = app_state
-                        .app_colours()
-                        .get(EXT_WARM_GREY)
-                        .map_or(Color::WHITE, |c| Color::new(c.red, c.green, c.blue, c.alpha));
+                    let helper_color: Color = AppColour::Palette(EXT_WARM_GREY).resolve(theme);
 
                     let el = form_theme_colour_picker_input(FormThemeColourPickerInputProps {
                         settings_window_id: self.settings_window_id,
                         label: settings_form_item.label.clone(),
-                        selected_key: settings_form_item.value.clone(),
+                        value: &settings_form_item.value,
                         form_value_key,
-                        app_colours,
                         helper_text: settings_form_item.helper_text.clone(),
                         helper_text_color: helper_color,
+                        custom_picker: app_state.custom_colour_picker(self.settings_window_id, form_value_key),
                     });
 
                     column = column.add(el);
                 }
                 SettingsFormInputType::FontPicker => {
-                    let helper_color: Color = app_state
-                        .app_colours()
-                        .get(EXT_WARM_GREY)
-                        .map_or(Color::WHITE, |c| Color::new(c.red, c.green, c.blue, c.alpha));
+                    let helper_color: Color = AppColour::Palette(EXT_WARM_GREY).resolve(theme);
 
                     let el = form_font_dropdown_input(FormFontDropdownInputProps {
                         settings_window_id: self.settings_window_id,
@@ -100,10 +84,7 @@ impl SettingsForm {
                     column = column.add(el);
                 }
                 SettingsFormInputType::SpinButton { min, max } => {
-                    let helper_color: Color = app_state
-                        .app_colours()
-                        .get(EXT_WARM_GREY)
-                        .map_or(Color::WHITE, |c| Color::new(c.red, c.green, c.blue, c.alpha));
+                    let helper_color: Color = AppColour::Palette(EXT_WARM_GREY).resolve(theme);
 
                     let el = form_spin_button_input(FormSpinButtonInputProps {
                         settings_window_id: self.settings_window_id,

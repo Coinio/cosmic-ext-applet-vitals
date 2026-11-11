@@ -1,11 +1,10 @@
 use crate::app::{AppState, Message};
 use crate::configuration::app_configuration::AppConfiguration;
 use crate::monitors::disk_monitor::DiskStats;
-use crate::core::app_colours::{ACCENT_GREEN, ACCENT_RED};
 use crate::core::app_icons::{READ_ICON, WRITE_ICON};
 use crate::ui::components::indicator::{indicator, IndicatorProps, IndicatorValueItem};
 use cosmic::Element;
-use crate::ui::indicators::{format_bytes_per_second, text_line_metrics, themed_icon};
+use crate::ui::indicators::{configured_colour, format_bytes_per_second, text_line_metrics, themed_icon};
 
 impl DiskStats {
     pub fn draw<'app>(&self, app_state: &'app AppState, horizontal: bool) -> Option<Element<'app, Message>> {
@@ -31,7 +30,7 @@ impl DiskStats {
         values.push(IndicatorValueItem {
             text: self.read_value(app_state.configuration()),
             icon: if horizontal {
-                Some(themed_icon(app_state, READ_ICON, Some(ACCENT_GREEN), font_size))
+                Some(themed_icon(app_state, READ_ICON, configured_colour(configuration.disk.read_colour.as_deref()), font_size))
             } else {
                 None
             },
@@ -40,7 +39,7 @@ impl DiskStats {
         values.push(IndicatorValueItem {
             text: self.write_value(app_state.configuration()),
             icon: if horizontal {
-                Some(themed_icon(app_state, WRITE_ICON, Some(ACCENT_RED), font_size))
+                Some(themed_icon(app_state, WRITE_ICON, configured_colour(configuration.disk.write_colour.as_deref()), font_size))
             } else {
                 None
             },

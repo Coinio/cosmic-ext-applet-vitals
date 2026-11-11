@@ -1,8 +1,8 @@
 use crate::app::AppState;
 use crate::configuration::app_configuration::AppConfiguration;
 use crate::core::app_text_measurements::indicator_line_height;
+use crate::core::app_colours::AppColour;
 use crate::ui::components::svg_icon::SvgIconProps;
-use cosmic::iced::Color;
 
 pub mod disk;
 pub mod network;
@@ -32,16 +32,19 @@ fn format_bytes_per_second(bytes_per_sec: u64, app_config: &AppConfiguration) ->
         }
     }
 }
-/// One of the app's icons, sized to sit alongside indicator text and tinted with the palette colour named by
-/// `colour_key`. Without a colour the icon keeps its own (white) fill.
-fn themed_icon<'a>(app_state: &'a AppState, icon_key: &str, colour_key: Option<&str>, size: u16) -> SvgIconProps<'a> {
+/// One of the app's icons, sized to sit alongside indicator text and tinted with `colour`. Without a colour the
+/// icon keeps its own (white) fill.
+fn themed_icon<'a>(app_state: &'a AppState, icon_key: &str, colour: Option<AppColour>, size: u16) -> SvgIconProps<'a> {
     SvgIconProps {
         icon: app_state.app_icons().get(icon_key),
         size,
-        colour: colour_key
-            .and_then(|key| app_state.app_colours().get(key))
-            .map(|c| Color::new(c.red, c.green, c.blue, c.alpha)),
+        colour,
     }
+}
+
+/// The icon colour from a configuration value. Unrecognised values leave the icon untinted.
+fn configured_colour(value: Option<&str>) -> Option<AppColour> {
+    value.and_then(AppColour::parse)
 }
 
 /// The line height of the indicator text and the centre of the rendered digits within it, for aligning icons.

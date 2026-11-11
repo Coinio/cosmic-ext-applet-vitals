@@ -1,5 +1,5 @@
 use crate::app::Message;
-use cosmic::iced_core::Color;
+use crate::core::app_colours::AppColour;
 use cosmic::style::Svg;
 use cosmic::widget::svg;
 use cosmic::{widget, Element};
@@ -8,7 +8,8 @@ use std::rc::Rc;
 pub struct SvgIconProps<'a> {
     pub icon: Option<&'a cosmic::widget::icon::Handle>,
     pub size: u16,
-    pub colour: Option<Color>,
+    /// Resolved against the theme the icon is drawn with. Without a colour the icon keeps its own fill.
+    pub colour: Option<AppColour>,
 }
 
 pub fn svg_icon<'a>(props: SvgIconProps<'a>) -> Option<Element<'a, Message>> {
@@ -19,7 +20,7 @@ pub fn svg_icon<'a>(props: SvgIconProps<'a>) -> Option<Element<'a, Message>> {
                 0: Rc::new(move |t| {
                     let mut style = svg::Catalog::style(t, &Svg::default(), svg::Status::Idle);
 
-                    style.color = props.colour;
+                    style.color = props.colour.map(|colour| colour.resolve(t.cosmic()));
                     style
                 }),
             }),

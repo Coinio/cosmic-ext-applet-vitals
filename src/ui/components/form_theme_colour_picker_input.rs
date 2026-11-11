@@ -1,83 +1,113 @@
-use crate::app::Message;
-use crate::core::app_colours::AppColours;
-use cosmic::iced::{window, Background, Color, Radius};
-use cosmic::widget;
-use cosmic::Element;
+use crate::app::{ColourPickerTarget, Message};
+use crate::core::app_colours::{AppColour, PRESET_COLOURS};
 use crate::core::settings::{SettingsFormEvent, SettingsFormEventValue};
+use crate::fl;
+use crate::ui::components::colour_picker::{colour_picker, hue_gradient, ColourPickerState};
+use cosmic::iced::{window, Background, Color, Radius};
+use cosmic::widget::tooltip::Position;
+use cosmic::{widget, Element, Theme};
 
-pub struct FormThemeColourPickerInputProps {
+const SWATCH_SIZE: u16 = 25;
+
+pub struct FormThemeColourPickerInputProps<'a> {
     pub settings_window_id: window::Id,
     pub label: String,
-    pub selected_key: String,
+    /// The configuration value of the selected colour.
+    pub value: &'a str,
     pub form_value_key: &'static str,
-    pub app_colours: AppColours,
     pub helper_text: Option<String>,
     pub helper_text_color: Color,
+    /// The custom colour picker, when it is open for this field.
+    pub custom_picker: Option<&'a ColourPickerState>,
 }
 
-pub fn form_theme_colour_picker_input<'a>(
-    props: FormThemeColourPickerInputProps,
-) -> Element<'a, Message> {
+/// A row of theme colour presets, followed by a swatch that opens a picker for any other colour.
+pub fn form_theme_colour_picker_input<'a>(props: FormThemeColourPickerInputProps<'a>) -> Element<'a, Message> {
     let FormThemeColourPickerInputProps {
         settings_window_id,
         label,
-        selected_key,
+        value,
         form_value_key,
-        app_colours,
         helper_text,
         helper_text_color,
+        custom_picker,
     } = props;
 
+    let selected = AppColour::parse(value);
     let mut row = widget::row().spacing(8);
 
-    for (key, colour) in app_colours.colours.into_iter() {
-        let is_selected = selected_key == key;
+    for preset in PRESET_COLOURS {
+        let fill = move |theme: &Theme| Background::Color(preset.resolve(theme.cosmic()));
+        let on_press = Message::SettingsFormUpdate(SettingsFormEvent::StringFieldUpdated(SettingsFormEventValue {
+            settings_window_id,
+            form_value_key,
+            value: preset.to_config_value(),
+        }));
+        let button = swatch(fill, selected == Some(preset) && custom_picker.is_none(), on_press);
 
-        let mut button = widget::button::custom("")
-            .height(25)
-            .width(25)
-            .class(cosmic::theme::style::Button::Custom {
-                active: Box::new(move |_, _| widget::button::Style {
-                    background: Some(Background::Color(colour.into())),
-                    text_color: None,
-                    border_radius: Radius::new(3.0),
-                    border_color: if is_selected { Color::WHITE } else { Color::TRANSPARENT },
-                    border_width: if is_selected { 3.0 } else { 0.0 },
-                    ..Default::default()
-                }),
-                disabled: Box::new(|_| Default::default()),
-                hovered: Box::new(move |_, _| widget::button::Style {
-                    background: Some(Background::Color(colour.into())),
-                    text_color: None,
-                    border_radius: Radius::new(3.0),
-                    border_color: if is_selected { Color::WHITE } else { Color::TRANSPARENT },
-                    border_width: if is_selected { 3.0 } else { 0.0 },
-                    ..Default::default()
-                }),
-                pressed: Box::new(|_, _| Default::default()),
-            });
-
-        button = button.on_press(Message::SettingsFormUpdate(
-            SettingsFormEvent::StringFieldUpdated(SettingsFormEventValue {
-                settings_window_id,
-                form_value_key,
-                value: key.to_string(),
-            }),
-        ));
-
-        row = row.push(button);
+        row = row.push(match preset {
+            AppColour::ThemeAccent => tooltip(button, fl!("settings-colour-theme-accent")),
+            _ => button,
+        });
     }
 
-    let mut colour_picker_column = widget::column().spacing(8);
-    colour_picker_column = colour_picker_column.push(widget::text(label));
+    // Colours that aren't presets are shown in the custom swatch. That includes palette colours offered by earlier
+    // versions, so they still show as selected.
+    let custom_colour = selected.filter(|colour| !colour.is_preset());
+    let custom_fill = move |theme: &Theme| match custom_colour {
+        Some(colour) => Background::Color(colour.resolve(theme.cosmic())),
+        None => hue_gradient(),
+    };
+    let toggle_picker = Message::ToggleCustomColourPicker(ColourPickerTarget {
+        settings_window_id,
+        form_value_key,
+    });
+    row = row.push(tooltip(
+        swatch(custom_fill, custom_colour.is_some() || custom_picker.is_some(), toggle_picker),
+        fl!("settings-colour-custom"),
+    ));
+
+    let mut column = widget::column().spacing(8);
+    column = column.push(widget::text(label));
     if let Some(helper) = helper_text {
-        colour_picker_column = colour_picker_column.push(
+        column = column.push(
             widget::text(helper)
                 .size(12)
                 .class(cosmic::theme::Text::from(helper_text_color)),
         );
     }
-    colour_picker_column = colour_picker_column.push(row.wrap());
+    column = column.push(row.wrap());
 
-    colour_picker_column.into()
+    if let Some(state) = custom_picker {
+        column = column.push(widget::container(colour_picker(state)).class(cosmic::theme::Container::Card));
+    }
+
+    column.into()
+}
+
+fn swatch<'a>(fill: impl Fn(&Theme) -> Background + Copy + 'static, selected: bool, on_press: Message) -> Element<'a, Message> {
+    let style = move |theme: &Theme| widget::button::Style {
+        background: Some(fill(theme)),
+        text_color: None,
+        border_radius: Radius::new(3.0),
+        border_color: if selected { theme.cosmic().background.on.into() } else { Color::TRANSPARENT },
+        border_width: if selected { 3.0 } else { 0.0 },
+        ..Default::default()
+    };
+
+    widget::button::custom("")
+        .height(SWATCH_SIZE)
+        .width(SWATCH_SIZE)
+        .class(cosmic::theme::style::Button::Custom {
+            active: Box::new(move |_, theme| style(theme)),
+            disabled: Box::new(move |theme| style(theme)),
+            hovered: Box::new(move |_, theme| style(theme)),
+            pressed: Box::new(move |_, theme| style(theme)),
+        })
+        .on_press(on_press)
+        .into()
+}
+
+fn tooltip<'a>(content: Element<'a, Message>, text: String) -> Element<'a, Message> {
+    widget::tooltip(content, widget::text(text), Position::Bottom).into()
 }

@@ -1,11 +1,10 @@
 use crate::app::{AppState, Message};
 use crate::configuration::app_configuration::AppConfiguration;
 use crate::monitors::network_monitor::NetworkStats;
-use crate::core::app_colours::{ACCENT_GREEN, ACCENT_RED};
 use crate::core::app_icons::{DOWN_ARROW_ICON, UP_ARROW_ICON};
 use crate::ui::components::indicator::{indicator, IndicatorProps, IndicatorValueItem};
 use cosmic::Element;
-use crate::ui::indicators::{format_bytes_per_second, text_line_metrics, themed_icon};
+use crate::ui::indicators::{configured_colour, format_bytes_per_second, text_line_metrics, themed_icon};
 
 impl NetworkStats {
     pub fn draw<'app>(&self, app_state: &'app AppState, horizontal: bool) -> Option<Element<'app, Message>> {
@@ -31,7 +30,7 @@ impl NetworkStats {
         values.push(IndicatorValueItem {
             text: self.read_value(app_state.configuration()),
             icon: if horizontal {
-                Some(themed_icon(app_state, DOWN_ARROW_ICON, Some(ACCENT_GREEN), font_size))
+                Some(themed_icon(app_state, DOWN_ARROW_ICON, configured_colour(configuration.network.download_colour.as_deref()), font_size))
             } else {
                 None
             },
@@ -40,7 +39,7 @@ impl NetworkStats {
         values.push(IndicatorValueItem {
             text: self.write_value(app_state.configuration()),
             icon: if horizontal {
-                Some(themed_icon(app_state, UP_ARROW_ICON, Some(ACCENT_RED), font_size))
+                Some(themed_icon(app_state, UP_ARROW_ICON, configured_colour(configuration.network.upload_colour.as_deref()), font_size))
             } else {
                 None
             },

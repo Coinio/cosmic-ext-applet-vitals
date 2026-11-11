@@ -17,6 +17,10 @@ log = "0.4.27"
 indexmap = "2.11.4"
 systemd-journal-logger = "2.2.2"
 
+[dev-dependencies]
+# Matches the version cosmic-config uses to store the configuration.
+ron = "0.11"
+
 [dependencies.libcosmic]
 git = "https://github.com/pop-os/libcosmic.git"
 default-features = false
