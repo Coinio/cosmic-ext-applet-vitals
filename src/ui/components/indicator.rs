@@ -17,6 +17,7 @@ pub struct IndicatorProps<'a> {
     pub label_colour: Color,
     pub font_size: u16,
     pub font: &'a cosmic::font::Font,
+    pub label_font: &'a cosmic::font::Font,
     pub value_width: Option<f32>,
     pub horizontal: bool,
     pub spacing: u16,
@@ -30,7 +31,7 @@ pub fn indicator<'a>(core: &'a cosmic::Core, props: IndicatorProps<'a>) -> Optio
         IndicatorLabelProps {
             text: props.label_text,
             font_size: props.font_size,
-            font: props.font,
+            font: props.label_font,
             colour: props.label_colour,
         },
     );

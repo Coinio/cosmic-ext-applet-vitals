@@ -29,6 +29,7 @@ pub const MAX_SAMPLES_SETTING_KEY: &'static str = "settings-max-samples";
 pub const FIX_INDICATOR_SIZE_SETTING_KEY: &'static str = "settings-fix-indicator-size";
 pub const USE_IEC_UNITS_SETTING_KEY: &'static str = "settings-use-iec-units";
 pub const FONT_SETTING_KEY: &'static str = "settings-font";
+pub const BOLD_LABELS_SETTING_KEY: &'static str = "settings-bold-labels";
 
 #[derive(Debug, Default, Clone, CosmicConfigEntry, Eq, PartialEq)]
 #[version = 1]

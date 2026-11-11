@@ -72,6 +72,7 @@ impl NetworkStats {
                 label_colour: display_item_color,
                 font_size,
                 font: app_state.indicator_font(),
+                label_font: app_state.label_font(),
                 value_width: max_text_width,
                 horizontal,
                 spacing: app_state.core().applet.suggested_padding(true),

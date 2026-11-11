@@ -25,6 +25,7 @@ for those fighting with iced/libcosmic, etc.
   * Label Text - The label text for each monitor
   * Switch between SI and IEC units
   * Font - Uses the bundled JetBrains Mono by default, or switch to the COSMIC system font or any installed font
+  * Bold Labels - Labels are bold by default, this can be turned off in the general settings
 
 ## Screenshots
 

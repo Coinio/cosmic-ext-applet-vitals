@@ -12,13 +12,18 @@ use std::sync::Arc;
 pub const DEFAULT_FONT_FAMILY: &str = "JetBrains Mono";
 
 const DEFAULT_FONT_BYTES: &[u8] = include_bytes!("../../res/fonts/JetBrainsMono-Regular.ttf");
+/// cosmic-text can't synthesise bold, so the bold face is bundled for the labels.
+const DEFAULT_BOLD_FONT_BYTES: &[u8] = include_bytes!("../../res/fonts/JetBrainsMono-Bold.ttf");
 
 /// Internal iced fonts that shouldn't be offered to the user.
 const HIDDEN_FONT_FAMILIES: &[&str] = &["Iced-Icons"];
 
 pub fn load_embedded_fonts() {
     match font_system().write() {
-        Ok(mut font_system) => font_system.load_font(Cow::Borrowed(DEFAULT_FONT_BYTES)),
+        Ok(mut font_system) => {
+            font_system.load_font(Cow::Borrowed(DEFAULT_FONT_BYTES));
+            font_system.load_font(Cow::Borrowed(DEFAULT_BOLD_FONT_BYTES));
+        }
         Err(err) => error!("Failed to load the embedded fonts: {}", err),
     }
 }
@@ -35,6 +40,18 @@ pub fn resolve_font(choice: &IndicatorFont, interface_font: &Font) -> Font {
             style: Style::Normal,
         }
         .into(),
+    }
+}
+
+/// The labels use the indicator font, optionally in bold. Fonts without a bold face fall back to their nearest weight.
+pub fn label_font(indicator_font: &Font, bold: bool) -> Font {
+    if bold {
+        Font {
+            weight: Weight::Bold,
+            ..*indicator_font
+        }
+    } else {
+        *indicator_font
     }
 }
 
@@ -123,6 +140,38 @@ mod tests {
         let narrow = measurer.measure_single("iiiii", 14, &font).expect("Failed to measure text");
         let wide = measurer.measure_single("MMMMM", 14, &font).expect("Failed to measure text");
         assert_eq!(narrow, wide);
+    }
+
+    #[test]
+    fn embedded_default_bold_font_is_available() {
+        load_embedded_fonts();
+
+        use cosmic::iced_renderer::graphics::text::cosmic_text::fontdb::{Family, Query, Weight as DbWeight};
+
+        let resolve_weight = |weight: DbWeight| {
+            let mut font_system = font_system().write().expect("Failed to read the font system");
+            let db = font_system.raw().db();
+            let id = db
+                .query(&Query {
+                    families: &[Family::Name(DEFAULT_FONT_FAMILY)],
+                    weight,
+                    ..Default::default()
+                })
+                .expect("The default font family is missing");
+            db.face(id).expect("The matched face is missing").weight
+        };
+
+        // The bundled bold face is tagged as 558, rather than 700, so check it's picked over the regular face.
+        assert_eq!(resolve_weight(DbWeight::NORMAL), DbWeight::NORMAL);
+        assert!(resolve_weight(DbWeight::BOLD) > DbWeight::NORMAL);
+    }
+
+    #[test]
+    fn label_font_is_bold_only_when_enabled() {
+        let font = resolve_font(&IndicatorFont::Default, &Font::default());
+
+        assert_eq!(label_font(&font, true), Font { weight: Weight::Bold, ..font });
+        assert_eq!(label_font(&font, false), font);
     }
 
     #[test]

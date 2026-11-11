@@ -1,7 +1,7 @@
 use std::time::Duration;
 use cosmic::iced::window;
 use indexmap::IndexMap;
-use crate::configuration::app_configuration::{CPU_SETTINGS_WINDOW_ID, DISK_SETTINGS_WINDOW_ID, GENERAL_SETTINGS_WINDOW_ID, HIDE_INDICATOR_SETTING_KEY, HIDE_LABEL_SETTING_KEY, LABEL_COLOUR_SETTING_KEY, LABEL_TEXT_SETTING_KEY, MAX_SAMPLES_SETTING_KEY, MEMORY_SETTINGS_WINDOW_ID, NETWORK_SETTINGS_WINDOW_ID, UPDATE_INTERVAL_SETTING_KEY, FIX_INDICATOR_SIZE_SETTING_KEY, FONT_SETTING_KEY};
+use crate::configuration::app_configuration::{CPU_SETTINGS_WINDOW_ID, DISK_SETTINGS_WINDOW_ID, GENERAL_SETTINGS_WINDOW_ID, HIDE_INDICATOR_SETTING_KEY, HIDE_LABEL_SETTING_KEY, LABEL_COLOUR_SETTING_KEY, LABEL_TEXT_SETTING_KEY, MAX_SAMPLES_SETTING_KEY, MEMORY_SETTINGS_WINDOW_ID, NETWORK_SETTINGS_WINDOW_ID, UPDATE_INTERVAL_SETTING_KEY, FIX_INDICATOR_SIZE_SETTING_KEY, FONT_SETTING_KEY, BOLD_LABELS_SETTING_KEY};
 use crate::configuration::cpu::CpuConfiguration;
 use crate::configuration::disk::DiskConfiguration;
 use crate::configuration::general::GeneralConfiguration;
@@ -131,6 +131,16 @@ impl From<&GeneralConfiguration> for SettingsForm {
                 input_type: SettingsFormInputType::FontPicker,
                 validator: None,
                 helper_text: Some(fl!("settings-font-helper")),
+            },
+        );
+        values.insert(
+            BOLD_LABELS_SETTING_KEY,
+            SettingsFormItem {
+                label: fl!("settings-bold-labels"),
+                value: config.bold_labels.to_string(),
+                input_type: SettingsFormInputType::CheckBox,
+                validator: Some(ConfigurationValidation::is_valid_boolean),
+                helper_text: Some(fl!("settings-bold-labels-helper")),
             },
         );
         values.insert(

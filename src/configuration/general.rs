@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::configuration::app_configuration::{
-    FIX_INDICATOR_SIZE_SETTING_KEY, FONT_SETTING_KEY, GENERAL_SETTINGS_WINDOW_ID, USE_IEC_UNITS_SETTING_KEY,
+    BOLD_LABELS_SETTING_KEY, FIX_INDICATOR_SIZE_SETTING_KEY, FONT_SETTING_KEY, GENERAL_SETTINGS_WINDOW_ID, USE_IEC_UNITS_SETTING_KEY,
 };
 use crate::configuration::validation::ConfigurationValidation;
 use crate::core::settings::SettingsForm;
@@ -65,6 +65,8 @@ pub struct GeneralConfiguration {
     /// When true, use IEC units (MiB, GiB); when false, use SI (MB, GB).
     pub use_iec_units: bool,
     pub font: IndicatorFont,
+    /// When true, the indicator labels use a bold weight of the indicator font.
+    pub bold_labels: bool,
 }
 
 impl Default for GeneralConfiguration {
@@ -83,6 +85,7 @@ impl Default for GeneralConfiguration {
             fix_indicator_size: true,
             use_iec_units: false,
             font: IndicatorFont::Default,
+            bold_labels: true,
         }
     }
 }
@@ -117,6 +120,15 @@ impl GeneralConfiguration {
                 .get(FONT_SETTING_KEY)
                 .and_then(|item| IndicatorFont::from_form_value(&item.value))
                 .unwrap_or_else(|| self.font.clone()),
+            bold_labels: ConfigurationValidation::sanitise_boolean_input(
+                settings_form
+                    .values
+                    .get(BOLD_LABELS_SETTING_KEY)
+                    .expect("Bold labels missing from settings form options")
+                    .value
+                    .clone(),
+                self.bold_labels,
+            ),
             ..self.clone()
         }
     }

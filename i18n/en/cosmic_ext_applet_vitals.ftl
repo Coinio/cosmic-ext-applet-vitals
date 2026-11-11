@@ -24,3 +24,5 @@ settings-font = Font
 settings-font-helper = The font used by the indicators in the panel/dock. System uses the COSMIC interface font.
 settings-font-default = Default (JetBrains Mono)
 settings-font-system = System
+settings-bold-labels = Bold Labels
+settings-bold-labels-helper = Show the indicator labels in bold. Fonts without a bold style will use their nearest weight.
