@@ -57,7 +57,6 @@ pub struct AppState {
     monitor_cancellation_token: Option<CancellationToken>,
     interface_font: Font,
     indicator_font: Font,
-    label_font: Font,
     /// Only populated while the settings window is open.
     font_options: FontOptions,
     /// The colours available to the application
@@ -156,7 +155,6 @@ impl Application for AppState {
             .map(|cosmic_tk| cosmic_tk.interface_font.clone().into())
             .unwrap_or_default();
         let indicator_font = app_fonts::resolve_font(&configuration.general.font, &interface_font);
-        let label_font = app_fonts::label_font(&indicator_font, configuration.general.bold_labels);
 
         let settings_nav = build_settings_nav(&settings_forms);
 
@@ -166,7 +164,6 @@ impl Application for AppState {
             settings_nav,
             interface_font,
             indicator_font,
-            label_font,
             app_colours,
             app_icons,
             app_text_measurements,
@@ -507,9 +504,6 @@ impl AppState {
     pub fn indicator_font(&self) -> &Font {
         &self.indicator_font
     }
-    pub fn label_font(&self) -> &Font {
-        &self.label_font
-    }
     pub fn font_options(&self) -> &FontOptions {
         &self.font_options
     }
@@ -563,7 +557,6 @@ impl AppState {
 
     fn refresh_indicator_font(&mut self) {
         self.indicator_font = app_fonts::resolve_font(&self.configuration.general.font, &self.interface_font);
-        self.label_font = app_fonts::label_font(&self.indicator_font, self.configuration.general.bold_labels);
     }
 
     fn refresh_configuration_from_disk(&mut self) {

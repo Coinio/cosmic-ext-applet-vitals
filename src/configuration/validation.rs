@@ -1,5 +1,5 @@
 use crate::configuration::app_configuration::{
-    SENSOR_INTERVAL_MINIMUM_IN_MS, SENSOR_MAX_LABEL_LENGTH, SENSOR_MAX_SAMPLES_MINIMUM,
+    SENSOR_INTERVAL_MINIMUM_IN_MS, SENSOR_MAX_SAMPLES_MINIMUM,
 };
 use crate::configuration::general::{INDICATOR_FONT_SIZE_MAXIMUM, INDICATOR_FONT_SIZE_MINIMUM};
 use crate::fl;
@@ -92,27 +92,6 @@ impl ConfigurationValidation {
         cmp::max(parsed_value, SENSOR_MAX_SAMPLES_MINIMUM)
     }
 
-    pub fn is_valid_label_text(input: &str) -> Result<(), String> {
-        if input.trim().is_empty() || input.len() > SENSOR_MAX_LABEL_LENGTH {
-            Err(fl!("settings-label-text-error", max_length = SENSOR_MAX_LABEL_LENGTH))
-        } else {
-            Ok(())
-        }
-    }
-
-    pub fn sanitise_label_text(new_input: String, previous_input: String) -> String {
-        let validation_result = Self::is_valid_label_text(new_input.as_str());
-
-        if validation_result.is_err() {
-            if new_input.trim().is_empty() {
-                return previous_input.trim().to_string();
-            }
-
-            return new_input[..SENSOR_MAX_LABEL_LENGTH].trim().to_string();
-        }
-
-        new_input.trim().to_string()
-    }
 
     /// Out of range sizes are clamped, as they can only come from the spin button's bounds or a hand-edited config.
     pub fn sanitise_font_size(new_input: &str, previous_value: u16) -> u16 {
@@ -308,63 +287,5 @@ mod boolean_tests {
         let previous = false;
         let res = ConfigurationValidation::sanitise_boolean_input("  true  ".to_string(), previous);
         assert_eq!(res, true);
-    }
-}
-
-#[cfg(test)]
-mod label_text_tests {
-    use super::ConfigurationValidation;
-    use crate::configuration::app_configuration::SENSOR_MAX_LABEL_LENGTH;
-
-    #[test]
-    fn is_valid_label_text_accepts_max_length() {
-        let max = SENSOR_MAX_LABEL_LENGTH;
-        let max_length_string = "X".repeat(max);
-        assert!(ConfigurationValidation::is_valid_label_text(&max_length_string).is_ok());
-    }
-
-    #[test]
-    fn is_valid_label_text_rejects_over_max_length() {
-        let max = SENSOR_MAX_LABEL_LENGTH;
-        let too_long_string = "Y".repeat(max + 1);
-        assert!(ConfigurationValidation::is_valid_label_text(&too_long_string).is_err());
-    }
-
-    #[test]
-    fn is_valid_label_text_rejects_empty() {
-        assert!(ConfigurationValidation::is_valid_label_text("").is_err());
-        assert!(ConfigurationValidation::is_valid_label_text("    ").is_err());
-    }
-
-    #[test]
-    fn sanitise_label_text_truncates_over_length() {
-        let max = SENSOR_MAX_LABEL_LENGTH;
-        let too_long = "Z".repeat(max + 5);
-        let truncated = ConfigurationValidation::sanitise_label_text(too_long.clone(), too_long.clone());
-        assert_eq!(truncated.len(), max);
-        assert_eq!(truncated, "Z".repeat(max));
-    }
-
-    #[test]
-    fn sanitise_label_text_trims_whitespace() {
-        let spaced = "   Hello  ".to_string();
-        let trimmed = ConfigurationValidation::sanitise_label_text(spaced.clone(), spaced.clone());
-        assert_eq!(trimmed, "Hello");
-    }
-    
-    #[test]
-    fn sanitise_label_text_returns_previous_when_empty() {
-        let previous = "Hello".to_string();
-        let empty = "".to_string();
-        let result = ConfigurationValidation::sanitise_label_text(empty.clone(), previous.clone());
-        assert_eq!(result, previous);
-    }
-    
-    #[test]
-    fn sanitise_label_text_trims_text_when_too_long() {
-        let trimmed = "X".repeat(SENSOR_MAX_LABEL_LENGTH);
-        let too_long = "X".repeat(SENSOR_MAX_LABEL_LENGTH + 1);
-        let result = ConfigurationValidation::sanitise_label_text(too_long.clone(), "X".repeat(SENSOR_MAX_LABEL_LENGTH));
-        assert_eq!(result, trimmed);   
     }
 }

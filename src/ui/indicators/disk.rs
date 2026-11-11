@@ -4,10 +4,8 @@ use crate::monitors::disk_monitor::DiskStats;
 use crate::core::app_colours::{ACCENT_GREEN, ACCENT_RED};
 use crate::core::app_icons::{READ_ICON, WRITE_ICON};
 use crate::ui::components::indicator::{indicator, IndicatorProps, IndicatorValueItem};
-use crate::ui::components::svg_icon::SvgIconProps;
-use cosmic::iced::Color;
 use cosmic::Element;
-use crate::ui::indicators::format_bytes_per_second;
+use crate::ui::indicators::{format_bytes_per_second, text_line_metrics, themed_icon};
 
 impl DiskStats {
     pub fn draw<'app>(&self, app_state: &'app AppState, horizontal: bool) -> Option<Element<'app, Message>> {
@@ -18,11 +16,8 @@ impl DiskStats {
             return None;
         }
 
-        let text = if configuration.disk.hide_label { None } else { configuration.disk.label_text.clone() };
-
-        let display_item_color = self.label_colour(app_state);
         let font_size = app_state.font_size(horizontal);
-        let icon_size = app_state.icon_size();
+        let (line_height, digit_centre) = text_line_metrics(app_state, font_size);
 
         let max_text_width = if configuration.general.fix_indicator_size {
             app_state
@@ -36,14 +31,7 @@ impl DiskStats {
         values.push(IndicatorValueItem {
             text: self.read_value(app_state.configuration()),
             icon: if horizontal {
-                Some(SvgIconProps {
-                    icon: app_state.app_icons().get(READ_ICON),
-                    size: icon_size,
-                    colour: app_state
-                        .app_colours()
-                        .get(ACCENT_GREEN)
-                        .map(|c| Color::new(c.red, c.green, c.blue, c.alpha)),
-                })
+                Some(themed_icon(app_state, READ_ICON, Some(ACCENT_GREEN), font_size))
             } else {
                 None
             },
@@ -52,14 +40,7 @@ impl DiskStats {
         values.push(IndicatorValueItem {
             text: self.write_value(app_state.configuration()),
             icon: if horizontal {
-                Some(SvgIconProps {
-                    icon: app_state.app_icons().get(WRITE_ICON),
-                    size: icon_size,
-                    colour: app_state
-                        .app_colours()
-                        .get(ACCENT_RED)
-                        .map(|c| Color::new(c.red, c.green, c.blue, c.alpha)),
-                })
+                Some(themed_icon(app_state, WRITE_ICON, Some(ACCENT_RED), font_size))
             } else {
                 None
             },
@@ -68,11 +49,11 @@ impl DiskStats {
         indicator(
             core,
             IndicatorProps {
-                label_text: text,
-                label_colour: display_item_color,
+                icon: None,
                 font_size,
                 font: app_state.indicator_font(),
-                label_font: app_state.label_font(),
+                line_height,
+                digit_centre,
                 value_width: max_text_width,
                 horizontal,
                 spacing: app_state.core().applet.suggested_padding(true),
@@ -82,16 +63,6 @@ impl DiskStats {
         )
     }
     
-    fn label_colour(&self, app_state: &AppState) -> Color {
-        app_state
-            .configuration()
-            .disk
-            .label_colour
-            .as_deref()
-            .and_then(|key| app_state.app_colours().get(key))
-            .map_or(Color::WHITE, |c| Color::new(c.red, c.green, c.blue, c.alpha))
-    }
-
     fn read_value(&self, app_config: &AppConfiguration) -> String {
         format_bytes_per_second(self.avg_bytes_read, app_config)
     }

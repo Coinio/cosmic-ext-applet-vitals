@@ -10,27 +10,24 @@ use crate::core::settings::SettingsForm;
 pub struct MemoryConfiguration {
     /// Whether to hide the CPU indicator from the panel
     pub hide_indicator: bool,
-    /// Whether to hide only the label for this indicator
-    pub hide_label: bool,
+    /// Whether to hide only the icon for this indicator
+    pub hide_icon: bool,
     /// The duration between each update interval, i.e. 5 seconds
     pub update_interval: Duration,
     /// The number of samples to keep and average for the final result
     pub max_samples: usize,
     /// The indicator icon colour key
-    pub label_colour: Option<String>,
-    /// The indicator label text
-    pub label_text: Option<String>,
+    pub icon_colour: Option<String>,
 }
 
 impl Default for MemoryConfiguration {
     fn default() -> Self {
         MemoryConfiguration {
             hide_indicator: false,
-            hide_label: false,
+            hide_icon: false,
             update_interval: Duration::from_secs(1),
             max_samples: 2,
-            label_colour: Some(EXT_PURPLE.to_string()),
-            label_text: Some("MEM".to_string()),
+            icon_colour: Some(EXT_PURPLE.to_string()),
         }
     }
 }
@@ -51,14 +48,14 @@ impl MemoryConfiguration {
                     .clone(),
                 self.hide_indicator,
             ),
-            hide_label: ConfigurationValidation::sanitise_boolean_input(
+            hide_icon: ConfigurationValidation::sanitise_boolean_input(
                 settings_form
                     .values
-                    .get(HIDE_LABEL_SETTING_KEY)
-                    .expect("Hide label missing from settings form options")
+                    .get(HIDE_ICON_SETTING_KEY)
+                    .expect("Hide icon missing from settings form options")
                     .value
                     .clone(),
-                self.hide_label,
+                self.hide_icon,
             ),
             update_interval: ConfigurationValidation::sanitise_interval_input(
                 settings_form
@@ -78,23 +75,14 @@ impl MemoryConfiguration {
                     .clone(),
                 self.max_samples,
             ),
-            label_colour: Some(
+            icon_colour: Some(
                 settings_form
                     .values
-                    .get(LABEL_COLOUR_SETTING_KEY)
-                    .expect("Label colour missing from settings form options")
+                    .get(ICON_COLOUR_SETTING_KEY)
+                    .expect("Icon colour missing from settings form options")
                     .value
                     .clone(),
             ),
-            label_text: Some(ConfigurationValidation::sanitise_label_text(
-                settings_form
-                    .values
-                    .get(LABEL_TEXT_SETTING_KEY)
-                    .expect("Label text missing from settings form options")
-                    .value
-                    .clone(),
-                self.label_text.clone().unwrap_or_default(),
-            )),
         }
     }
 }

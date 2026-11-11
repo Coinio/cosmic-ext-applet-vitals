@@ -19,18 +19,15 @@ pub static DISK_SETTINGS_WINDOW_ID: Lazy<cosmic::iced::window::Id> = Lazy::new(|
 
 pub const SENSOR_INTERVAL_MINIMUM_IN_MS: u64 = 250;
 pub const SENSOR_MAX_SAMPLES_MINIMUM: usize = 1;
-pub const SENSOR_MAX_LABEL_LENGTH: usize = 10;
-pub const LABEL_TEXT_SETTING_KEY: &'static str = "settings-label-text";
-pub const LABEL_COLOUR_SETTING_KEY: &'static str = "settings-label-colour";
+pub const ICON_COLOUR_SETTING_KEY: &'static str = "settings-icon-colour";
 pub const HIDE_INDICATOR_SETTING_KEY: &'static str = "settings-hide-indicator";
-pub const HIDE_LABEL_SETTING_KEY: &'static str = "settings-hide-label";
+pub const HIDE_ICON_SETTING_KEY: &'static str = "settings-hide-icon";
 pub const UPDATE_INTERVAL_SETTING_KEY: &'static str = "settings-update-interval";
 pub const MAX_SAMPLES_SETTING_KEY: &'static str = "settings-max-samples";
 pub const FIX_INDICATOR_SIZE_SETTING_KEY: &'static str = "settings-fix-indicator-size";
 pub const USE_IEC_UNITS_SETTING_KEY: &'static str = "settings-use-iec-units";
 pub const FONT_SETTING_KEY: &'static str = "settings-font";
 pub const FONT_SIZE_SETTING_KEY: &'static str = "settings-font-size";
-pub const BOLD_LABELS_SETTING_KEY: &'static str = "settings-bold-labels";
 
 #[derive(Debug, Default, Clone, CosmicConfigEntry, Eq, PartialEq)]
 #[version = 1]

@@ -20,12 +20,10 @@ for those fighting with iced/libcosmic, etc.
   * Read Intervals - How often each monitor is polled
   * Max Samples - The number of samples to keep to average the readings across
   * Show / Hide each monitor
-  * Show / Hide the labels for each monitor
-  * Label Colours - The colours can be selected from the current theme libcosmic palette
-  * Label Text - The label text for each monitor
+  * Show / Hide the CPU and memory icons
+  * Icon Colours - The CPU and memory icon colours can be selected from the current theme libcosmic palette
   * Switch between SI and IEC units
   * Font - Uses the COSMIC system font by default, or switch to any installed font. See [Fonts](#fonts)
-  * Bold Labels - Labels are bold by default, this can be turned off in the general settings
 
 ## Screenshots
 
@@ -84,5 +82,3 @@ sudo pacman -S ttf-jetbrains-mono
 Or download it from the [JetBrains Mono releases](https://github.com/JetBrains/JetBrainsMono/releases). Then select it
 under **Settings > General > Font**. If a newly installed font doesn't show up in the list, log out and back in so
 the panel reloads its fonts.
-
-Bold labels need the font to have a bold style. Fonts without one use their nearest available weight.

@@ -25,19 +25,6 @@ pub fn resolve_font(choice: &IndicatorFont, interface_font: &Font) -> Font {
     }
 }
 
-/// The labels use the indicator font, optionally in bold. cosmic-text can't synthesise bold, so fonts without a
-/// bold face fall back to their nearest weight.
-pub fn label_font(indicator_font: &Font, bold: bool) -> Font {
-    if bold {
-        Font {
-            weight: Weight::Bold,
-            ..*indicator_font
-        }
-    } else {
-        *indicator_font
-    }
-}
-
 #[derive(Debug, Clone, Default)]
 pub struct FontOptions {
     pub labels: Vec<String>,
@@ -103,14 +90,6 @@ fn sort_families(families: &mut [String]) {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn label_font_is_bold_only_when_enabled() {
-        let font = Font::with_name("Open Sans");
-
-        assert_eq!(label_font(&font, true), Font { weight: Weight::Bold, ..font });
-        assert_eq!(label_font(&font, false), font);
-    }
 
     #[test]
     fn font_options_start_with_system() {

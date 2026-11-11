@@ -1,9 +1,10 @@
 use crate::app::{AppState, Message};
 use crate::configuration::app_configuration::AppConfiguration;
+use crate::core::app_icons::CPU_ICON;
 use crate::monitors::cpu_monitor::CpuStats;
 use crate::ui::components::indicator::{indicator, IndicatorProps, IndicatorValueItem};
-use cosmic::iced::Color;
 use cosmic::Element;
+use crate::ui::indicators::{text_line_metrics, themed_icon};
 
 impl CpuStats {
 
@@ -15,10 +16,13 @@ impl CpuStats {
             return None;
         }
 
-        let text = if configuration.cpu.hide_label { None } else { configuration.cpu.label_text.clone() };
-
-        let display_item_color = self.label_colour(app_state);
         let font_size = app_state.font_size(horizontal);
+        let (line_height, digit_centre) = text_line_metrics(app_state, font_size);
+        let icon = if configuration.cpu.hide_icon {
+            None
+        } else {
+            Some(themed_icon(app_state, CPU_ICON, configuration.cpu.icon_colour.as_deref(), font_size))
+        };
 
         let max_text_width = if configuration.general.fix_indicator_size {
             app_state
@@ -36,11 +40,11 @@ impl CpuStats {
         indicator(
             core,
             IndicatorProps {
-                label_text: text,
-                label_colour: display_item_color,
+                icon,
                 font_size,
                 font: app_state.indicator_font(),
-                label_font: app_state.label_font(),
+                line_height,
+                digit_centre,
                 value_width: max_text_width,
                 horizontal,
                 spacing: app_state.core().applet.suggested_padding(true),
@@ -48,16 +52,6 @@ impl CpuStats {
                 values,
             },
         )
-    }
-
-    fn label_colour(&self, app_state: &AppState) -> Color {
-        app_state
-            .configuration()
-            .cpu
-            .label_colour
-            .as_deref()
-            .and_then(|key| app_state.app_colours().get(key))
-            .map_or(Color::WHITE, |c| Color::new(c.red, c.green, c.blue, c.alpha))
     }
 
     fn value(&self, _app_config: &AppConfiguration) -> String {

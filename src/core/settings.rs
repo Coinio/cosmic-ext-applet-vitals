@@ -1,7 +1,7 @@
 use std::time::Duration;
 use cosmic::iced::window;
 use indexmap::IndexMap;
-use crate::configuration::app_configuration::{CPU_SETTINGS_WINDOW_ID, DISK_SETTINGS_WINDOW_ID, GENERAL_SETTINGS_WINDOW_ID, HIDE_INDICATOR_SETTING_KEY, HIDE_LABEL_SETTING_KEY, LABEL_COLOUR_SETTING_KEY, LABEL_TEXT_SETTING_KEY, MAX_SAMPLES_SETTING_KEY, MEMORY_SETTINGS_WINDOW_ID, NETWORK_SETTINGS_WINDOW_ID, UPDATE_INTERVAL_SETTING_KEY, FIX_INDICATOR_SIZE_SETTING_KEY, FONT_SETTING_KEY, FONT_SIZE_SETTING_KEY, BOLD_LABELS_SETTING_KEY};
+use crate::configuration::app_configuration::{CPU_SETTINGS_WINDOW_ID, DISK_SETTINGS_WINDOW_ID, GENERAL_SETTINGS_WINDOW_ID, HIDE_INDICATOR_SETTING_KEY, HIDE_ICON_SETTING_KEY, ICON_COLOUR_SETTING_KEY, MAX_SAMPLES_SETTING_KEY, MEMORY_SETTINGS_WINDOW_ID, NETWORK_SETTINGS_WINDOW_ID, UPDATE_INTERVAL_SETTING_KEY, FIX_INDICATOR_SIZE_SETTING_KEY, FONT_SETTING_KEY, FONT_SIZE_SETTING_KEY};
 use crate::configuration::cpu::CpuConfiguration;
 use crate::configuration::disk::DiskConfiguration;
 use crate::configuration::general::{
@@ -54,11 +54,9 @@ impl From<&CpuConfiguration> for SettingsForm {
     fn from(config: &CpuConfiguration) -> SettingsForm {
         let values = build_shared_settings(
             config.hide_indicator,
-            config.hide_label,
+            Some((config.hide_icon, config.icon_colour.clone())),
             config.update_interval,
             config.max_samples,
-            config.label_colour.clone(),
-            config.label_text.clone(),
         );
 
         SettingsForm {
@@ -73,11 +71,9 @@ impl From<&MemoryConfiguration> for SettingsForm {
     fn from(config: &MemoryConfiguration) -> SettingsForm {
         let values = build_shared_settings(
             config.hide_indicator,
-            config.hide_label,
+            Some((config.hide_icon, config.icon_colour.clone())),
             config.update_interval,
             config.max_samples,
-            config.label_colour.clone(),
-            config.label_text.clone(),
         );
         SettingsForm {
             settings_window_id: MEMORY_SETTINGS_WINDOW_ID.clone(),
@@ -91,11 +87,9 @@ impl From<&NetworkConfiguration> for SettingsForm {
     fn from(config: &NetworkConfiguration) -> SettingsForm {
         let values = build_shared_settings(
             config.hide_indicator,
-            config.hide_label,
+            None,
             config.update_interval,
             config.max_samples,
-            config.label_colour.clone(),
-            config.label_text.clone(),
         );
 
         SettingsForm {
@@ -110,11 +104,9 @@ impl From<&DiskConfiguration> for SettingsForm {
     fn from(config: &DiskConfiguration) -> SettingsForm {
         let values = build_shared_settings(
             config.hide_indicator,
-            config.hide_label,
+            None,
             config.update_interval,
             config.max_samples,
-            config.label_colour.clone(),
-            config.label_text.clone(),
         );
         SettingsForm {
             settings_window_id: DISK_SETTINGS_WINDOW_ID.clone(),
@@ -154,16 +146,6 @@ impl SettingsForm {
             );
         }
         values.insert(
-            BOLD_LABELS_SETTING_KEY,
-            SettingsFormItem {
-                label: fl!("settings-bold-labels"),
-                value: config.bold_labels.to_string(),
-                input_type: SettingsFormInputType::CheckBox,
-                validator: Some(ConfigurationValidation::is_valid_boolean),
-                helper_text: Some(fl!("settings-bold-labels-helper")),
-            },
-        );
-        values.insert(
             FIX_INDICATOR_SIZE_SETTING_KEY,
             SettingsFormItem {
                 label: fl!("settings-fix-indicator-size"),
@@ -193,56 +175,49 @@ impl SettingsForm {
 }
 
 // This is used to build the shared settings between all the settings forms.
-/// Extend the BTreeMap returned by this with any sensor-specific settings if required.
+/// Extend the map returned by this with any sensor-specific settings if required.
+/// `icon` is the indicator's (hide icon, icon colour) settings, for indicators that have an icon.
 fn build_shared_settings(
     hide_indicator: bool,
-    hide_label: bool,
+    icon: Option<(bool, Option<String>)>,
     update_interval: Duration,
     max_samples: usize,
-    label_colour: Option<String>,
-    label_text: Option<String>,
 ) -> IndexMap<&'static str, SettingsFormItem> {
-    IndexMap::from([
-        (
-            HIDE_INDICATOR_SETTING_KEY,
+    let mut settings = IndexMap::from([(
+        HIDE_INDICATOR_SETTING_KEY,
+        SettingsFormItem {
+            label: fl!("settings-hide-indicator"),
+            value: hide_indicator.to_string(),
+            input_type: SettingsFormInputType::CheckBox,
+            validator: Some(ConfigurationValidation::is_valid_boolean),
+            helper_text: None,
+        },
+    )]);
+
+    if let Some((hide_icon, icon_colour)) = icon {
+        settings.insert(
+            HIDE_ICON_SETTING_KEY,
             SettingsFormItem {
-                label: fl!("settings-hide-indicator"),
-                value: hide_indicator.to_string(),
+                label: fl!("settings-hide-icon"),
+                value: hide_icon.to_string(),
                 input_type: SettingsFormInputType::CheckBox,
                 validator: Some(ConfigurationValidation::is_valid_boolean),
                 helper_text: None,
             },
-        ),
-        (
-            HIDE_LABEL_SETTING_KEY,
+        );
+        settings.insert(
+            ICON_COLOUR_SETTING_KEY,
             SettingsFormItem {
-                label: fl!("settings-hide-label"),
-                value: hide_label.to_string(),
-                input_type: SettingsFormInputType::CheckBox,
-                validator: Some(ConfigurationValidation::is_valid_boolean),
-                helper_text: None,
-            },
-        ),
-        (
-            LABEL_TEXT_SETTING_KEY,
-            SettingsFormItem {
-                label: fl!("settings-label-text"),
-                value: label_text.clone().unwrap_or_default(),
-                input_type: SettingsFormInputType::String,
-                validator: Some(ConfigurationValidation::is_valid_label_text),
-                helper_text: None,
-            },
-        ),
-        (
-            LABEL_COLOUR_SETTING_KEY,
-            SettingsFormItem {
-                label: fl!("settings-label-colour"),
-                value: label_colour.clone().unwrap_or_default(),
+                label: fl!("settings-icon-colour"),
+                value: icon_colour.unwrap_or_default(),
                 input_type: SettingsFormInputType::ColourPicker,
                 validator: None,
                 helper_text: None,
             },
-        ),
+        );
+    }
+
+    settings.extend([
         (
             UPDATE_INTERVAL_SETTING_KEY,
             SettingsFormItem {
@@ -263,5 +238,7 @@ fn build_shared_settings(
                 helper_text: None,
             },
         ),
-    ])
+    ]);
+
+    settings
 }

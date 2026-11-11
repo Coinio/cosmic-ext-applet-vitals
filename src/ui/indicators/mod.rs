@@ -1,4 +1,8 @@
+use crate::app::AppState;
 use crate::configuration::app_configuration::AppConfiguration;
+use crate::core::app_text_measurements::indicator_line_height;
+use crate::ui::components::svg_icon::SvgIconProps;
+use cosmic::iced::Color;
 
 pub mod disk;
 pub mod network;
@@ -27,4 +31,24 @@ fn format_bytes_per_second(bytes_per_sec: u64, app_config: &AppConfiguration) ->
             format!("{:.1}MB/s", mb_per_second)
         }
     }
+}
+/// One of the app's icons, sized to sit alongside indicator text and tinted with the palette colour named by
+/// `colour_key`. Without a colour the icon keeps its own (white) fill.
+fn themed_icon<'a>(app_state: &'a AppState, icon_key: &str, colour_key: Option<&str>, size: u16) -> SvgIconProps<'a> {
+    SvgIconProps {
+        icon: app_state.app_icons().get(icon_key),
+        size,
+        colour: colour_key
+            .and_then(|key| app_state.app_colours().get(key))
+            .map(|c| Color::new(c.red, c.green, c.blue, c.alpha)),
+    }
+}
+
+/// The line height of the indicator text and the centre of the rendered digits within it, for aligning icons.
+fn text_line_metrics(app_state: &AppState, font_size: u16) -> (u16, Option<f32>) {
+    let line_height = indicator_line_height(font_size);
+    let digit_centre = app_state
+        .app_text_measurements()
+        .digit_centre(font_size, line_height, app_state.indicator_font());
+    (line_height, digit_centre)
 }

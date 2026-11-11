@@ -1,9 +1,8 @@
 use crate::configuration::app_configuration::{
-    DISK_SETTINGS_WINDOW_ID, HIDE_INDICATOR_SETTING_KEY, HIDE_LABEL_SETTING_KEY, LABEL_COLOUR_SETTING_KEY, LABEL_TEXT_SETTING_KEY,
+    DISK_SETTINGS_WINDOW_ID, HIDE_INDICATOR_SETTING_KEY,
     MAX_SAMPLES_SETTING_KEY, UPDATE_INTERVAL_SETTING_KEY,
 };
 use crate::configuration::validation::ConfigurationValidation;
-use crate::core::app_colours::ACCENT_ORANGE;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 use crate::core::settings::SettingsForm;
@@ -13,27 +12,18 @@ use crate::core::settings::SettingsForm;
 pub struct DiskConfiguration {
     /// Whether to hide the CPU indicator from the panel
     pub hide_indicator: bool,
-    /// Whether to hide only the label for this indicator
-    pub hide_label: bool,
     /// The duration between each update interval, i.e. 5 seconds
     pub update_interval: Duration,
     /// The number of samples to keep and average for the final result
     pub max_samples: usize,
-    /// The label colour
-    pub label_colour: Option<String>,
-    /// The indicator label text
-    pub label_text: Option<String>,
 }
 
 impl Default for DiskConfiguration {
     fn default() -> Self {
         Self {
             hide_indicator: false,
-            hide_label: false,
             update_interval: Duration::from_secs(1),
             max_samples: 3,
-            label_colour: Some(ACCENT_ORANGE.to_string()),
-            label_text: Some("DISK".to_string()),
         }
     }
 }
@@ -54,15 +44,6 @@ impl DiskConfiguration {
                     .clone(),
                 self.hide_indicator,
             ),
-            hide_label: ConfigurationValidation::sanitise_boolean_input(
-                settings_form
-                    .values
-                    .get(HIDE_LABEL_SETTING_KEY)
-                    .expect("Hide label missing from settings form options")
-                    .value
-                    .clone(),
-                self.hide_label,
-            ),
             update_interval: ConfigurationValidation::sanitise_interval_input(
                 settings_form
                     .values
@@ -81,23 +62,6 @@ impl DiskConfiguration {
                     .clone(),
                 self.max_samples,
             ),
-            label_colour: Some(
-                settings_form
-                    .values
-                    .get(LABEL_COLOUR_SETTING_KEY)
-                    .expect("Read colour missing from settings form options")
-                    .value
-                    .clone(),
-            ),
-            label_text: Some(ConfigurationValidation::sanitise_label_text(
-                settings_form
-                    .values
-                    .get(LABEL_TEXT_SETTING_KEY)
-                    .expect("Label text missing from settings form options")
-                    .value
-                    .clone(),
-                self.label_text.clone().unwrap_or_default(),
-            )),
         }
     }
 }

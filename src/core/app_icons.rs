@@ -6,6 +6,8 @@ pub const UP_ARROW_ICON: &str = "up-arrow-icon";
 pub const DOWN_ARROW_ICON: &str = "down-arrow-icon";
 pub const READ_ICON: &str = "read-icon";
 pub const WRITE_ICON: &str = "write-icon";
+pub const CPU_ICON: &str = "cpu-icon";
+pub const MEMORY_ICON: &str = "memory-icon";
 
 #[derive(RustEmbed)]
 #[folder = "res/icons/"]
@@ -27,10 +29,12 @@ impl AppIcons {
         Self {
             icons: HashMap::from([
                 (APP_LOGO_ICON, svg_handle("dev.eidolon.cosmic-ext-applet-vitals.svg").into()),
-                (DOWN_ARROW_ICON, svg_handle("arrow-download.svg").into()),
-                (UP_ARROW_ICON, svg_handle("arrow-upload.svg").into()),
+                (DOWN_ARROW_ICON, svg_handle("arrow-down.svg").into()),
+                (UP_ARROW_ICON, svg_handle("arrow-up.svg").into()),
                 (READ_ICON, svg_handle("read.svg").into()),
                 (WRITE_ICON, svg_handle("write.svg").into()),
+                (CPU_ICON, svg_handle("cpu.svg").into()),
+                (MEMORY_ICON, svg_handle("memory.svg").into()),
             ])
         }
     }
