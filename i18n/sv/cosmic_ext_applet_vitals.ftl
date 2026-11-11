@@ -23,5 +23,7 @@ settings-use-iec-units-helper = Växla mellan 1000-baserade SI-enheter (MB, GB) 
 settings-font = Typsnitt
 settings-font-helper = Typsnittet som används av indikatorerna i panelen/dockan. System använder COSMICs gränssnittstypsnitt. Ett typsnitt med fast bredd, till exempel JetBrains Mono, rekommenderas.
 settings-font-system = System
+settings-font-size = Teckenstorlek
+settings-font-size-helper = Detta ändrar teckenstorleken för panel-/dockstorlek '{ $size }'.
 settings-bold-labels = Etiketter i fetstil
 settings-bold-labels-helper = Visa indikatorernas etiketter i fetstil. Typsnitt utan fetstil använder närmaste vikt.

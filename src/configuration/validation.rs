@@ -1,6 +1,7 @@
 use crate::configuration::app_configuration::{
     SENSOR_INTERVAL_MINIMUM_IN_MS, SENSOR_MAX_LABEL_LENGTH, SENSOR_MAX_SAMPLES_MINIMUM,
 };
+use crate::configuration::general::{INDICATOR_FONT_SIZE_MAXIMUM, INDICATOR_FONT_SIZE_MINIMUM};
 use crate::fl;
 use std::cmp;
 use std::time::Duration;
@@ -111,6 +112,41 @@ impl ConfigurationValidation {
         }
 
         new_input.trim().to_string()
+    }
+
+    /// Out of range sizes are clamped, as they can only come from the spin button's bounds or a hand-edited config.
+    pub fn sanitise_font_size(new_input: &str, previous_value: u16) -> u16 {
+        new_input
+            .trim()
+            .parse::<u16>()
+            .map_or(previous_value, |value| {
+                value.clamp(INDICATOR_FONT_SIZE_MINIMUM, INDICATOR_FONT_SIZE_MAXIMUM)
+            })
+    }
+}
+
+#[cfg(test)]
+mod font_size_tests {
+    use crate::configuration::general::{INDICATOR_FONT_SIZE_MAXIMUM, INDICATOR_FONT_SIZE_MINIMUM};
+    use crate::configuration::validation::ConfigurationValidation;
+
+    #[test]
+    fn sanitise_font_size_accepts_values_in_range() {
+        assert_eq!(ConfigurationValidation::sanitise_font_size("16", 14), 16);
+        assert_eq!(ConfigurationValidation::sanitise_font_size(" 20 ", 14), 20);
+    }
+
+    #[test]
+    fn sanitise_font_size_returns_previous_when_not_numeric() {
+        assert_eq!(ConfigurationValidation::sanitise_font_size("abc", 14), 14);
+        assert_eq!(ConfigurationValidation::sanitise_font_size("", 14), 14);
+        assert_eq!(ConfigurationValidation::sanitise_font_size("-1", 14), 14);
+    }
+
+    #[test]
+    fn sanitise_font_size_clamps_to_bounds() {
+        assert_eq!(ConfigurationValidation::sanitise_font_size("1", 14), INDICATOR_FONT_SIZE_MINIMUM);
+        assert_eq!(ConfigurationValidation::sanitise_font_size("500", 14), INDICATOR_FONT_SIZE_MAXIMUM);
     }
 }
 

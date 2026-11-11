@@ -4,6 +4,7 @@ use crate::configuration::app_configuration::{
     AppConfiguration, CPU_SETTINGS_WINDOW_ID, DISK_SETTINGS_WINDOW_ID, GENERAL_SETTINGS_WINDOW_ID,
     MEMORY_SETTINGS_WINDOW_ID, NETWORK_SETTINGS_WINDOW_ID,
 };
+use crate::configuration::general::FontSizeSlot;
 use crate::core::app_colours::AppColours;
 use crate::core::app_fonts::{self, FontOptions};
 use crate::core::app_icons::{AppIcons, APP_LOGO_ICON};
@@ -145,7 +146,7 @@ impl Application for AppState {
             })
             .unwrap_or_default();
 
-        let settings_forms = configuration.settings_form_options();
+        let settings_forms = configuration.settings_form_options(font_size_slot(&core));
         let app_colours = AppColours::from(&core.system_theme().cosmic().palette);
         let app_icons = AppIcons::new();
         let app_text_measurements = AppTextMeasurements::new();
@@ -374,7 +375,7 @@ impl Application for AppState {
     }
 
     fn view(&self) -> Element<'_, Self::Message> {
-        let is_horizontal = matches!(self.core.applet.anchor, PanelAnchor::Top | PanelAnchor::Bottom);
+        let is_horizontal = is_horizontal(&self.core);
 
         let mut elements: Vec<Element<Message>> = Vec::new();
 
@@ -549,7 +550,7 @@ impl AppState {
             .expect("No general settings form configured.");
 
         self.configuration = AppConfiguration {
-            general: self.configuration.general.update(general_settings_form),
+            general: self.configuration.general.update(general_settings_form, font_size_slot(&self.core)),
             memory: self.configuration.memory.update(memory_settings_form),
             cpu: self.configuration.cpu.update(cpu_settings_form),
             network: self.configuration.network.update(network_settings_form),
@@ -573,7 +574,7 @@ impl AppState {
             });
 
             self.configuration = loaded;
-            self.settings_forms = self.configuration.settings_form_options();
+            self.settings_forms = self.configuration.settings_form_options(font_size_slot(&self.core));
             self.settings_nav = build_settings_nav(&self.settings_forms);
             self.refresh_indicator_font();
         } else {
@@ -592,31 +593,8 @@ impl AppState {
     }
 
     pub fn font_size(&self, horizontal: bool) -> u16 {
-        let configuration = self.configuration();
-
-        match self.core.applet.size {
-            cosmic::applet::Size::PanelSize(PanelSize::XS) if horizontal => {
-                configuration.general.horizontal_font_size_xs
-            }
-            cosmic::applet::Size::PanelSize(PanelSize::XS) => configuration.general.vertical_font_size_xs,
-            cosmic::applet::Size::PanelSize(PanelSize::S) if horizontal => {
-                configuration.general.horizontal_font_size_sm
-            }
-            cosmic::applet::Size::PanelSize(PanelSize::S) => configuration.general.vertical_font_size_sm,
-            cosmic::applet::Size::PanelSize(PanelSize::M) if horizontal => {
-                configuration.general.horizontal_font_size_md
-            }
-            cosmic::applet::Size::PanelSize(PanelSize::M) => configuration.general.vertical_font_size_md,
-            cosmic::applet::Size::PanelSize(PanelSize::L) if horizontal => {
-                configuration.general.horizontal_font_size_lg
-            }
-            cosmic::applet::Size::PanelSize(PanelSize::L) => configuration.general.vertical_font_size_lg,
-            cosmic::applet::Size::PanelSize(PanelSize::XL) if horizontal => {
-                configuration.general.horizontal_font_size_xl
-            }
-            cosmic::applet::Size::PanelSize(PanelSize::XL) => configuration.general.vertical_font_size_xl,
-            _ => DEFAULT_INDICATOR_FONT_SIZE,
-        }
+        FontSizeSlot::from_applet_size(&self.core.applet.size, horizontal)
+            .map_or(DEFAULT_INDICATOR_FONT_SIZE, |slot| self.configuration.general.font_size(slot))
     }
 
     pub fn icon_size(&self) -> u16 {
@@ -629,6 +607,15 @@ impl AppState {
             _ => DEFAULT_INDICATOR_ICON_SIZE,
         }
     }
+}
+
+fn is_horizontal(core: &Core) -> bool {
+    matches!(core.applet.anchor, PanelAnchor::Top | PanelAnchor::Bottom)
+}
+
+/// The font size slot for the panel/dock the applet is running in, which is the one the settings form edits.
+fn font_size_slot(core: &Core) -> Option<FontSizeSlot> {
+    FontSizeSlot::from_applet_size(&core.applet.size, is_horizontal(core))
 }
 
 /// Build the settings window sidebar, with one entry per settings form. The first entry is selected.

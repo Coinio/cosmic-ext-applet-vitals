@@ -3,6 +3,7 @@ use crate::core::app_colours::{AppColours, BRIGHT_RED, EXT_WARM_GREY};
 use crate::core::settings::{SettingsForm, SettingsFormInputType};
 use crate::ui::components::form_checkbox_input::{form_checkbox_input, FormCheckboxInputProps};
 use crate::ui::components::form_font_dropdown_input::{form_font_dropdown_input, FormFontDropdownInputProps};
+use crate::ui::components::form_spin_button_input::{form_spin_button_input, FormSpinButtonInputProps};
 use crate::ui::components::form_text_input::{form_text_input, FormTextInputProps};
 use crate::ui::components::form_theme_colour_picker_input::{
     form_theme_colour_picker_input, FormThemeColourPickerInputProps,
@@ -92,6 +93,25 @@ impl SettingsForm {
                         value: &settings_form_item.value,
                         form_value_key,
                         options: app_state.font_options(),
+                        helper_text: settings_form_item.helper_text.clone(),
+                        helper_text_color: helper_color,
+                    });
+
+                    column = column.add(el);
+                }
+                SettingsFormInputType::SpinButton { min, max } => {
+                    let helper_color: Color = app_state
+                        .app_colours()
+                        .get(EXT_WARM_GREY)
+                        .map_or(Color::WHITE, |c| Color::new(c.red, c.green, c.blue, c.alpha));
+
+                    let el = form_spin_button_input(FormSpinButtonInputProps {
+                        settings_window_id: self.settings_window_id,
+                        label: settings_form_item.label.clone(),
+                        value: settings_form_item.value.trim().parse::<u16>().unwrap_or(min),
+                        min,
+                        max,
+                        form_value_key,
                         helper_text: settings_form_item.helper_text.clone(),
                         helper_text_color: helper_color,
                     });

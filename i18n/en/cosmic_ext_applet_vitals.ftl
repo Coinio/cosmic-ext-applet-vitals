@@ -23,5 +23,7 @@ settings-use-iec-units-helper = Toggle between 1000-based SI units (MB, GB) and 
 settings-font = Font
 settings-font-helper = The font used by the indicators in the panel/dock. System uses the COSMIC interface font. A monospaced font, such as JetBrains Mono, is recommended.
 settings-font-system = System
+settings-font-size = Font Size
+settings-font-size-helper = This edits the font size for panel / dock size '{ $size }'.
 settings-bold-labels = Bold Labels
 settings-bold-labels-helper = Show the indicator labels in bold. Fonts without a bold style will use their nearest weight.

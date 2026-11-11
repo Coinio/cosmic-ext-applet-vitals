@@ -1,6 +1,6 @@
 use crate::configuration::cpu::CpuConfiguration;
 use crate::configuration::disk::DiskConfiguration;
-use crate::configuration::general::GeneralConfiguration;
+use crate::configuration::general::{FontSizeSlot, GeneralConfiguration};
 use crate::configuration::memory::MemoryConfiguration;
 use crate::configuration::network::NetworkConfiguration;
 use crate::core::settings::SettingsForm;
@@ -29,6 +29,7 @@ pub const MAX_SAMPLES_SETTING_KEY: &'static str = "settings-max-samples";
 pub const FIX_INDICATOR_SIZE_SETTING_KEY: &'static str = "settings-fix-indicator-size";
 pub const USE_IEC_UNITS_SETTING_KEY: &'static str = "settings-use-iec-units";
 pub const FONT_SETTING_KEY: &'static str = "settings-font";
+pub const FONT_SIZE_SETTING_KEY: &'static str = "settings-font-size";
 pub const BOLD_LABELS_SETTING_KEY: &'static str = "settings-bold-labels";
 
 #[derive(Debug, Default, Clone, CosmicConfigEntry, Eq, PartialEq)]
@@ -42,9 +43,13 @@ pub struct AppConfiguration {
 }
 
 impl AppConfiguration {
-    pub fn settings_form_options(&self) -> BTreeMap<window::Id, SettingsForm> {
+    /// `font_size_slot` is the panel/dock size the applet is running in, whose font size the general form edits.
+    pub fn settings_form_options(&self, font_size_slot: Option<FontSizeSlot>) -> BTreeMap<window::Id, SettingsForm> {
         BTreeMap::from([
-            (GENERAL_SETTINGS_WINDOW_ID.clone(), SettingsForm::from(&self.general)),
+            (
+                GENERAL_SETTINGS_WINDOW_ID.clone(),
+                SettingsForm::from_general(&self.general, font_size_slot),
+            ),
             (CPU_SETTINGS_WINDOW_ID.clone(), SettingsForm::from(&self.cpu)),
             (MEMORY_SETTINGS_WINDOW_ID.clone(), SettingsForm::from(&self.memory)),
             (NETWORK_SETTINGS_WINDOW_ID.clone(), SettingsForm::from(&self.network)),

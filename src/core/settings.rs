@@ -1,10 +1,12 @@
 use std::time::Duration;
 use cosmic::iced::window;
 use indexmap::IndexMap;
-use crate::configuration::app_configuration::{CPU_SETTINGS_WINDOW_ID, DISK_SETTINGS_WINDOW_ID, GENERAL_SETTINGS_WINDOW_ID, HIDE_INDICATOR_SETTING_KEY, HIDE_LABEL_SETTING_KEY, LABEL_COLOUR_SETTING_KEY, LABEL_TEXT_SETTING_KEY, MAX_SAMPLES_SETTING_KEY, MEMORY_SETTINGS_WINDOW_ID, NETWORK_SETTINGS_WINDOW_ID, UPDATE_INTERVAL_SETTING_KEY, FIX_INDICATOR_SIZE_SETTING_KEY, FONT_SETTING_KEY, BOLD_LABELS_SETTING_KEY};
+use crate::configuration::app_configuration::{CPU_SETTINGS_WINDOW_ID, DISK_SETTINGS_WINDOW_ID, GENERAL_SETTINGS_WINDOW_ID, HIDE_INDICATOR_SETTING_KEY, HIDE_LABEL_SETTING_KEY, LABEL_COLOUR_SETTING_KEY, LABEL_TEXT_SETTING_KEY, MAX_SAMPLES_SETTING_KEY, MEMORY_SETTINGS_WINDOW_ID, NETWORK_SETTINGS_WINDOW_ID, UPDATE_INTERVAL_SETTING_KEY, FIX_INDICATOR_SIZE_SETTING_KEY, FONT_SETTING_KEY, FONT_SIZE_SETTING_KEY, BOLD_LABELS_SETTING_KEY};
 use crate::configuration::cpu::CpuConfiguration;
 use crate::configuration::disk::DiskConfiguration;
-use crate::configuration::general::GeneralConfiguration;
+use crate::configuration::general::{
+    FontSizeSlot, GeneralConfiguration, INDICATOR_FONT_SIZE_MAXIMUM, INDICATOR_FONT_SIZE_MINIMUM,
+};
 use crate::configuration::memory::MemoryConfiguration;
 use crate::configuration::network::NetworkConfiguration;
 use crate::configuration::validation::ConfigurationValidation;
@@ -23,6 +25,8 @@ pub enum SettingsFormInputType {
     ColourPicker,
     /// The value is an encoded `IndicatorFont`.
     FontPicker,
+    /// The value is an integer within the inclusive bounds.
+    SpinButton { min: u16, max: u16 },
 }
 
 #[derive(Debug, Clone)]
@@ -120,8 +124,9 @@ impl From<&DiskConfiguration> for SettingsForm {
     }
 }
 
-impl From<&GeneralConfiguration> for SettingsForm {
-    fn from(config: &GeneralConfiguration) -> SettingsForm {
+impl SettingsForm {
+    /// The font size field is only shown when the applet is in a named panel/dock size, and edits that size only.
+    pub fn from_general(config: &GeneralConfiguration, font_size_slot: Option<FontSizeSlot>) -> SettingsForm {
         let mut values: IndexMap<&'static str, SettingsFormItem> = IndexMap::new();
         values.insert(
             FONT_SETTING_KEY,
@@ -133,6 +138,21 @@ impl From<&GeneralConfiguration> for SettingsForm {
                 helper_text: Some(fl!("settings-font-helper")),
             },
         );
+        if let Some(slot) = font_size_slot {
+            values.insert(
+                FONT_SIZE_SETTING_KEY,
+                SettingsFormItem {
+                    label: fl!("settings-font-size"),
+                    value: config.font_size(slot).to_string(),
+                    input_type: SettingsFormInputType::SpinButton {
+                        min: INDICATOR_FONT_SIZE_MINIMUM,
+                        max: INDICATOR_FONT_SIZE_MAXIMUM,
+                    },
+                    validator: None,
+                    helper_text: Some(fl!("settings-font-size-helper", size = slot.size.label())),
+                },
+            );
+        }
         values.insert(
             BOLD_LABELS_SETTING_KEY,
             SettingsFormItem {
