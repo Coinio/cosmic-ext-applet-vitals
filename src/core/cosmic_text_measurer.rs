@@ -1,7 +1,7 @@
 use cosmic::iced;
-use cosmic::iced_renderer::graphics::text::cosmic_text;
-use cosmic::iced_renderer::graphics::text::cosmic_text::{Attrs, Buffer, Metrics, Shaping, SwashCache};
-use cosmic::iced_renderer::graphics::text::font_system;
+use cosmic::iced::advanced::graphics::text::cosmic_text;
+use cosmic::iced::advanced::graphics::text::cosmic_text::{Attrs, Buffer, Metrics, Shaping, SwashCache};
+use cosmic::iced::advanced::graphics::text::font_system;
 
 /// Uses iced's global font system so measurements match rendering.
 #[derive(Default)]
@@ -17,7 +17,8 @@ impl CosmicTextMeasurer {
         let font_system = font_system.raw();
 
         let mut buffer = Buffer::new(font_system, metrics);
-        buffer.set_text(font_system, text, &attrs(font), Shaping::Advanced, None);
+        buffer.set_text(text, &attrs(font), Shaping::Advanced, None);
+        buffer.shape_until_scroll(font_system, false);
 
         buffer
             .lines
@@ -37,7 +38,7 @@ impl CosmicTextMeasurer {
         let font_system = font_system.raw();
 
         let mut buffer = Buffer::new(font_system, metrics);
-        buffer.set_text(font_system, text, &attrs(font), Shaping::Advanced, None);
+        buffer.set_text(text, &attrs(font), Shaping::Advanced, None);
         buffer.shape_until_scroll(font_system, false);
 
         let mut swash_cache = SwashCache::new();

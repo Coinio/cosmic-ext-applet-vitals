@@ -28,13 +28,13 @@ pub fn form_text_input<'a>(props: FormTextInputProps<'a>) -> Element<'a, Message
         helper_text_color,
     } = props;
 
-    let input_id = cosmic::iced::widget::text_input::Id::new(format!(
+    let input_id = cosmic::widget::Id::new(format!(
         "settings_input::{:?}::{}",
         settings_window_id, form_value_key
     ));
 
     let text_input = widget::text_input(fl!("settings-empty"), value)
-        .id(input_id.into())
+        .id(input_id)
         .on_input(move |new_value| {
             Message::SettingsFormUpdate(SettingsFormEvent::StringFieldUpdated(
                 SettingsFormEventValue {
@@ -53,7 +53,7 @@ pub fn form_text_input<'a>(props: FormTextInputProps<'a>) -> Element<'a, Message
         Err(error_text) => text_input.width(150).error(error_text.clone()),
     };
 
-    let mut column = widget::column().spacing(6);
+    let mut column = widget::Column::new().spacing(6);
     column = column.push(settings::item(label, field));
 
     if let Some(helper) = helper_text {

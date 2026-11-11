@@ -37,7 +37,7 @@ pub fn form_spin_button_input<'a>(props: FormSpinButtonInputProps) -> Element<'a
         }))
     });
 
-    let mut column = widget::column().spacing(6);
+    let mut column = widget::Column::new().spacing(6);
     column = column.push(settings::item(label, spin_button));
 
     if let Some(helper) = helper_text {

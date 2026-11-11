@@ -37,7 +37,7 @@ pub fn form_font_dropdown_input<'a>(props: FormFontDropdownInputProps<'a>) -> El
         }))
     });
 
-    let mut column = widget::column().spacing(6);
+    let mut column = widget::Column::new().spacing(6);
     column = column.push(settings::item(label, dropdown));
 
     if let Some(helper) = helper_text {

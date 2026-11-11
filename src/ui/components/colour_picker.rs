@@ -106,7 +106,7 @@ pub fn colour_picker<'a>(state: &'a ColourPickerState) -> Element<'a, Message> {
     })
     .height(16);
 
-    let preview = widget::container(widget::Space::new(32, 32)).class(cosmic::theme::Container::custom(move |theme| {
+    let preview = widget::container(widget::Space::new().width(32).height(32)).class(cosmic::theme::Container::custom(move |theme| {
         widget::container::Style {
             background: Some(Background::Color(colour)),
             border: cosmic::iced::Border {
@@ -123,20 +123,20 @@ pub fn colour_picker<'a>(state: &'a ColourPickerState) -> Element<'a, Message> {
         .on_submit(move |_| event(ColourPickerEvent::Apply))
         .width(Length::Fixed(120.0));
 
-    let buttons = widget::row()
+    let buttons = widget::Row::new()
         .spacing(8)
         .push(widget::button::standard(fl!("settings-colour-picker-cancel")).on_press(event(ColourPickerEvent::Cancel)))
         .push(widget::button::suggested(fl!("settings-colour-picker-save")).on_press(event(ColourPickerEvent::Apply)));
 
-    let controls = widget::row()
+    let controls = widget::Row::new()
         .spacing(8)
         .align_y(Alignment::Center)
         .push(preview)
         .push(input)
-        .push(widget::horizontal_space())
+        .push(widget::space::horizontal())
         .push(buttons);
 
-    widget::column()
+    widget::Column::new()
         .spacing(12)
         .padding(12)
         .max_width(400)

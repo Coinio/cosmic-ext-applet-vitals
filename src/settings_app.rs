@@ -21,7 +21,7 @@ use crate::ui::components::colour_picker::{ColourPickerEvent, ColourPickerState}
 use cosmic::app::{Core, Task};
 use cosmic::cosmic_config::{Config, CosmicConfigEntry};
 use cosmic::iced::{window, Length, Limits, Size};
-use cosmic::iced_widget::row;
+use cosmic::iced::widget::row;
 use cosmic::widget::{container, nav_bar, scrollable};
 use cosmic::{Application, Element};
 use log::{error, info};

@@ -55,7 +55,7 @@ impl DiskStats {
                 digit_centre,
                 value_width: max_text_width,
                 horizontal,
-                spacing: app_state.core().applet.suggested_padding(true),
+                spacing: app_state.core().applet.suggested_padding(true).1,
                 icon_spacing: 2,
                 values,
             },

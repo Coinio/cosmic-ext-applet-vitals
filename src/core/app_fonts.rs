@@ -1,9 +1,8 @@
 use crate::configuration::general::IndicatorFont;
 use crate::fl;
-use cosmic::config::FontConfig;
+use cosmic::cosmic_theme::FontConfig;
 use cosmic::font::Font;
-use cosmic::iced::font::{Stretch, Style, Weight};
-use cosmic::iced_renderer::graphics::text::font_system;
+use cosmic::iced::advanced::graphics::text::font_system;
 use log::error;
 use std::collections::BTreeSet;
 use std::sync::Arc;
@@ -15,13 +14,7 @@ pub fn resolve_font(choice: &IndicatorFont, interface_font: &Font) -> Font {
     match choice {
         IndicatorFont::System => *interface_font,
         // FontConfig interns the family name, giving iced its &'static str without leaking on every reload.
-        IndicatorFont::Family(family) => FontConfig {
-            family: family.clone(),
-            weight: Weight::Normal,
-            stretch: Stretch::Normal,
-            style: Style::Normal,
-        }
-        .into(),
+        IndicatorFont::Family(family) => FontConfig::new(family.clone()).into(),
     }
 }
 
@@ -90,6 +83,7 @@ fn sort_families(families: &mut [String]) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use cosmic::iced::font::Weight;
 
     #[test]
     fn font_options_start_with_system() {

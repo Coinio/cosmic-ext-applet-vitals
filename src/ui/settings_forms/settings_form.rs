@@ -9,13 +9,13 @@ use crate::ui::components::form_theme_colour_picker_input::{
     form_theme_colour_picker_input, FormThemeColourPickerInputProps,
 };
 use cosmic::iced::Color;
-use cosmic::iced_widget::{container, Container};
+use cosmic::iced::widget::{container, Container};
 use cosmic::{widget, Theme};
 
 impl SettingsForm {
     pub fn draw<'a>(&'a self, app_state: &'a SettingsApp) -> Container<'a, Message, Theme> {
         let theme = app_state.core().system_theme().cosmic();
-        let mut column = widget::list_column().padding(2).spacing(0).divider_padding(2);
+        let mut column = widget::list_column().divider_padding(2);
 
         column = column.add(widget::text::title4(self.title.clone()));
 
@@ -102,6 +102,6 @@ impl SettingsForm {
             };
         }
 
-        container(column)
+        container(column).padding(2)
     }
 }

@@ -2,7 +2,7 @@ use crate::app::Message;
 use crate::ui::components::indicator_value::{indicator_value, IndicatorValueProps};
 use crate::ui::components::svg_icon::{svg_icon, SvgIconProps};
 use cosmic::iced::Alignment;
-use cosmic::iced_widget::Row;
+use cosmic::iced::widget::Row;
 use cosmic::widget::Column;
 use cosmic::{widget, Element};
 

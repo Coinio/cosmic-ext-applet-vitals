@@ -17,12 +17,11 @@ use crate::settings_app::SETTINGS_FLAG;
 use crate::ui::components::no_indicator::{no_indicators_content, NoIndicatorProps};
 use cosmic::app::{Core, Task};
 use cosmic::applet::cosmic_panel_config::{PanelAnchor, PanelSize};
-use cosmic::config::{CosmicTk, COSMIC_TK};
 use cosmic::cosmic_config::CosmicConfigEntry;
 use cosmic::font::Font;
 use cosmic::iced::Alignment;
 use cosmic::iced::Subscription;
-use cosmic::iced_widget::{Column, Row};
+use cosmic::iced::widget::{Column, Row};
 use cosmic::widget;
 use cosmic::widget::{autosize, container, divider, Id};
 use cosmic::{cosmic_config, Application, Element};
@@ -90,8 +89,6 @@ pub enum Message {
     StatsUpdate(StatsUpdate),
     /// The configuration file was changed externally
     ConfigFileChanged(AppConfiguration),
-    /// The COSMIC DE theme was changed
-    ThemeChanged(CosmicTk),
 }
 
 impl Application for AppState {
@@ -122,10 +119,7 @@ impl Application for AppState {
         let app_icons = AppIcons::new();
         let app_text_measurements = AppTextMeasurements::new();
 
-        let interface_font: Font = COSMIC_TK
-            .read()
-            .map(|cosmic_tk| cosmic_tk.interface_font.clone().into())
-            .unwrap_or_default();
+        let interface_font = cosmic::font::default();
         let indicator_font = app_fonts::resolve_font(&configuration.general.font, &interface_font);
 
         let app = AppState {
@@ -148,12 +142,6 @@ impl Application for AppState {
             self.core()
                 .watch_config::<AppConfiguration>(Self::APP_ID)
                 .map(|update| Message::ConfigFileChanged(update.config)),
-        );
-
-        subscriptions.push(
-            self.core()
-                .watch_config::<CosmicTk>("com.system76.CosmicTk")
-                .map(|tk| Message::ThemeChanged(tk.config)),
         );
 
         Subscription::batch(subscriptions)
@@ -250,11 +238,6 @@ impl Application for AppState {
                 self.refresh_indicator_font();
                 return cosmic::task::message(Message::StartMonitoring);
             }
-            Message::ThemeChanged(cosmic_tk) => {
-                self.interface_font = cosmic_tk.interface_font.into();
-                self.refresh_indicator_font();
-                self.app_text_measurements.reset();
-            }
         }
         Task::none()
     }
@@ -299,13 +282,12 @@ impl Application for AppState {
             Column::from_vec(elements).align_x(Alignment::Center).into()
         };
 
+        // The minor-axis padding, which is what `suggested_padding` returned before it also reported the major axis.
+        let (_, applet_padding) = self.core.applet.suggested_padding(false);
         let padding = if is_horizontal {
-            [
-                self.core.applet.suggested_padding(false),
-                self.core.applet.suggested_padding(false),
-            ]
+            [applet_padding, applet_padding]
         } else {
-            [self.core.applet.suggested_padding(false), 1]
+            [applet_padding, 1]
         };
 
         let button = widget::button::custom(wrapper)
@@ -316,8 +298,23 @@ impl Application for AppState {
         autosize::autosize(container(button), AUTOSIZE_MAIN_ID.clone()).into()
     }
 
-    fn style(&self) -> Option<cosmic::iced_runtime::Appearance> {
+    fn style(&self) -> Option<cosmic::iced::theme::Style> {
         Some(cosmic::applet::style())
+    }
+
+    /// The interface font comes from the theme, so it's refreshed here when the theme or theme mode changes.
+    fn system_theme_update(
+        &mut self,
+        _keys: &[&'static str],
+        new_theme: &cosmic::cosmic_theme::Theme,
+    ) -> Task<Self::Message> {
+        let interface_font = Font::from(&new_theme.font);
+        if interface_font != self.interface_font {
+            self.interface_font = interface_font;
+            self.refresh_indicator_font();
+            self.app_text_measurements.reset();
+        }
+        Task::none()
     }
 }
 

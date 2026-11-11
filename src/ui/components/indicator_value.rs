@@ -1,6 +1,6 @@
 use crate::app::Message;
 use cosmic::iced::Alignment;
-use cosmic::iced_core::text::LineHeight;
+use cosmic::iced::core::text::LineHeight;
 use cosmic::{widget, Element};
 use cosmic::font::Font;
 

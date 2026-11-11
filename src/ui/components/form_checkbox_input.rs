@@ -23,7 +23,7 @@ pub fn form_checkbox_input<'a>(props: FormCheckboxInputProps) -> Element<'a, Mes
         helper_text_color,
     } = props;
 
-    let checkbox_input = widget::checkbox("", value).on_toggle(move |new_value| {
+    let checkbox_input = widget::checkbox(value).on_toggle(move |new_value| {
         Message::SettingsFormUpdate(SettingsFormEvent::CheckBoxUpdated(SettingsFormEventValue {
             settings_window_id,
             form_value_key,
@@ -31,7 +31,7 @@ pub fn form_checkbox_input<'a>(props: FormCheckboxInputProps) -> Element<'a, Mes
         }))
     });
 
-    let mut column = widget::column().spacing(6);
+    let mut column = widget::Column::new().spacing(6);
     column = column.push(settings::item(label, checkbox_input));
 
     if let Some(helper) = helper_text {

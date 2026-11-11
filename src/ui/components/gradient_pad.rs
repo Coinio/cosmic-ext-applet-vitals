@@ -1,7 +1,7 @@
-use cosmic::iced_core::renderer::Quad;
-use cosmic::iced_core::widget::{tree, Tree};
-use cosmic::iced_core::{
-    event, layout, mouse, renderer, Background, Border, Clipboard, Color, Event, Layout, Length, Point, Rectangle,
+use cosmic::iced::core::renderer::Quad;
+use cosmic::iced::core::widget::{tree, Tree};
+use cosmic::iced::core::{
+    layout, mouse, renderer, Background, Border, Clipboard, Color, Event, Layout, Length, Point, Rectangle,
     Shadow, Shell, Size, Widget,
 };
 use cosmic::{Element, Renderer, Theme};
@@ -70,7 +70,7 @@ impl<Message> Widget<Message, Theme, Renderer> for GradientPad<'_, Message> {
         Size::new(self.width, self.height)
     }
 
-    fn layout(&self, _tree: &mut Tree, _renderer: &Renderer, limits: &layout::Limits) -> layout::Node {
+    fn layout(&mut self, _tree: &mut Tree, _renderer: &Renderer, limits: &layout::Limits) -> layout::Node {
         layout::atomic(limits, self.width, self.height)
     }
 
@@ -84,7 +84,7 @@ impl<Message> Widget<Message, Theme, Renderer> for GradientPad<'_, Message> {
         _cursor: mouse::Cursor,
         _viewport: &Rectangle,
     ) {
-        use cosmic::iced_core::Renderer as _;
+        use cosmic::iced::core::Renderer as _;
 
         let bounds = layout.bounds();
         for layer in &self.layers {
@@ -96,6 +96,7 @@ impl<Message> Widget<Message, Theme, Renderer> for GradientPad<'_, Message> {
                         ..Default::default()
                     },
                     shadow: Shadow::default(),
+                    ..Default::default()
                 },
                 *layer,
             );
@@ -121,6 +122,7 @@ impl<Message> Widget<Message, Theme, Renderer> for GradientPad<'_, Message> {
                     color: Color::from_rgba(0.0, 0.0, 0.0, 0.5),
                 },
                 shadow: Shadow::default(),
+                ..Default::default()
             },
             Color::TRANSPARENT,
         );
@@ -133,22 +135,23 @@ impl<Message> Widget<Message, Theme, Renderer> for GradientPad<'_, Message> {
                     color: Color::WHITE,
                 },
                 shadow: Shadow::default(),
+                ..Default::default()
             },
             self.handle_fill,
         );
     }
 
-    fn on_event(
+    fn update(
         &mut self,
         tree: &mut Tree,
-        event: Event,
+        event: &Event,
         layout: Layout<'_>,
         cursor: mouse::Cursor,
         _renderer: &Renderer,
         _clipboard: &mut dyn Clipboard,
         shell: &mut Shell<'_, Message>,
         _viewport: &Rectangle,
-    ) -> event::Status {
+    ) {
         let state: &mut State = tree.state.downcast_mut();
         let bounds = layout.bounds();
 
@@ -157,23 +160,21 @@ impl<Message> Widget<Message, Theme, Renderer> for GradientPad<'_, Message> {
                 if let Some(position) = cursor.position_over(bounds) {
                     state.dragging = true;
                     self.publish(bounds, position, shell);
-                    return event::Status::Captured;
+                    shell.capture_event();
                 }
             }
             Event::Mouse(mouse::Event::CursorMoved { position }) if state.dragging => {
-                self.publish(bounds, position, shell);
-                return event::Status::Captured;
+                self.publish(bounds, *position, shell);
+                shell.capture_event();
             }
             Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Left) | mouse::Event::CursorLeft)
                 if state.dragging =>
             {
                 state.dragging = false;
-                return event::Status::Captured;
+                shell.capture_event();
             }
             _ => {}
         }
-
-        event::Status::Ignored
     }
 
     fn mouse_interaction(

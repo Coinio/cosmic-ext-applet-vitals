@@ -34,7 +34,7 @@ pub fn form_theme_colour_picker_input<'a>(props: FormThemeColourPickerInputProps
     } = props;
 
     let selected = AppColour::parse(value);
-    let mut row = widget::row().spacing(8);
+    let mut row = widget::Row::new().spacing(8);
 
     for preset in PRESET_COLOURS {
         let fill = move |theme: &Theme| Background::Color(preset.resolve(theme.cosmic()));
@@ -67,7 +67,7 @@ pub fn form_theme_colour_picker_input<'a>(props: FormThemeColourPickerInputProps
         fl!("settings-colour-custom"),
     ));
 
-    let mut column = widget::column().spacing(8);
+    let mut column = widget::Column::new().spacing(8);
     column = column.push(widget::text(label));
     if let Some(helper) = helper_text {
         column = column.push(
@@ -90,7 +90,7 @@ fn swatch<'a>(fill: impl Fn(&Theme) -> Background + Copy + 'static, selected: bo
         background: Some(fill(theme)),
         text_color: None,
         border_radius: Radius::new(3.0),
-        border_color: if selected { theme.cosmic().background.on.into() } else { Color::TRANSPARENT },
+        border_color: if selected { theme.cosmic().background(theme.transparent).on.into() } else { Color::TRANSPARENT },
         border_width: if selected { 3.0 } else { 0.0 },
         ..Default::default()
     };
