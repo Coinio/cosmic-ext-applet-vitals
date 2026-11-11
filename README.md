@@ -24,6 +24,7 @@ for those fighting with iced/libcosmic, etc.
   * Label Colours - The colours can be selected from the current theme libcosmic palette
   * Label Text - The label text for each monitor
   * Switch between SI and IEC units
+  * Font - Uses the bundled JetBrains Mono by default, or switch to the COSMIC system font or any installed font
 
 ## Screenshots
 
@@ -61,3 +62,8 @@ sudo just install
 ```
 
 Then you can add the applet to the panel / dock as usual.
+
+## Fonts
+
+This applet bundles [JetBrains Mono](https://github.com/JetBrains/JetBrainsMono), which is licensed under the
+SIL Open Font License 1.1. See [res/fonts/JetBrainsMono-OFL.txt](res/fonts/JetBrainsMono-OFL.txt).

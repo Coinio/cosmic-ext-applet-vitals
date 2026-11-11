@@ -5,6 +5,7 @@ use crate::configuration::app_configuration::{
     MEMORY_SETTINGS_WINDOW_ID, NETWORK_SETTINGS_WINDOW_ID,
 };
 use crate::core::app_colours::AppColours;
+use crate::core::app_fonts::{self, FontOptions};
 use crate::core::app_icons::{AppIcons, APP_LOGO_ICON};
 use crate::core::app_text_measurements::AppTextMeasurements;
 use crate::core::settings::{SettingsForm, SettingsFormEvent};
@@ -53,8 +54,10 @@ pub struct AppState {
     core: Core,
     /// The cancellation token to stop the status updates
     monitor_cancellation_token: Option<CancellationToken>,
-    /// The active system font
-    active_interface_font: Font,
+    interface_font: Font,
+    indicator_font: Font,
+    /// Only populated while the settings window is open.
+    font_options: FontOptions,
     /// The colours available to the application
     app_colours: AppColours,
     /// The icons available to the application
@@ -145,12 +148,14 @@ impl Application for AppState {
         let app_colours = AppColours::from(&core.system_theme().cosmic().palette);
         let app_icons = AppIcons::new();
         let app_text_measurements = AppTextMeasurements::new();
-        let active_interface_font: Font = COSMIC_TK
+
+        // Must happen before anything is rendered or measured.
+        app_fonts::load_embedded_fonts();
+        let interface_font: Font = COSMIC_TK
             .read()
-            .expect("No COSMIC_TK configuration found")
-            .interface_font
-            .clone()
-            .into();
+            .map(|cosmic_tk| cosmic_tk.interface_font.clone().into())
+            .unwrap_or_default();
+        let indicator_font = app_fonts::resolve_font(&configuration.general.font, &interface_font);
 
         let settings_nav = build_settings_nav(&settings_forms);
 
@@ -158,7 +163,8 @@ impl Application for AppState {
             core,
             settings_forms,
             settings_nav,
-            active_interface_font,
+            interface_font,
+            indicator_font,
             app_colours,
             app_icons,
             app_text_measurements,
@@ -184,7 +190,7 @@ impl Application for AppState {
 
         subscriptions.push(
             self.core()
-                .watch_config("com.system76.CosmicTk")
+                .watch_config::<CosmicTk>("com.system76.CosmicTk")
                 .map(|tk| Message::ThemeChanged(tk.config)),
         );
 
@@ -202,6 +208,7 @@ impl Application for AppState {
 
                 // Ensure the configuration is up to date when we open the settings form.
                 self.refresh_configuration_from_disk();
+                self.font_options = FontOptions::new(&self.configuration.general.font);
 
                 // Every message rebuilds and redraws all open windows, so pause the monitors while the
                 // settings window is open. They are restarted with the new configuration when it closes.
@@ -237,6 +244,7 @@ impl Application for AppState {
                 if self.settings_window == Some(id) {
                     info!("Closing settings window");
                     self.settings_window = None;
+                    self.font_options = FontOptions::default();
                     self.save_configuration();
                     return cosmic::task::message(Message::StartMonitoring);
                 }
@@ -334,6 +342,7 @@ impl Application for AppState {
             }
             Message::ConfigFileChanged(configuration) => {
                 self.configuration = configuration;
+                self.refresh_indicator_font();
                 return cosmic::task::message(Message::StartMonitoring);
             }
             Message::SettingsFormUpdate(settings_form_event) => {
@@ -355,7 +364,8 @@ impl Application for AppState {
                 self.update_configuration();
             }
             Message::ThemeChanged(cosmic_tk) => {
-                self.active_interface_font = cosmic_tk.interface_font.clone().into();
+                self.interface_font = cosmic_tk.interface_font.into();
+                self.refresh_indicator_font();
                 self.app_text_measurements.reset();
             }
         }
@@ -492,8 +502,11 @@ impl AppState {
     pub fn app_text_measurements(&self) -> &AppTextMeasurements {
         &self.app_text_measurements
     }
-    pub fn active_interface_font(&self) -> &Font {
-        &self.active_interface_font
+    pub fn indicator_font(&self) -> &Font {
+        &self.indicator_font
+    }
+    pub fn font_options(&self) -> &FontOptions {
+        &self.font_options
     }
 
     fn stop_monitoring(&mut self) {
@@ -538,7 +551,13 @@ impl AppState {
             network: self.configuration.network.update(network_settings_form),
             disk: self.configuration.disk.update(disk_settings_form),
             ..Default::default()
-        }
+        };
+
+        self.refresh_indicator_font();
+    }
+
+    fn refresh_indicator_font(&mut self) {
+        self.indicator_font = app_fonts::resolve_font(&self.configuration.general.font, &self.interface_font);
     }
 
     fn refresh_configuration_from_disk(&mut self) {
@@ -551,6 +570,7 @@ impl AppState {
             self.configuration = loaded;
             self.settings_forms = self.configuration.settings_form_options();
             self.settings_nav = build_settings_nav(&self.settings_forms);
+            self.refresh_indicator_font();
         } else {
             error!("Failed to create config context for reload");
         }

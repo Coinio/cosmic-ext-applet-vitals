@@ -2,6 +2,7 @@ use crate::app::{AppState, Message};
 use crate::core::app_colours::{AppColours, BRIGHT_RED, EXT_WARM_GREY};
 use crate::core::settings::{SettingsForm, SettingsFormInputType};
 use crate::ui::components::form_checkbox_input::{form_checkbox_input, FormCheckboxInputProps};
+use crate::ui::components::form_font_dropdown_input::{form_font_dropdown_input, FormFontDropdownInputProps};
 use crate::ui::components::form_text_input::{form_text_input, FormTextInputProps};
 use crate::ui::components::form_theme_colour_picker_input::{
     form_theme_colour_picker_input, FormThemeColourPickerInputProps,
@@ -11,7 +12,7 @@ use cosmic::iced_widget::{container, Container};
 use cosmic::{widget, Theme};
 
 impl SettingsForm {
-    pub fn draw(&self, app_state: &AppState) -> Container<'_, Message, Theme> {
+    pub fn draw<'a>(&'a self, app_state: &'a AppState) -> Container<'a, Message, Theme> {
         let mut column = widget::list_column().padding(2).spacing(0).divider_padding(2);
 
         column = column.add(widget::text::title4(self.title.clone()));
@@ -73,6 +74,24 @@ impl SettingsForm {
                         selected_key: settings_form_item.value.clone(),
                         form_value_key,
                         app_colours,
+                        helper_text: settings_form_item.helper_text.clone(),
+                        helper_text_color: helper_color,
+                    });
+
+                    column = column.add(el);
+                }
+                SettingsFormInputType::FontPicker => {
+                    let helper_color: Color = app_state
+                        .app_colours()
+                        .get(EXT_WARM_GREY)
+                        .map_or(Color::WHITE, |c| Color::new(c.red, c.green, c.blue, c.alpha));
+
+                    let el = form_font_dropdown_input(FormFontDropdownInputProps {
+                        settings_window_id: self.settings_window_id,
+                        label: settings_form_item.label.clone(),
+                        value: &settings_form_item.value,
+                        form_value_key,
+                        options: app_state.font_options(),
                         helper_text: settings_form_item.helper_text.clone(),
                         helper_text_color: helper_color,
                     });

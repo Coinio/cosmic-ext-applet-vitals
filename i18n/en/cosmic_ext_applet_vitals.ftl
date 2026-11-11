@@ -20,3 +20,7 @@ settings-fix-indicator-size = Fix Indicator Size
 settings-fix-indicator-size-helper = Fixes the width to the max possible text size to prevent jitter in the panel/dock. Turn this off if you prefer a higher density UI.
 settings-use-iec-units = Use IEC units instead of SI
 settings-use-iec-units-helper = Toggle between 1000-based SI units (MB, GB) and 1024-based IEC units (MiB, GiB) for all indicators.
+settings-font = Font
+settings-font-helper = The font used by the indicators in the panel/dock. System uses the COSMIC interface font.
+settings-font-default = Default (JetBrains Mono)
+settings-font-system = System

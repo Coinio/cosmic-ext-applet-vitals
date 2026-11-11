@@ -1,10 +1,49 @@
 use serde::{Deserialize, Serialize};
 
-use crate::configuration::app_configuration::{GENERAL_SETTINGS_WINDOW_ID, FIX_INDICATOR_SIZE_SETTING_KEY, USE_IEC_UNITS_SETTING_KEY};
+use crate::configuration::app_configuration::{
+    FIX_INDICATOR_SIZE_SETTING_KEY, FONT_SETTING_KEY, GENERAL_SETTINGS_WINDOW_ID, USE_IEC_UNITS_SETTING_KEY,
+};
 use crate::configuration::validation::ConfigurationValidation;
 use crate::core::settings::SettingsForm;
 
 const DEFAULT_INDICATOR_FONT_SIZE: u16 = 14;
+
+const FONT_FORM_VALUE_DEFAULT: &str = "default";
+const FONT_FORM_VALUE_SYSTEM: &str = "system";
+const FONT_FORM_VALUE_FAMILY_PREFIX: &str = "family:";
+
+#[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize)]
+pub enum IndicatorFont {
+    /// The bundled JetBrains Mono
+    #[default]
+    Default,
+    /// The COSMIC interface font
+    System,
+    Family(String),
+}
+
+impl IndicatorFont {
+    /// Family names are prefixed so a font called "default" or "system" can't clash with those options.
+    pub fn to_form_value(&self) -> String {
+        match self {
+            IndicatorFont::Default => FONT_FORM_VALUE_DEFAULT.to_string(),
+            IndicatorFont::System => FONT_FORM_VALUE_SYSTEM.to_string(),
+            IndicatorFont::Family(family) => format!("{FONT_FORM_VALUE_FAMILY_PREFIX}{family}"),
+        }
+    }
+
+    pub fn from_form_value(value: &str) -> Option<Self> {
+        match value {
+            FONT_FORM_VALUE_DEFAULT => Some(IndicatorFont::Default),
+            FONT_FORM_VALUE_SYSTEM => Some(IndicatorFont::System),
+            _ => value
+                .strip_prefix(FONT_FORM_VALUE_FAMILY_PREFIX)
+                .map(str::trim)
+                .filter(|family| !family.is_empty())
+                .map(|family| IndicatorFont::Family(family.to_string())),
+        }
+    }
+}
 
 /// General configuration for the app, i.e. font size.
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
@@ -25,6 +64,7 @@ pub struct GeneralConfiguration {
     pub fix_indicator_size: bool,
     /// When true, use IEC units (MiB, GiB); when false, use SI (MB, GB).
     pub use_iec_units: bool,
+    pub font: IndicatorFont,
 }
 
 impl Default for GeneralConfiguration {
@@ -42,6 +82,7 @@ impl Default for GeneralConfiguration {
             horizontal_font_size_xl: DEFAULT_INDICATOR_FONT_SIZE + 8,
             fix_indicator_size: true,
             use_iec_units: false,
+            font: IndicatorFont::Default,
         }
     }
 }
@@ -71,7 +112,37 @@ impl GeneralConfiguration {
                     .clone(),
                 self.use_iec_units,
             ),
+            font: settings_form
+                .values
+                .get(FONT_SETTING_KEY)
+                .and_then(|item| IndicatorFont::from_form_value(&item.value))
+                .unwrap_or_else(|| self.font.clone()),
             ..self.clone()
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::IndicatorFont;
+
+    #[test]
+    fn font_form_value_round_trips() {
+        for font in [
+            IndicatorFont::Default,
+            IndicatorFont::System,
+            IndicatorFont::Family("JetBrains Mono".to_string()),
+            IndicatorFont::Family("system".to_string()),
+        ] {
+            assert_eq!(IndicatorFont::from_form_value(&font.to_form_value()), Some(font));
+        }
+    }
+
+    #[test]
+    fn invalid_font_form_values_are_rejected() {
+        assert_eq!(IndicatorFont::from_form_value(""), None);
+        assert_eq!(IndicatorFont::from_form_value("Fira Sans"), None);
+        assert_eq!(IndicatorFont::from_form_value("family:"), None);
+        assert_eq!(IndicatorFont::from_form_value("family:   "), None);
     }
 }

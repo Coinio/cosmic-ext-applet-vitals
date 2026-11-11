@@ -1,4 +1,5 @@
 use crate::core::cosmic_text_measurer::CosmicTextMeasurer;
+use cosmic::font::Font;
 use std::collections::HashMap;
 
 /// Contains the current text measurements for the indicator labels. This is essentially a
@@ -7,9 +8,8 @@ use std::collections::HashMap;
 pub struct AppTextMeasurements {
     /// The cosmic text measurer that is used to measure text as rendered
     cosmic_text_measurer: CosmicTextMeasurer,
-    /// The text measurements for the labels, keyed by the label text.
-    text_measurements: std::cell::RefCell<HashMap<(&'static str, u16), f32>>,
-
+    /// The text measurements for the labels, keyed by the label text, font size and font.
+    text_measurements: std::cell::RefCell<HashMap<(&'static str, u16, Font), f32>>,
 }
 
 impl AppTextMeasurements {
@@ -17,15 +17,16 @@ impl AppTextMeasurements {
         Self::default()
     }
 
-    pub fn measure(&self, text: &'static str, font_size: u16) -> Option<f32> {
+    pub fn measure(&self, text: &'static str, font_size: u16, font: &Font) -> Option<f32> {
+        let key = (text, font_size, *font);
 
-        if let Some(value) = self.text_measurements.borrow().get(&(text, font_size)).copied() {
+        if let Some(value) = self.text_measurements.borrow().get(&key).copied() {
             return Some(value);
         }
 
         let new_measurement = self
             .cosmic_text_measurer
-            .measure_single(text, font_size)
+            .measure_single(text, font_size, font)
             .unwrap_or_default();
 
         if new_measurement <= 0.0 {
@@ -34,7 +35,7 @@ impl AppTextMeasurements {
 
         self.text_measurements
             .borrow_mut()
-            .insert((text, font_size), new_measurement);
+            .insert(key, new_measurement);
 
         Some(new_measurement)
 

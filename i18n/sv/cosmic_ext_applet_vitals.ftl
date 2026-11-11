@@ -20,3 +20,7 @@ settings-fix-indicator-size = Fixad indikatorstorlek
 settings-fix-indicator-size-helper = FJusterar bredden till maximal möjlig textstorlek för att förhindra flimmer i panel/dock. Stäng av detta om du föredrar ett gränssnitt med högre densitet.
 settings-use-iec-units = Använd IEC-enheter istället för SI
 settings-use-iec-units-helper = Växla mellan 1000-baserade SI-enheter (MB, GB) och 1024-baserade IEC-enheter (MiB, GiB) för alla indikatorer.
+settings-font = Typsnitt
+settings-font-helper = Typsnittet som används av indikatorerna i panelen/dockan. System använder COSMICs gränssnittstypsnitt.
+settings-font-default = Standard (JetBrains Mono)
+settings-font-system = System

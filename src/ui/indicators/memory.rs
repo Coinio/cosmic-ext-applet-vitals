@@ -22,7 +22,7 @@ impl MemoryStats {
         let max_text_width = if configuration.general.fix_indicator_size {
             app_state
                 .app_text_measurements()
-                .measure(self.max_label_text(configuration), font_size)
+                .measure(self.max_label_text(configuration), font_size, app_state.indicator_font())
         } else {
             None
         };
@@ -38,7 +38,7 @@ impl MemoryStats {
                 label_text: text,
                 label_colour: display_item_color,
                 font_size,
-                font: app_state.active_interface_font(),
+                font: app_state.indicator_font(),
                 value_width: max_text_width,
                 horizontal,
                 spacing: app_state.core().applet.suggested_padding(true),
