@@ -1,5 +1,5 @@
 # COSMIC Vitals
-![Main Image](https://github.com/Coinio/cosmic-vitals/blob/main/res/screenshots/main-image.png)
+![COSMIC Vitals in the panel](https://github.com/Coinio/cosmic-vitals/blob/main/res/screenshots/main-image.png)
 
 
 A minimal configurable applet to display basic system resource usage, i.e. CPU, Memory, Network. 
@@ -29,30 +29,44 @@ for those fighting with iced/libcosmic, etc.
   * Read Intervals - How often each monitor is polled
   * Max Samples - The number of samples to keep to average the readings across
   * Show / Hide each monitor
-  * Show / Hide the CPU and memory icons
-  * Icon Colours - The CPU and memory icon colours can be selected from the current theme libcosmic palette
+  * Show / Hide the CPU, memory and storage icons
+  * Icon Colours - The CPU, memory and storage icon colours can be selected from the current theme libcosmic palette,
+    or picked with a custom colour picker
   * Switch between SI and IEC units
   * Font - Uses the COSMIC system font by default, or switch to any installed font. See [Fonts](#fonts)
 
 ## Screenshots
 
-##### Horizontal Layout Example 1
-![Horizontal Panel Layout](https://github.com/Coinio/cosmic-vitals/blob/main/res/screenshots/horizontal-layout.png)
+##### CPU Details
+Usage of each thread and the CPU temperature.
 
-##### Horizontal Layout Example 2
-![Horizontal Panel Layout 2](https://github.com/Coinio/cosmic-vitals/blob/main/res/screenshots/horizontal-layout-2.png)
+![CPU Detail Popup](https://github.com/Coinio/cosmic-vitals/blob/main/res/screenshots/cpu-detail.png)
 
-##### Horizontal Layout Example 3
-![Horizontal Panel Layout 3](https://github.com/Coinio/cosmic-vitals/blob/main/res/screenshots/horizontal-layout-3.png)
+##### Memory Details
+Memory used, cached and available, and the swap used.
 
-##### Vertical Layout
-![Vertical Panel Layout](https://github.com/Coinio/cosmic-vitals/blob/main/res/screenshots/vertical-layout.jpg)
-##### Main Settings Page
-![Main Settings Page](https://github.com/Coinio/cosmic-vitals/blob/main/res/screenshots/main-settings.png)
-##### Network Settings Page
-![Example Settings Page](https://github.com/Coinio/cosmic-vitals/blob/main/res/screenshots/example-network-settings.png)
-##### General Settings Page
-![Example Settings Page](https://github.com/Coinio/cosmic-vitals/blob/main/res/screenshots/general-settings.png)
+![Memory Detail Popup](https://github.com/Coinio/cosmic-vitals/blob/main/res/screenshots/memory-detail.png)
+
+##### Network Details
+Download / upload and IPv4 address of each interface.
+
+![Network Detail Popup](https://github.com/Coinio/cosmic-vitals/blob/main/res/screenshots/network-detail.png)
+
+##### Disk Details
+Reads / writes, model and busy time of each disk, including disks that aren't mounted.
+
+![Disk Detail Popup](https://github.com/Coinio/cosmic-vitals/blob/main/res/screenshots/disk-detail.png)
+
+##### Storage Details
+Free space of every mount, plus any unmounted drives.
+
+![Storage Detail Popup](https://github.com/Coinio/cosmic-vitals/blob/main/res/screenshots/storage-detail.png)
+
+##### Storage Settings Page
+Each indicator has its own settings page. The storage page shows the custom icon colour picker and the mounts
+included in the total.
+
+![Storage Settings Page](https://github.com/Coinio/cosmic-vitals/blob/main/res/screenshots/storage-settings.png)
 
 ## Install
 
