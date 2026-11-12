@@ -990,6 +990,7 @@ dependencies = [
  "rustix 1.1.6",
  "serde",
  "systemd-journal-logger",
+ "tempfile",
  "tokio",
  "tokio-util",
 ]

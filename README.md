@@ -16,6 +16,9 @@ for those fighting with iced/libcosmic, etc.
 * Show Disk upload / down. This counts reads / writes to logical disks, not partitions, etc.
 * Show available / total storage. Choose which mounts are included in the settings, `/` by default. A filesystem
   mounted in more than one place, e.g. btrfs subvolumes, is only counted once.
+* Hover over the CPU indicator for the usage of each thread, or each physical core, and the CPU temperature and fan
+  speed where the system reports them. See [CPU Temperature and Fan Speed](#cpu-temperature-and-fan-speed)
+* Hover over the storage indicator for the free space of every mount
 * Horizontal / Vertical Layouts - The horizontal layout has seen a little more testing as I 
   don't use the vertical.
 * Config:
@@ -84,3 +87,30 @@ sudo pacman -S ttf-jetbrains-mono
 Or download it from the [JetBrains Mono releases](https://github.com/JetBrains/JetBrainsMono/releases). Then select it
 under **Settings > General > Font**. If a newly installed font doesn't show up in the list, log out and back in so
 the panel reloads its fonts.
+
+## CPU Temperature and Fan Speed
+
+The CPU detail popup reads the temperature and fan speed from the kernel's hardware monitoring drivers, the same
+sensors `sensors` from lm-sensors shows. Nothing extra needs installing for the applet, but the driver for your
+hardware has to be loaded. Each reading only shows in the popup when there's a sensor for it.
+
+By default, the applet picks the sensors automatically:
+
+* **Temperature** - The CPU's own sensor, e.g. `k10temp` on AMD, `coretemp` on Intel, or `cpu_thermal` on a
+  Raspberry Pi. These load automatically on almost every system.
+* **Fan** - A fan labelled as the CPU fan, or the only fan. Many motherboards don't label their fans, so if there are
+  several, choose the one connected to the CPU fan header under **Settings > CPU > Fan Sensor**. Each sensor is listed
+  with its current reading to help tell them apart.
+
+If no fans are found, your motherboard's sensor chip probably needs its driver loading. `sensors-detect` from
+lm-sensors finds the right one:
+
+```sh
+# Pop!_OS / Ubuntu / Debian
+sudo apt install lm-sensors
+sudo sensors-detect
+```
+
+It offers to load the driver on every boot. Restart the applet afterwards, e.g. by logging out and back in, so it
+finds the new sensors. A few chips, e.g. on some MSI and Gigabyte boards, need a newer kernel or an out-of-tree driver,
+and many laptops don't report their fans at all.

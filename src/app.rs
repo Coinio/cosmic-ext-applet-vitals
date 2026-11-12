@@ -6,10 +6,13 @@ use crate::core::app_fonts;
 use crate::core::app_icons::{AppIcons, APP_LOGO_ICON};
 use crate::core::app_text_measurements::AppTextMeasurements;
 use crate::monitors::cpu_monitor::{CpuMonitor, CpuStats};
+use crate::monitors::cpu_sensors_monitor::{CpuSensorStats, CpuSensorsMonitor};
 use crate::monitors::disk_monitor::{DiskMonitor, DiskStats};
 use crate::monitors::memory_monitor::{MemoryMonitor, MemoryStats};
 use crate::monitors::network_monitor::{NetworkMonitor, NetworkStats};
 use crate::monitors::storage_monitor::{StorageMonitor, StorageStats};
+use crate::sensors::cpu_topology_reader::{CpuTopology, SYSFS_CPU_ROOT};
+use crate::sensors::hwmon_reader::HWMON_ROOT;
 use crate::sensors::proc_disk_stats_reader::ProcDiskStatsReader;
 use crate::sensors::proc_meminfo_reader::ProcMemInfoSensorReader;
 use crate::sensors::proc_net_dev_reader::ProcNetDevReader;
@@ -32,8 +35,10 @@ use cosmic::widget::{autosize, container, divider, Id};
 use cosmic::{cosmic_config, Application, Element};
 use log::{error, info, warn};
 use once_cell::sync::Lazy;
+use std::path::Path;
 use std::process::{Child, Command, Stdio};
 use std::time::Duration;
+use tokio::sync::watch;
 use tokio::time::Instant;
 use tokio_util::sync::CancellationToken;
 
@@ -62,7 +67,7 @@ pub enum IndicatorKind {
 impl IndicatorKind {
     /// Whether hovering over the indicator shows a popup with more detail.
     fn has_detail(self) -> bool {
-        matches!(self, IndicatorKind::Storage)
+        matches!(self, IndicatorKind::Cpu | IndicatorKind::Storage)
     }
 }
 
@@ -96,6 +101,10 @@ pub struct AppState {
     memory: MemoryStats,
     /// The current cpu usage stats
     cpu: CpuStats,
+    /// The latest cpu temperature and fan speed, which are only read while the cpu detail popup is wanted.
+    cpu_sensors: CpuSensorStats,
+    /// Tells the monitors whether the cpu detail popup is wanted, so they only read its sensors while it is.
+    cpu_detail_wanted: watch::Sender<bool>,
     /// The current network usage stats
     network: NetworkStats,
     /// The current disk usage stats   
@@ -118,6 +127,7 @@ const MONITOR_COALESCE_WINDOW: Duration = Duration::from_millis(50);
 pub struct StatsUpdate {
     memory: Option<MemoryStats>,
     cpu: Option<CpuStats>,
+    cpu_sensors: Option<CpuSensorStats>,
     network: Option<NetworkStats>,
     disk: Option<DiskStats>,
     storage: Option<StorageStats>,
@@ -201,141 +211,9 @@ impl Application for AppState {
     }
 
     fn update(&mut self, message: Self::Message) -> Task<Self::Message> {
-        match message {
-            Message::OpenSettingsWindow => {
-                self.open_settings_window();
-                return self.close_detail_popup();
-            }
-            Message::StartMonitoring => {
-                self.stop_monitoring();
-
-                info!("Starting monitoring");
-
-                let cancellation_token = CancellationToken::new();
-                self.monitor_cancellation_token = Some(cancellation_token.clone());
-
-                let config = self.configuration.clone();
-
-                return cosmic::Task::stream(async_stream::stream! {
-                    let mut memory_monitor = (!config.memory.hide_indicator)
-                        .then(|| MemoryMonitor::new(ProcMemInfoSensorReader, &config));
-                    let mut cpu_monitor = (!config.cpu.hide_indicator)
-                        .then(|| CpuMonitor::new(ProcStatSensorReader, &config));
-                    let mut network_monitor = (!config.network.hide_indicator)
-                        .then(|| NetworkMonitor::new(ProcNetDevReader, &config));
-                    let mut disk_monitor = (!config.disk.hide_indicator)
-                        .then(|| DiskMonitor::new(ProcDiskStatsReader, &config));
-                    let mut storage_monitor = (!config.storage.hide_indicator)
-                        .then(|| StorageMonitor::new(StorageReader, config.storage.mounts.clone()));
-
-                    // A single scheduler drives every monitor. Monitors that fall due at (nearly) the same
-                    // time are polled together and sent as one message, because every message rebuilds and
-                    // redraws the applet. Separate timers per monitor would wake the UI once per monitor.
-                    let start = Instant::now();
-                    let mut schedules = [
-                        memory_monitor.is_some().then_some((start, config.memory.update_interval)),
-                        cpu_monitor.is_some().then_some((start, config.cpu.update_interval)),
-                        network_monitor.is_some().then_some((start, config.network.update_interval)),
-                        disk_monitor.is_some().then_some((start, config.disk.update_interval)),
-                        storage_monitor.is_some().then_some((start, config.storage.update_interval)),
-                    ];
-
-                    loop {
-                        let Some(next_due) = schedules.iter().flatten().map(|(due, _)| *due).min() else {
-                            // Every indicator is hidden, nothing to poll.
-                            cancellation_token.cancelled().await;
-                            break;
-                        };
-
-                        tokio::select! {
-                            _ = tokio::time::sleep_until(next_due) => {},
-                            _ = cancellation_token.cancelled() => break,
-                        }
-
-                        let now = Instant::now();
-                        let mut due = [false; 5];
-
-                        for (index, schedule) in schedules.iter_mut().enumerate() {
-                            if let Some((next, interval)) = schedule {
-                                if *next <= now + MONITOR_COALESCE_WINDOW {
-                                    due[index] = true;
-                                    // Scheduling from `now` keeps coalesced monitors in step and never
-                                    // leaves missed ticks to catch up on.
-                                    *next = now + *interval;
-                                }
-                            }
-                        }
-
-                        let update = StatsUpdate {
-                            memory: memory_monitor.as_mut().filter(|_| due[0]).map(|m| m.poll().unwrap_or_default()),
-                            cpu: cpu_monitor.as_mut().filter(|_| due[1]).map(|m| m.poll().unwrap_or_default()),
-                            network: network_monitor.as_mut().filter(|_| due[2]).map(|m| m.poll().unwrap_or_default()),
-                            disk: disk_monitor.as_mut().filter(|_| due[3]).map(|m| m.poll().unwrap_or_default()),
-                            storage: storage_monitor.as_mut().filter(|_| due[4]).map(|m| m.poll().unwrap_or_default()),
-                        };
-
-                        yield Message::StatsUpdate(update);
-                    }
-                })
-                .map(cosmic::Action::App);
-            }
-            Message::StatsUpdate(update) => {
-                if let Some(memory) = update.memory {
-                    self.memory = memory;
-                }
-                if let Some(cpu) = update.cpu {
-                    self.cpu = cpu;
-                }
-                if let Some(network) = update.network {
-                    self.network = network;
-                }
-                if let Some(disk) = update.disk {
-                    self.disk = disk;
-                }
-                if let Some(storage) = update.storage {
-                    self.storage = storage;
-                }
-            }
-            Message::ConfigFileChanged(configuration) => {
-                self.configuration = configuration;
-                self.refresh_indicator_font();
-                // The hovered indicator may have been hidden, which leaves nothing to report that it's no longer hovered.
-                return self
-                    .close_detail_popup()
-                    .chain(cosmic::task::message(Message::StartMonitoring));
-            }
-            Message::IndicatorHovered(kind, bounds) => {
-                let close = self.close_detail_popup();
-
-                self.hover_count += 1;
-                let hover = self.hover_count;
-                self.detail_popup = Some(DetailPopup {
-                    kind,
-                    bounds,
-                    hover,
-                    window_id: None,
-                });
-
-                let open = cosmic::task::future(async move {
-                    tokio::time::sleep(DETAIL_POPUP_DELAY).await;
-                    Message::OpenDetailPopup(hover)
-                });
-                return Task::batch([close, open]);
-            }
-            Message::IndicatorUnhovered(kind) => {
-                // Moving between indicators can report entering the next one before leaving this one.
-                if self.detail_popup.as_ref().is_some_and(|popup| popup.kind == kind) {
-                    return self.close_detail_popup();
-                }
-            }
-            Message::OpenDetailPopup(hover) => return self.open_detail_popup(hover),
-            Message::PopupClosed(id) => {
-                if self.detail_popup.as_ref().is_some_and(|popup| popup.window_id == Some(id)) {
-                    self.detail_popup = None;
-                }
-            }
-        }
-        Task::none()
+        let task = self.handle_message(message);
+        self.sync_cpu_detail_wanted();
+        task
     }
 
     fn view(&self) -> Element<'_, Self::Message> {
@@ -445,6 +323,174 @@ impl Application for AppState {
 }
 
 impl AppState {
+    fn handle_message(&mut self, message: Message) -> Task<Message> {
+        match message {
+            Message::OpenSettingsWindow => {
+                self.open_settings_window();
+                return self.close_detail_popup();
+            }
+            Message::StartMonitoring => {
+                self.stop_monitoring();
+
+                info!("Starting monitoring");
+
+                let cancellation_token = CancellationToken::new();
+                self.monitor_cancellation_token = Some(cancellation_token.clone());
+
+                let config = self.configuration.clone();
+                let mut cpu_detail_wanted = self.cpu_detail_wanted.subscribe();
+
+                return cosmic::Task::stream(async_stream::stream! {
+                    let mut memory_monitor = (!config.memory.hide_indicator)
+                        .then(|| MemoryMonitor::new(ProcMemInfoSensorReader, &config));
+                    let mut cpu_monitor = (!config.cpu.hide_indicator).then(|| {
+                        let topology = config.cpu.combine_cores.then(|| CpuTopology::read(Path::new(SYSFS_CPU_ROOT)));
+                        CpuMonitor::new(ProcStatSensorReader, &config, topology)
+                    });
+                    // The temperature and fan are only shown in the cpu detail popup, so they're only read while
+                    // it's wanted. Some sensor drivers are slow to read, or wake their device to do it.
+                    let cpu_sensors_monitor = (!config.cpu.hide_indicator)
+                        .then(|| CpuSensorsMonitor::new(Path::new(HWMON_ROOT), &config.cpu));
+                    let mut network_monitor = (!config.network.hide_indicator)
+                        .then(|| NetworkMonitor::new(ProcNetDevReader, &config));
+                    let mut disk_monitor = (!config.disk.hide_indicator)
+                        .then(|| DiskMonitor::new(ProcDiskStatsReader, &config));
+                    let mut storage_monitor = (!config.storage.hide_indicator)
+                        .then(|| StorageMonitor::new(StorageReader, config.storage.mounts.clone()));
+
+                    // A single scheduler drives every monitor. Monitors that fall due at (nearly) the same
+                    // time are polled together and sent as one message, because every message rebuilds and
+                    // redraws the applet. Separate timers per monitor would wake the UI once per monitor.
+                    let start = Instant::now();
+                    let mut schedules = [
+                        memory_monitor.is_some().then_some((start, config.memory.update_interval)),
+                        cpu_monitor.is_some().then_some((start, config.cpu.update_interval)),
+                        network_monitor.is_some().then_some((start, config.network.update_interval)),
+                        disk_monitor.is_some().then_some((start, config.disk.update_interval)),
+                        storage_monitor.is_some().then_some((start, config.storage.update_interval)),
+                    ];
+
+                    loop {
+                        let Some(next_due) = schedules.iter().flatten().map(|(due, _)| *due).min() else {
+                            // Every indicator is hidden, nothing to poll.
+                            cancellation_token.cancelled().await;
+                            break;
+                        };
+
+                        // Set when the cpu detail popup has just become wanted, to read its sensors straight away
+                        // instead of at the next cpu tick.
+                        let mut cpu_sensors_requested = false;
+
+                        tokio::select! {
+                            _ = tokio::time::sleep_until(next_due) => {},
+                            changed = cpu_detail_wanted.changed(), if cpu_sensors_monitor.is_some() => {
+                                // The sender lives as long as the applet, so this only fails as it exits.
+                                if changed.is_err() {
+                                    break;
+                                }
+                                cpu_sensors_requested = *cpu_detail_wanted.borrow();
+                            },
+                            _ = cancellation_token.cancelled() => break,
+                        }
+
+                        let now = Instant::now();
+                        let mut due = [false; 5];
+
+                        for (index, schedule) in schedules.iter_mut().enumerate() {
+                            if let Some((next, interval)) = schedule {
+                                if *next <= now + MONITOR_COALESCE_WINDOW {
+                                    due[index] = true;
+                                    // Scheduling from `now` keeps coalesced monitors in step and never
+                                    // leaves missed ticks to catch up on.
+                                    *next = now + *interval;
+                                }
+                            }
+                        }
+
+                        let read_cpu_sensors = cpu_sensors_requested || (due[1] && *cpu_detail_wanted.borrow());
+
+                        // Waking for the cpu detail popup can find nothing else due, and nothing to read when it
+                        // stopped being wanted.
+                        if !read_cpu_sensors && !due.contains(&true) {
+                            continue;
+                        }
+
+                        let update = StatsUpdate {
+                            memory: memory_monitor.as_mut().filter(|_| due[0]).map(|m| m.poll().unwrap_or_default()),
+                            cpu: cpu_monitor.as_mut().filter(|_| due[1]).map(|m| m.poll().unwrap_or_default()),
+                            cpu_sensors: cpu_sensors_monitor.as_ref().filter(|_| read_cpu_sensors).map(|m| m.poll()),
+                            network: network_monitor.as_mut().filter(|_| due[2]).map(|m| m.poll().unwrap_or_default()),
+                            disk: disk_monitor.as_mut().filter(|_| due[3]).map(|m| m.poll().unwrap_or_default()),
+                            storage: storage_monitor.as_mut().filter(|_| due[4]).map(|m| m.poll().unwrap_or_default()),
+                        };
+
+                        yield Message::StatsUpdate(update);
+                    }
+                })
+                .map(cosmic::Action::App);
+            }
+            Message::StatsUpdate(update) => {
+                if let Some(memory) = update.memory {
+                    self.memory = memory;
+                }
+                if let Some(cpu) = update.cpu {
+                    self.cpu = cpu;
+                }
+                if let Some(cpu_sensors) = update.cpu_sensors {
+                    self.cpu_sensors = cpu_sensors;
+                }
+                if let Some(network) = update.network {
+                    self.network = network;
+                }
+                if let Some(disk) = update.disk {
+                    self.disk = disk;
+                }
+                if let Some(storage) = update.storage {
+                    self.storage = storage;
+                }
+            }
+            Message::ConfigFileChanged(configuration) => {
+                self.configuration = configuration;
+                self.refresh_indicator_font();
+                // The hovered indicator may have been hidden, which leaves nothing to report that it's no longer hovered.
+                return self
+                    .close_detail_popup()
+                    .chain(cosmic::task::message(Message::StartMonitoring));
+            }
+            Message::IndicatorHovered(kind, bounds) => {
+                let close = self.close_detail_popup();
+
+                self.hover_count += 1;
+                let hover = self.hover_count;
+                self.detail_popup = Some(DetailPopup {
+                    kind,
+                    bounds,
+                    hover,
+                    window_id: None,
+                });
+
+                let open = cosmic::task::future(async move {
+                    tokio::time::sleep(DETAIL_POPUP_DELAY).await;
+                    Message::OpenDetailPopup(hover)
+                });
+                return Task::batch([close, open]);
+            }
+            Message::IndicatorUnhovered(kind) => {
+                // Moving between indicators can report entering the next one before leaving this one.
+                if self.detail_popup.as_ref().is_some_and(|popup| popup.kind == kind) {
+                    return self.close_detail_popup();
+                }
+            }
+            Message::OpenDetailPopup(hover) => return self.open_detail_popup(hover),
+            Message::PopupClosed(id) => {
+                if self.detail_popup.as_ref().is_some_and(|popup| popup.window_id == Some(id)) {
+                    self.detail_popup = None;
+                }
+            }
+        }
+        Task::none()
+    }
+
     pub fn core(&self) -> &Core {
         &self.core
     }
@@ -535,6 +581,17 @@ impl AppState {
         get_popup(detail_popup_settings(&self.core, parent, id, popup.bounds))
     }
 
+    /// The cpu detail popup is wanted from when the cpu indicator is hovered, so its sensors have been read by the
+    /// time it opens, until it closes.
+    fn sync_cpu_detail_wanted(&self) {
+        let wanted = self.detail_popup.as_ref().is_some_and(|popup| popup.kind == IndicatorKind::Cpu);
+        self.cpu_detail_wanted.send_if_modified(|current| {
+            let changed = *current != wanted;
+            *current = wanted;
+            changed
+        });
+    }
+
     fn close_detail_popup(&mut self) -> Task<Message> {
         match self.detail_popup.take().and_then(|popup| popup.window_id) {
             Some(id) => destroy_popup(id),
@@ -544,8 +601,9 @@ impl AppState {
 
     fn detail_popup_content(&self, kind: IndicatorKind) -> Option<Element<'_, Message>> {
         match kind {
+            IndicatorKind::Cpu => Some(self.cpu.detail(&self.cpu_sensors, &self.configuration)),
             IndicatorKind::Storage => Some(self.storage.detail(&self.configuration)),
-            IndicatorKind::Cpu | IndicatorKind::Memory | IndicatorKind::Network | IndicatorKind::Disk => None,
+            IndicatorKind::Memory | IndicatorKind::Network | IndicatorKind::Disk => None,
         }
     }
 

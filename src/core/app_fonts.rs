@@ -51,6 +51,7 @@ impl FontOptions {
         }
     }
 
+    #[cfg(test)]
     pub fn position(&self, form_value: &str) -> Option<usize> {
         self.values.iter().position(|value| value == form_value)
     }

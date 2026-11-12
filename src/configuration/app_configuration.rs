@@ -37,6 +37,10 @@ pub const SHOW_INDICATOR_SEPARATORS_SETTING_KEY: &'static str = "settings-show-i
 pub const FONT_SETTING_KEY: &'static str = "settings-font";
 pub const FONT_SIZE_SETTING_KEY: &'static str = "settings-font-size";
 pub const STORAGE_MOUNTS_SETTING_KEY: &'static str = "settings-storage-mounts";
+pub const CPU_COMBINE_CORES_SETTING_KEY: &'static str = "settings-cpu-combine-cores";
+pub const CPU_TEMPERATURE_SENSOR_SETTING_KEY: &'static str = "settings-cpu-temperature-sensor";
+pub const CPU_FAN_SENSOR_SETTING_KEY: &'static str = "settings-cpu-fan-sensor";
+pub const CPU_USE_FAHRENHEIT_SETTING_KEY: &'static str = "settings-cpu-use-fahrenheit";
 
 #[derive(Debug, Default, Clone, CosmicConfigEntry, Eq, PartialEq)]
 #[version = 1]

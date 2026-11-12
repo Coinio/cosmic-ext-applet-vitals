@@ -16,8 +16,10 @@ use crate::configuration::general::FontSizeSlot;
 use crate::core::app_colours::AppColour;
 use crate::core::app_fonts::FontOptions;
 use crate::core::mount_options::MountOptions;
+use crate::core::sensor_options::SensorOptions;
 use crate::core::settings::{SettingsForm, SettingsFormEvent};
 use crate::fl;
+use crate::sensors::hwmon_reader::HwmonSensorKind;
 use crate::ui::components::colour_picker::{ColourPickerEvent, ColourPickerState};
 use cosmic::app::{Core, Task};
 use cosmic::cosmic_config::{Config, CosmicConfigEntry};
@@ -60,6 +62,10 @@ pub struct SettingsApp {
     font_options: FontOptions,
     /// The mount points that can be included in the storage totals
     mount_options: MountOptions,
+    /// The sensors that can be chosen for the CPU temperature
+    temperature_sensor_options: SensorOptions,
+    /// The sensors that can be chosen for the CPU fan
+    fan_sensor_options: SensorOptions,
     /// The settings forms that are available for configuration of the monitors.
     settings_forms: BTreeMap<window::Id, SettingsForm>,
     /// The navigation model for the sidebar. Each entry holds the id of its settings form.
@@ -121,6 +127,16 @@ impl Application for SettingsApp {
             core,
             font_options: FontOptions::new(&configuration.general.font),
             mount_options: MountOptions::new(&configuration.storage.mounts),
+            temperature_sensor_options: SensorOptions::new(
+                HwmonSensorKind::Temperature,
+                configuration.cpu.temperature_sensor.as_ref(),
+                configuration.cpu.use_fahrenheit,
+            ),
+            fan_sensor_options: SensorOptions::new(
+                HwmonSensorKind::Fan,
+                configuration.cpu.fan_sensor.as_ref(),
+                configuration.cpu.use_fahrenheit,
+            ),
             configuration,
             font_size_slot: flags.font_size_slot,
             settings_forms,
@@ -225,6 +241,13 @@ impl SettingsApp {
 
     pub fn mount_options(&self) -> &MountOptions {
         &self.mount_options
+    }
+
+    pub fn sensor_options(&self, kind: HwmonSensorKind) -> &SensorOptions {
+        match kind {
+            HwmonSensorKind::Temperature => &self.temperature_sensor_options,
+            HwmonSensorKind::Fan => &self.fan_sensor_options,
+        }
     }
 
     /// The custom colour picker, if it is open for the given settings form field.

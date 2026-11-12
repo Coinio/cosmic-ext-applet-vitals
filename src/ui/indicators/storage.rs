@@ -5,12 +5,10 @@ use crate::core::app_icons::STORAGE_ICON;
 use crate::fl;
 use crate::monitors::storage_monitor::StorageStats;
 use crate::sensors::storage_reader::MountUsage;
-use crate::ui::components::detail_popup::detail_popup;
+use crate::ui::components::detail_popup::{coloured_bar_class, detail_popup};
 use crate::ui::components::indicator::{IndicatorContent, IndicatorIcon, IndicatorLine};
-use cosmic::iced::widget::progress_bar::Catalog;
 use cosmic::iced::widget::{progress_bar, Column, Row};
 use cosmic::iced::{Alignment, Length};
-use cosmic::theme::ProgressBar;
 use cosmic::{widget, Element};
 
 /// The thickness of the used space bar under each mount.
@@ -79,7 +77,7 @@ fn mount_detail<'a>(
 
     let bar = progress_bar(0.0..=1.0, used_fraction(mount))
         .girth(USED_SPACE_BAR_GIRTH)
-        .class(used_space_bar_class(bar_colour));
+        .class(coloured_bar_class(bar_colour));
 
     Column::new().spacing(4).push(label).push(bar).into()
 }
@@ -91,18 +89,6 @@ fn used_fraction(mount: &MountUsage) -> f32 {
     }
     let used_bytes = mount.total_bytes.saturating_sub(mount.available_bytes);
     (used_bytes as f64 / mount.total_bytes as f64) as f32
-}
-
-/// The theme's progress bar, with the bar drawn in the indicator's icon colour when one is set.
-fn used_space_bar_class(colour: Option<AppColour>) -> ProgressBar {
-    match colour {
-        None => ProgressBar::Primary,
-        Some(colour) => ProgressBar::custom(move |theme| {
-            let mut style = theme.style(&ProgressBar::Primary);
-            style.bar = colour.resolve(theme.cosmic()).into();
-            style
-        }),
-    }
 }
 
 /// Bytes as gigabytes, or terabytes once there are a thousand gigabytes, in at most 4 significant figures.

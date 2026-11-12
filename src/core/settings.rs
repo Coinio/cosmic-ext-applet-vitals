@@ -1,7 +1,7 @@
 use std::time::Duration;
 use cosmic::iced::window;
 use indexmap::IndexMap;
-use crate::configuration::app_configuration::{CPU_SETTINGS_WINDOW_ID, DISK_SETTINGS_WINDOW_ID, GENERAL_SETTINGS_WINDOW_ID, HIDE_INDICATOR_SETTING_KEY, HIDE_ICON_SETTING_KEY, ICON_COLOUR_SETTING_KEY, DOWNLOAD_COLOUR_SETTING_KEY, UPLOAD_COLOUR_SETTING_KEY, READ_COLOUR_SETTING_KEY, WRITE_COLOUR_SETTING_KEY, MAX_SAMPLES_SETTING_KEY, MEMORY_SETTINGS_WINDOW_ID, NETWORK_SETTINGS_WINDOW_ID, UPDATE_INTERVAL_SETTING_KEY, FIX_INDICATOR_SIZE_SETTING_KEY, FONT_SETTING_KEY, FONT_SIZE_SETTING_KEY, STORAGE_MOUNTS_SETTING_KEY, STORAGE_SETTINGS_WINDOW_ID};
+use crate::configuration::app_configuration::{CPU_SETTINGS_WINDOW_ID, DISK_SETTINGS_WINDOW_ID, GENERAL_SETTINGS_WINDOW_ID, HIDE_INDICATOR_SETTING_KEY, HIDE_ICON_SETTING_KEY, ICON_COLOUR_SETTING_KEY, DOWNLOAD_COLOUR_SETTING_KEY, UPLOAD_COLOUR_SETTING_KEY, READ_COLOUR_SETTING_KEY, WRITE_COLOUR_SETTING_KEY, MAX_SAMPLES_SETTING_KEY, MEMORY_SETTINGS_WINDOW_ID, NETWORK_SETTINGS_WINDOW_ID, UPDATE_INTERVAL_SETTING_KEY, FIX_INDICATOR_SIZE_SETTING_KEY, FONT_SETTING_KEY, FONT_SIZE_SETTING_KEY, STORAGE_MOUNTS_SETTING_KEY, STORAGE_SETTINGS_WINDOW_ID, CPU_COMBINE_CORES_SETTING_KEY, CPU_TEMPERATURE_SENSOR_SETTING_KEY, CPU_FAN_SENSOR_SETTING_KEY, CPU_USE_FAHRENHEIT_SETTING_KEY};
 use crate::configuration::cpu::CpuConfiguration;
 use crate::configuration::disk::DiskConfiguration;
 use crate::configuration::general::{
@@ -12,6 +12,7 @@ use crate::configuration::network::NetworkConfiguration;
 use crate::configuration::storage::{mounts_to_form_value, StorageConfiguration};
 use crate::configuration::validation::ConfigurationValidation;
 use crate::fl;
+use crate::sensors::hwmon_reader::{HwmonSensorId, HwmonSensorKind};
 
 #[derive(Debug, Clone)]
 pub enum SettingsFormEvent {
@@ -31,6 +32,9 @@ pub enum SettingsFormInputType {
     /// A checkbox per mount point. The value is the encoded list of included mount points, see
     /// [`mounts_to_form_value`].
     MountList,
+    /// A dropdown of the sensors of the kind. The value is an encoded optional `HwmonSensorId`, see
+    /// [`HwmonSensorId::to_form_value`], where empty picks the sensor automatically.
+    SensorPicker(HwmonSensorKind),
 }
 
 #[derive(Debug, Clone)]
@@ -56,12 +60,44 @@ pub struct SettingsForm {
 
 impl From<&CpuConfiguration> for SettingsForm {
     fn from(config: &CpuConfiguration) -> SettingsForm {
-        let values = build_shared_settings(
+        let mut values = build_shared_settings(
             config.hide_indicator,
             Some((config.hide_icon, config.icon_colour.clone())),
             Vec::new(),
             config.update_interval,
             Some(config.max_samples),
+        );
+        values.insert(
+            CPU_COMBINE_CORES_SETTING_KEY,
+            checkbox_setting(
+                fl!("settings-cpu-combine-cores"),
+                config.combine_cores,
+                Some(fl!("settings-cpu-combine-cores-helper")),
+            ),
+        );
+        values.insert(
+            CPU_TEMPERATURE_SENSOR_SETTING_KEY,
+            SettingsFormItem {
+                label: fl!("settings-cpu-temperature-sensor"),
+                value: HwmonSensorId::to_form_value(config.temperature_sensor.as_ref()),
+                input_type: SettingsFormInputType::SensorPicker(HwmonSensorKind::Temperature),
+                validator: None,
+                helper_text: Some(fl!("settings-cpu-temperature-sensor-helper")),
+            },
+        );
+        values.insert(
+            CPU_USE_FAHRENHEIT_SETTING_KEY,
+            checkbox_setting(fl!("settings-cpu-use-fahrenheit"), config.use_fahrenheit, None),
+        );
+        values.insert(
+            CPU_FAN_SENSOR_SETTING_KEY,
+            SettingsFormItem {
+                label: fl!("settings-cpu-fan-sensor"),
+                value: HwmonSensorId::to_form_value(config.fan_sensor.as_ref()),
+                input_type: SettingsFormInputType::SensorPicker(HwmonSensorKind::Fan),
+                validator: None,
+                helper_text: Some(fl!("settings-cpu-fan-sensor-helper")),
+            },
         );
 
         SettingsForm {
@@ -298,6 +334,16 @@ fn build_shared_settings(
     }
 
     settings
+}
+
+fn checkbox_setting(label: String, value: bool, helper_text: Option<String>) -> SettingsFormItem {
+    SettingsFormItem {
+        label,
+        value: value.to_string(),
+        input_type: SettingsFormInputType::CheckBox,
+        validator: Some(ConfigurationValidation::is_valid_boolean),
+        helper_text,
+    }
 }
 
 fn colour_setting(key: &'static str, label: String, colour: &Option<String>) -> (&'static str, SettingsFormItem) {

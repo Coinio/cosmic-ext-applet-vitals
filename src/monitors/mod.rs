@@ -3,3 +3,4 @@ pub mod memory_monitor;
 pub mod network_monitor;
 pub mod disk_monitor;
 pub mod storage_monitor;
+pub mod cpu_sensors_monitor;

@@ -1,35 +1,40 @@
-use crate::settings_app::Message;
-use crate::core::app_fonts::FontOptions;
 use crate::core::settings::{SettingsFormEvent, SettingsFormEventValue};
+use crate::settings_app::Message;
 use cosmic::iced::{window, Color, Length};
 use cosmic::widget::{self, settings};
 use cosmic::Element;
+use std::sync::Arc;
 
-pub struct FormFontDropdownInputProps<'a> {
+pub struct FormDropdownInputProps<'a> {
     pub settings_window_id: window::Id,
     pub label: String,
     pub value: &'a str,
     pub form_value_key: &'static str,
-    pub options: &'a FontOptions,
+    /// The option labels shown in the dropdown.
+    pub labels: &'a [String],
+    /// The form value of each option, parallel to `labels`.
+    pub values: Arc<[String]>,
     pub helper_text: Option<String>,
     pub helper_text_color: Color,
 }
 
-pub fn form_font_dropdown_input<'a>(props: FormFontDropdownInputProps<'a>) -> Element<'a, Message> {
-    let FormFontDropdownInputProps {
+/// A dropdown that sets the form value to the chosen option's value.
+pub fn form_dropdown_input<'a>(props: FormDropdownInputProps<'a>) -> Element<'a, Message> {
+    let FormDropdownInputProps {
         settings_window_id,
         label,
         value,
         form_value_key,
-        options,
+        labels,
+        values,
         helper_text,
         helper_text_color,
     } = props;
 
-    // Shared rather than cloned on every render, as there can be hundreds of fonts.
-    let values = options.values.clone();
+    let selected = values.iter().position(|option| option == value);
 
-    let dropdown = widget::dropdown(options.labels.as_slice(), options.position(value), move |index| {
+    // Shared rather than cloned on every render, as there can be hundreds of options, e.g. fonts.
+    let dropdown = widget::dropdown(labels, selected, move |index| {
         Message::SettingsFormUpdate(SettingsFormEvent::StringFieldUpdated(SettingsFormEventValue {
             settings_window_id,
             form_value_key,

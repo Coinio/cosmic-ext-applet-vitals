@@ -1,8 +1,10 @@
 use crate::settings_app::{Message, SettingsApp};
 use crate::core::app_colours::{AppColour, BRIGHT_RED, EXT_WARM_GREY};
 use crate::core::settings::{SettingsForm, SettingsFormInputType};
+use crate::fl;
+use crate::sensors::hwmon_reader::HwmonSensorKind;
 use crate::ui::components::form_checkbox_input::{form_checkbox_input, FormCheckboxInputProps};
-use crate::ui::components::form_font_dropdown_input::{form_font_dropdown_input, FormFontDropdownInputProps};
+use crate::ui::components::form_dropdown_input::{form_dropdown_input, FormDropdownInputProps};
 use crate::ui::components::form_mount_list_input::{form_mount_list_input, FormMountListInputProps};
 use crate::ui::components::form_spin_button_input::{form_spin_button_input, FormSpinButtonInputProps};
 use crate::ui::components::form_text_input::{form_text_input, FormTextInputProps};
@@ -72,12 +74,14 @@ impl SettingsForm {
                 SettingsFormInputType::FontPicker => {
                     let helper_color: Color = AppColour::Palette(EXT_WARM_GREY).resolve(theme);
 
-                    let el = form_font_dropdown_input(FormFontDropdownInputProps {
+                    let options = app_state.font_options();
+                    let el = form_dropdown_input(FormDropdownInputProps {
                         settings_window_id: self.settings_window_id,
                         label: settings_form_item.label.clone(),
                         value: &settings_form_item.value,
                         form_value_key,
-                        options: app_state.font_options(),
+                        labels: options.labels.as_slice(),
+                        values: options.values.clone(),
                         helper_text: settings_form_item.helper_text.clone(),
                         helper_text_color: helper_color,
                     });
@@ -116,6 +120,33 @@ impl SettingsForm {
                     for row in rows {
                         column = column.add(row);
                     }
+                }
+                SettingsFormInputType::SensorPicker(kind) => {
+                    let helper_color: Color = AppColour::Palette(EXT_WARM_GREY).resolve(theme);
+                    let options = app_state.sensor_options(kind);
+
+                    // Without any sensors, the choice is moot, so explain why there are none instead.
+                    let helper_text = if options.has_sensors {
+                        settings_form_item.helper_text.clone()
+                    } else {
+                        Some(match kind {
+                            HwmonSensorKind::Temperature => fl!("settings-cpu-no-temperature-sensors"),
+                            HwmonSensorKind::Fan => fl!("settings-cpu-no-fan-sensors"),
+                        })
+                    };
+
+                    let el = form_dropdown_input(FormDropdownInputProps {
+                        settings_window_id: self.settings_window_id,
+                        label: settings_form_item.label.clone(),
+                        value: &settings_form_item.value,
+                        form_value_key,
+                        labels: options.labels.as_slice(),
+                        values: options.values.clone(),
+                        helper_text,
+                        helper_text_color: helper_color,
+                    });
+
+                    column = column.add(el);
                 }
             };
         }
