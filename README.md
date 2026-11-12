@@ -35,6 +35,11 @@ Memory used, cached and available, and the swap used.
 
 ![Memory Detail Popup](https://github.com/Coinio/cosmic-vitals/blob/main/res/screenshots/memory-detail.png)
 
+##### GPU Details
+Usage and VRAM of each GPU, plus its temperature and power draw where reported.
+
+![GPU Detail Popup](https://github.com/Coinio/cosmic-vitals/blob/main/res/screenshots/gpu-detail.png)
+
 ##### Network Details
 Download / upload and IPv4 address of each interface.
 
