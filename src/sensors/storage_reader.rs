@@ -13,17 +13,9 @@ pub struct MountUsage {
     pub available_bytes: u64,
 }
 
-/// Reads the space on the configured mount points. Mount points that aren't currently mounted are skipped, so an
-/// unplugged drive doesn't report the space of the filesystem its mount point directory is on.
-pub struct StorageReader {
-    mount_points: Vec<String>,
-}
-
-impl StorageReader {
-    pub fn new(mount_points: Vec<String>) -> Self {
-        Self { mount_points }
-    }
-}
+/// Reads the space on every mounted storage filesystem, in mount table order. Only mounted filesystems are read, so
+/// an unplugged drive doesn't report the space of the filesystem its mount point directory is on.
+pub struct StorageReader;
 
 impl SensorReader for StorageReader {
     type Output = Vec<MountUsage>;
@@ -33,7 +25,6 @@ impl SensorReader for StorageReader {
 
         let usage = mounts
             .into_iter()
-            .filter(|mount| self.mount_points.contains(&mount.mount_point))
             .filter_map(|mount| match rustix::fs::statvfs(mount.mount_point.as_str()) {
                 Ok(stats) => Some(MountUsage {
                     total_bytes: stats.f_blocks.saturating_mul(stats.f_frsize),

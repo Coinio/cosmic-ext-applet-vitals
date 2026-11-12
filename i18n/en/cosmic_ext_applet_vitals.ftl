@@ -37,3 +37,5 @@ settings-storage-title = Storage Settings
 settings-storage-mounts = Included Mounts
 settings-storage-mounts-helper = The available / total space shown is the sum of the ticked mounts. A filesystem mounted in more than one place is only counted once.
 settings-storage-not-mounted = Not mounted
+popup-storage-title = Storage
+popup-storage-space = { $available } free of { $total }

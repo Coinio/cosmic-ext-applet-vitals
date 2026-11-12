@@ -1,7 +1,20 @@
+use crate::app::Message;
 use crate::configuration::app_configuration::AppConfiguration;
+use crate::core::app_colours::AppColour;
 use crate::core::app_icons::STORAGE_ICON;
+use crate::fl;
 use crate::monitors::storage_monitor::StorageStats;
+use crate::sensors::storage_reader::MountUsage;
+use crate::ui::components::detail_popup::detail_popup;
 use crate::ui::components::indicator::{IndicatorContent, IndicatorIcon, IndicatorLine};
+use cosmic::iced::widget::progress_bar::Catalog;
+use cosmic::iced::widget::{progress_bar, Column, Row};
+use cosmic::iced::{Alignment, Length};
+use cosmic::theme::ProgressBar;
+use cosmic::{widget, Element};
+
+/// The thickness of the used space bar under each mount.
+const USED_SPACE_BAR_GIRTH: u16 = 6;
 
 impl StorageStats {
     pub fn content(&self, configuration: &AppConfiguration, horizontal: bool) -> Option<IndicatorContent> {
@@ -32,6 +45,63 @@ impl StorageStats {
             lines,
             max_label_text,
         })
+    }
+
+    /// The popup shown when hovering over the indicator, which lists every mount, not only the ones in the totals.
+    pub fn detail(&self, configuration: &AppConfiguration) -> Element<'_, Message> {
+        let bar_colour = configuration.storage.icon_colour.as_deref().and_then(AppColour::parse);
+        let mounts = self
+            .mounts
+            .iter()
+            .map(|mount| mount_detail(mount, bar_colour, configuration));
+
+        detail_popup(fl!("popup-storage-title"), mounts)
+    }
+}
+
+/// A mount point and its free space, above a bar showing how much of it is used.
+fn mount_detail<'a>(
+    mount: &'a MountUsage,
+    bar_colour: Option<AppColour>,
+    configuration: &AppConfiguration,
+) -> Element<'a, Message> {
+    let space = fl!(
+        "popup-storage-space",
+        available = format_storage_bytes(mount.available_bytes, configuration),
+        total = format_storage_bytes(mount.total_bytes, configuration)
+    );
+
+    let label = Row::new()
+        .spacing(8)
+        .align_y(Alignment::Center)
+        .push(widget::text::body(mount.mount_point.as_str()).width(Length::Fill))
+        .push(widget::text::caption(space));
+
+    let bar = progress_bar(0.0..=1.0, used_fraction(mount))
+        .girth(USED_SPACE_BAR_GIRTH)
+        .class(used_space_bar_class(bar_colour));
+
+    Column::new().spacing(4).push(label).push(bar).into()
+}
+
+/// How much of the mount is used, from 0 to 1. Blocks reserved for root count as used, matching the free space shown.
+fn used_fraction(mount: &MountUsage) -> f32 {
+    if mount.total_bytes == 0 {
+        return 0.0;
+    }
+    let used_bytes = mount.total_bytes.saturating_sub(mount.available_bytes);
+    (used_bytes as f64 / mount.total_bytes as f64) as f32
+}
+
+/// The theme's progress bar, with the bar drawn in the indicator's icon colour when one is set.
+fn used_space_bar_class(colour: Option<AppColour>) -> ProgressBar {
+    match colour {
+        None => ProgressBar::Primary,
+        Some(colour) => ProgressBar::custom(move |theme| {
+            let mut style = theme.style(&ProgressBar::Primary);
+            style.bar = colour.resolve(theme.cosmic()).into();
+            style
+        }),
     }
 }
 
@@ -78,6 +148,27 @@ mod tests {
         assert_eq!(format_storage_bytes(999_700_000_000, &config), "1.0TB");
         assert_eq!(format_storage_bytes(2_000_000_000_000, &config), "2.0TB");
         assert_eq!(format_storage_bytes(120_000_000_000_000, &config), "120TB");
+    }
+
+    fn mount(total_bytes: u64, available_bytes: u64) -> MountUsage {
+        MountUsage {
+            source: "/dev/sda1".to_string(),
+            mount_point: "/".to_string(),
+            total_bytes,
+            available_bytes,
+        }
+    }
+
+    #[test]
+    fn used_fraction_is_the_space_that_is_not_available() {
+        assert_eq!(used_fraction(&mount(1000, 250)), 0.75);
+        assert_eq!(used_fraction(&mount(1000, 1000)), 0.0);
+        assert_eq!(used_fraction(&mount(1000, 0)), 1.0);
+    }
+
+    #[test]
+    fn used_fraction_of_an_empty_filesystem_is_zero() {
+        assert_eq!(used_fraction(&mount(0, 0)), 0.0);
     }
 
     #[test]

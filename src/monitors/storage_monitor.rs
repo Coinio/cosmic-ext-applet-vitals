@@ -5,19 +5,28 @@ use std::collections::HashSet;
 
 #[derive(Debug, Clone, Default)]
 pub struct StorageStats {
+    /// The available space across the configured mounts.
     pub available_bytes: u64,
+    /// The total space across the configured mounts.
     pub total_bytes: u64,
+    /// Every mounted filesystem, including those not counted in the totals, in mount table order.
+    pub mounts: Vec<MountUsage>,
 }
 
 /// Totals the space across the configured mounts. Free space doesn't need smoothing, so there are no samples.
 pub struct StorageMonitor<S: SensorReader<Output = Vec<MountUsage>>> {
     sensor_reader: S,
+    /// The mount points counted in the totals.
+    counted_mount_points: Vec<String>,
 }
 
 impl<S: SensorReader<Output = Vec<MountUsage>>> StorageMonitor<S> {
-    pub fn new(sensor_reader: S) -> Self {
+    pub fn new(sensor_reader: S, counted_mount_points: Vec<String>) -> Self {
         info!("Creating new storage monitor");
-        Self { sensor_reader }
+        Self {
+            sensor_reader,
+            counted_mount_points,
+        }
     }
 
     pub fn poll(&mut self) -> Result<StorageStats, String> {
@@ -26,9 +35,9 @@ impl<S: SensorReader<Output = Vec<MountUsage>>> StorageMonitor<S> {
         let mut counted: HashSet<String> = HashSet::new();
         let mut stats = StorageStats::default();
 
-        for mount in mounts {
+        for mount in mounts.iter().filter(|mount| self.counted_mount_points.contains(&mount.mount_point)) {
             // Bind mounts and btrfs subvolumes are the same filesystem mounted more than once, so only count it once.
-            if !counted.insert(filesystem_key(&mount)) {
+            if !counted.insert(filesystem_key(mount)) {
                 continue;
             }
 
@@ -36,6 +45,7 @@ impl<S: SensorReader<Output = Vec<MountUsage>>> StorageMonitor<S> {
             stats.total_bytes = stats.total_bytes.saturating_add(mount.total_bytes);
         }
 
+        stats.mounts = mounts;
         Ok(stats)
     }
 }
@@ -88,13 +98,17 @@ mod tests {
         }
     }
 
+    fn mount_points(mount_points: &[&str]) -> Vec<String> {
+        mount_points.iter().map(|mount_point| mount_point.to_string()).collect()
+    }
+
     #[test]
     fn sums_separate_filesystems() {
         let reader = MockStorageReader::new(vec![Ok(vec![
             usage("/dev/nvme0n1p2", "/", 1000, 400),
             usage("/dev/sda1", "/data", 2000, 1500),
         ])]);
-        let mut monitor = StorageMonitor::new(reader);
+        let mut monitor = StorageMonitor::new(reader, mount_points(&["/", "/data"]));
 
         let stats = monitor.poll().unwrap();
 
@@ -108,7 +122,7 @@ mod tests {
             usage("/dev/nvme0n1p2", "/", 1000, 400),
             usage("/dev/nvme0n1p2", "/home", 1000, 400),
         ])]);
-        let mut monitor = StorageMonitor::new(reader);
+        let mut monitor = StorageMonitor::new(reader, mount_points(&["/", "/home"]));
 
         let stats = monitor.poll().unwrap();
 
@@ -122,7 +136,7 @@ mod tests {
             usage("none", "/mnt/a", 1000, 100),
             usage("none", "/mnt/b", 500, 50),
         ])]);
-        let mut monitor = StorageMonitor::new(reader);
+        let mut monitor = StorageMonitor::new(reader, mount_points(&["/mnt/a", "/mnt/b"]));
 
         let stats = monitor.poll().unwrap();
 
@@ -131,9 +145,26 @@ mod tests {
     }
 
     #[test]
+    fn lists_every_mount_but_only_counts_the_configured_ones() {
+        let mounts = vec![
+            usage("/dev/nvme0n1p2", "/", 1000, 400),
+            usage("/dev/nvme0n1p1", "/boot/efi", 100, 90),
+            usage("/dev/sda1", "/data", 2000, 1500),
+        ];
+        let reader = MockStorageReader::new(vec![Ok(mounts.clone())]);
+        let mut monitor = StorageMonitor::new(reader, mount_points(&["/", "/data"]));
+
+        let stats = monitor.poll().unwrap();
+
+        assert_eq!(stats.total_bytes, 3000);
+        assert_eq!(stats.available_bytes, 1900);
+        assert_eq!(stats.mounts, mounts);
+    }
+
+    #[test]
     fn no_mounts_gives_zero() {
         let reader = MockStorageReader::new(vec![Ok(Vec::new())]);
-        let mut monitor = StorageMonitor::new(reader);
+        let mut monitor = StorageMonitor::new(reader, mount_points(&["/"]));
 
         let stats = monitor.poll().unwrap();
 
@@ -144,7 +175,7 @@ mod tests {
     #[test]
     fn error_is_propagated() {
         let reader = MockStorageReader::new(vec![Err("boom".to_string())]);
-        let mut monitor = StorageMonitor::new(reader);
+        let mut monitor = StorageMonitor::new(reader, mount_points(&["/"]));
 
         assert_eq!(monitor.poll().unwrap_err(), "boom");
     }

@@ -16,14 +16,16 @@ use crate::sensors::proc_net_dev_reader::ProcNetDevReader;
 use crate::sensors::proc_stat_reader::ProcStatSensorReader;
 use crate::sensors::storage_reader::StorageReader;
 use crate::settings_app::SETTINGS_FLAG;
+use crate::ui::components::hover_area::hover_area;
 use crate::ui::components::indicator::indicator;
 use crate::ui::components::no_indicator::{no_indicators_content, NoIndicatorProps};
 use cosmic::app::{Core, Task};
 use cosmic::applet::cosmic_panel_config::{PanelAnchor, PanelSize};
 use cosmic::cosmic_config::CosmicConfigEntry;
 use cosmic::font::Font;
-use cosmic::iced::Alignment;
-use cosmic::iced::Subscription;
+use cosmic::iced::platform_specific::runtime::wayland::popup::SctkPopupSettings;
+use cosmic::iced::platform_specific::shell::commands::popup::{destroy_popup, get_popup};
+use cosmic::iced::{window, Alignment, Point, Rectangle, Size, Subscription};
 use cosmic::iced::widget::{Column, Row};
 use cosmic::widget;
 use cosmic::widget::{autosize, container, divider, Id};
@@ -42,6 +44,39 @@ static AUTOSIZE_MAIN_ID: Lazy<Id> = Lazy::new(|| Id::new("autosize-main"));
 const DEFAULT_INDICATOR_FONT_SIZE: u16 = 11;
 const DEFAULT_INDICATOR_ICON_SIZE: u16 = 11;
 const DEFAULT_INDICATOR_SPACING: u16 = 8;
+
+/// How long the cursor has to rest on an indicator before its detail popup opens, so sweeping the cursor across the
+/// panel doesn't flash popups open.
+const DETAIL_POPUP_DELAY: Duration = Duration::from_millis(400);
+
+/// Identifies an indicator, e.g. to know which one's detail popup to show.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum IndicatorKind {
+    Cpu,
+    Memory,
+    Network,
+    Disk,
+    Storage,
+}
+
+impl IndicatorKind {
+    /// Whether hovering over the indicator shows a popup with more detail.
+    fn has_detail(self) -> bool {
+        matches!(self, IndicatorKind::Storage)
+    }
+}
+
+/// The detail popup for the indicator under the cursor. It opens after [`DETAIL_POPUP_DELAY`].
+#[derive(Debug)]
+struct DetailPopup {
+    kind: IndicatorKind,
+    /// The indicator's bounds in the applet, which the popup is anchored to.
+    bounds: Rectangle,
+    /// Identifies this hover, so the delayed open of an earlier hover is ignored.
+    hover: u64,
+    /// The popup's window, once it has opened.
+    window_id: Option<window::Id>,
+}
 
 #[derive(Default)]
 pub struct AppState {
@@ -69,6 +104,10 @@ pub struct AppState {
     storage: StorageStats,
     /// The settings window process, if one has been launched. See [`crate::settings_app`] for why it is separate.
     settings_process: Option<Child>,
+    /// The detail popup for the hovered indicator, if one is hovered.
+    detail_popup: Option<DetailPopup>,
+    /// Counts the hovers over indicators, to identify each one.
+    hover_count: u64,
 }
 
 /// Monitors that fall due within this window of each other are polled together, so they share one redraw.
@@ -95,6 +134,14 @@ pub enum Message {
     StatsUpdate(StatsUpdate),
     /// The configuration file was changed externally
     ConfigFileChanged(AppConfiguration),
+    /// The cursor entered an indicator, which has these bounds
+    IndicatorHovered(IndicatorKind, Rectangle),
+    /// The cursor left an indicator
+    IndicatorUnhovered(IndicatorKind),
+    /// The cursor has rested on an indicator long enough to open its detail popup. Identifies the hover.
+    OpenDetailPopup(u64),
+    /// A popup was closed by the compositor
+    PopupClosed(window::Id),
 }
 
 impl Application for AppState {
@@ -155,7 +202,10 @@ impl Application for AppState {
 
     fn update(&mut self, message: Self::Message) -> Task<Self::Message> {
         match message {
-            Message::OpenSettingsWindow => self.open_settings_window(),
+            Message::OpenSettingsWindow => {
+                self.open_settings_window();
+                return self.close_detail_popup();
+            }
             Message::StartMonitoring => {
                 self.stop_monitoring();
 
@@ -176,7 +226,7 @@ impl Application for AppState {
                     let mut disk_monitor = (!config.disk.hide_indicator)
                         .then(|| DiskMonitor::new(ProcDiskStatsReader, &config));
                     let mut storage_monitor = (!config.storage.hide_indicator)
-                        .then(|| StorageMonitor::new(StorageReader::new(config.storage.mounts.clone())));
+                        .then(|| StorageMonitor::new(StorageReader, config.storage.mounts.clone()));
 
                     // A single scheduler drives every monitor. Monitors that fall due at (nearly) the same
                     // time are polled together and sent as one message, because every message rebuilds and
@@ -249,7 +299,40 @@ impl Application for AppState {
             Message::ConfigFileChanged(configuration) => {
                 self.configuration = configuration;
                 self.refresh_indicator_font();
-                return cosmic::task::message(Message::StartMonitoring);
+                // The hovered indicator may have been hidden, which leaves nothing to report that it's no longer hovered.
+                return self
+                    .close_detail_popup()
+                    .chain(cosmic::task::message(Message::StartMonitoring));
+            }
+            Message::IndicatorHovered(kind, bounds) => {
+                let close = self.close_detail_popup();
+
+                self.hover_count += 1;
+                let hover = self.hover_count;
+                self.detail_popup = Some(DetailPopup {
+                    kind,
+                    bounds,
+                    hover,
+                    window_id: None,
+                });
+
+                let open = cosmic::task::future(async move {
+                    tokio::time::sleep(DETAIL_POPUP_DELAY).await;
+                    Message::OpenDetailPopup(hover)
+                });
+                return Task::batch([close, open]);
+            }
+            Message::IndicatorUnhovered(kind) => {
+                // Moving between indicators can report entering the next one before leaving this one.
+                if self.detail_popup.as_ref().is_some_and(|popup| popup.kind == kind) {
+                    return self.close_detail_popup();
+                }
+            }
+            Message::OpenDetailPopup(hover) => return self.open_detail_popup(hover),
+            Message::PopupClosed(id) => {
+                if self.detail_popup.as_ref().is_some_and(|popup| popup.window_id == Some(id)) {
+                    self.detail_popup = None;
+                }
             }
         }
         Task::none()
@@ -259,16 +342,28 @@ impl Application for AppState {
         let is_horizontal = is_horizontal(&self.core);
 
         let indicators = [
-            self.cpu.content(&self.configuration),
-            self.memory.content(&self.configuration),
-            self.network.content(&self.configuration),
-            self.disk.content(&self.configuration),
-            self.storage.content(&self.configuration, is_horizontal),
+            (IndicatorKind::Cpu, self.cpu.content(&self.configuration)),
+            (IndicatorKind::Memory, self.memory.content(&self.configuration)),
+            (IndicatorKind::Network, self.network.content(&self.configuration)),
+            (IndicatorKind::Disk, self.disk.content(&self.configuration)),
+            (IndicatorKind::Storage, self.storage.content(&self.configuration, is_horizontal)),
         ];
         let mut contents: Vec<Element<Message>> = indicators
             .into_iter()
-            .flatten()
-            .map(|content| indicator(self, is_horizontal, content))
+            .filter_map(|(kind, content)| Some((kind, content?)))
+            .map(|(kind, content)| {
+                let content = indicator(self, is_horizontal, content);
+                if kind.has_detail() {
+                    hover_area(
+                        content,
+                        move |bounds| Message::IndicatorHovered(kind, bounds),
+                        Message::IndicatorUnhovered(kind),
+                    )
+                    .into()
+                } else {
+                    content
+                }
+            })
             .collect();
         if contents.is_empty() {
             contents.push(no_indicators_content(NoIndicatorProps {
@@ -312,6 +407,21 @@ impl Application for AppState {
             .on_press(Message::OpenSettingsWindow);
 
         autosize::autosize(container(button), AUTOSIZE_MAIN_ID.clone()).into()
+    }
+
+    fn view_window(&self, id: window::Id) -> Element<'_, Self::Message> {
+        let content = match &self.detail_popup {
+            Some(popup) if popup.window_id == Some(id) => self.detail_popup_content(popup.kind),
+            _ => None,
+        };
+        match content {
+            Some(content) => self.core.applet.popup_container(content).into(),
+            None => widget::Space::new().into(),
+        }
+    }
+
+    fn on_close_requested(&self, id: window::Id) -> Option<Self::Message> {
+        Some(Message::PopupClosed(id))
     }
 
     fn style(&self) -> Option<cosmic::iced::theme::Style> {
@@ -408,6 +518,37 @@ impl AppState {
         }
     }
 
+    /// Open the detail popup for the hovered indicator, if it is still the hover that asked for it.
+    fn open_detail_popup(&mut self, hover: u64) -> Task<Message> {
+        let Some(parent) = self.core.main_window_id() else {
+            return Task::none();
+        };
+        let Some(popup) = self.detail_popup.as_mut().filter(|popup| popup.hover == hover) else {
+            return Task::none();
+        };
+        if popup.window_id.is_some() {
+            return Task::none();
+        }
+
+        let id = window::Id::unique();
+        popup.window_id = Some(id);
+        get_popup(detail_popup_settings(&self.core, parent, id, popup.bounds))
+    }
+
+    fn close_detail_popup(&mut self) -> Task<Message> {
+        match self.detail_popup.take().and_then(|popup| popup.window_id) {
+            Some(id) => destroy_popup(id),
+            None => Task::none(),
+        }
+    }
+
+    fn detail_popup_content(&self, kind: IndicatorKind) -> Option<Element<'_, Message>> {
+        match kind {
+            IndicatorKind::Storage => Some(self.storage.detail(&self.configuration)),
+            IndicatorKind::Cpu | IndicatorKind::Memory | IndicatorKind::Network | IndicatorKind::Disk => None,
+        }
+    }
+
     fn refresh_indicator_font(&mut self) {
         self.indicator_font = app_fonts::resolve_font(&self.configuration.general.font, &self.interface_font);
     }
@@ -431,6 +572,28 @@ impl AppState {
 
 fn is_horizontal(core: &Core) -> bool {
     matches!(core.applet.anchor, PanelAnchor::Top | PanelAnchor::Bottom)
+}
+
+/// A popup anchored to the indicator with `bounds`, beyond the panel's edge, which doesn't take the pointer or
+/// keyboard, so the indicator stays hovered and the panel keeps working while it's open.
+fn detail_popup_settings(core: &Core, parent: window::Id, id: window::Id, bounds: Rectangle) -> SctkPopupSettings {
+    let mut settings = core.applet.get_popup_settings(parent, id, None, None, None);
+
+    // The default anchor spans the whole applet. Narrow it to the indicator along the panel, and keep the applet's
+    // thickness across it so the popup clears the panel.
+    let anchor = &mut settings.positioner.anchor_rect;
+    if is_horizontal(core) {
+        anchor.x = bounds.x.round() as i32;
+        anchor.width = bounds.width.round() as i32;
+    } else {
+        anchor.y = bounds.y.round() as i32;
+        anchor.height = bounds.height.round() as i32;
+    }
+
+    settings.grab = false;
+    // An empty input region, placed off the surface as the COSMIC applet tooltips do, so the pointer passes through.
+    settings.input_zone = Some(vec![Rectangle::new(Point::new(-1000.0, -1000.0), Size::default())]);
+    settings
 }
 
 /// The font size slot for the panel/dock the applet is running in, which is the one the settings form edits.
