@@ -13,7 +13,7 @@ use crate::monitors::network_monitor::{NetworkMonitor, NetworkStats};
 use crate::monitors::storage_monitor::{StorageMonitor, StorageStats};
 use crate::sensors::cpu_topology_reader::{CpuTopology, SYSFS_CPU_ROOT};
 use crate::sensors::hwmon_reader::HWMON_ROOT;
-use crate::sensors::proc_disk_stats_reader::ProcDiskStatsReader;
+use crate::sensors::proc_disk_stats_reader::{ProcDiskStatsReader, SYS_BLOCK_ROOT};
 use crate::sensors::proc_meminfo_reader::ProcMemInfoSensorReader;
 use crate::sensors::proc_net_dev_reader::ProcNetDevReader;
 use crate::sensors::proc_stat_reader::ProcStatSensorReader;
@@ -65,11 +65,6 @@ pub enum IndicatorKind {
 }
 
 impl IndicatorKind {
-    /// Whether hovering over the indicator shows a popup with more detail.
-    fn has_detail(self) -> bool {
-        matches!(self, IndicatorKind::Cpu | IndicatorKind::Storage)
-    }
-
     /// The settings page that clicking the indicator opens.
     fn settings_page(self) -> SettingsPage {
         match self {
@@ -289,7 +284,8 @@ impl Application for AppState {
                 .into();
             let page = kind.map_or(SettingsPage::General, IndicatorKind::settings_page);
             let mut area = indicator_area(content, Message::OpenSettingsWindow(page));
-            if let Some(kind) = kind.filter(|kind| kind.has_detail()) {
+            // Every indicator has a detail popup.
+            if let Some(kind) = kind {
                 area = area.on_hover(
                     move |bounds| Message::IndicatorHovered(kind, bounds),
                     Message::IndicatorUnhovered(kind),
@@ -395,7 +391,7 @@ impl AppState {
                     let mut network_monitor = (!config.network.hide_indicator)
                         .then(|| NetworkMonitor::new(ProcNetDevReader, &config));
                     let mut disk_monitor = (!config.disk.hide_indicator)
-                        .then(|| DiskMonitor::new(ProcDiskStatsReader, &config));
+                        .then(|| DiskMonitor::new(ProcDiskStatsReader, &config, Path::new(SYS_BLOCK_ROOT)));
                     let mut storage_monitor = (!config.storage.hide_indicator)
                         .then(|| StorageMonitor::new(StorageReader, config.storage.mounts.clone()));
 
@@ -645,8 +641,10 @@ impl AppState {
     fn detail_popup_content(&self, kind: IndicatorKind) -> Option<Element<'_, Message>> {
         match kind {
             IndicatorKind::Cpu => Some(self.cpu.detail(&self.cpu_sensors, &self.configuration)),
+            IndicatorKind::Memory => Some(self.memory.detail(&self.configuration)),
+            IndicatorKind::Network => Some(self.network.detail(&self.configuration, &self.app_icons)),
+            IndicatorKind::Disk => Some(self.disk.detail(&self.configuration, &self.app_icons)),
             IndicatorKind::Storage => Some(self.storage.detail(&self.configuration)),
-            IndicatorKind::Memory | IndicatorKind::Network | IndicatorKind::Disk => None,
         }
     }
 

@@ -7,16 +7,14 @@ use crate::configuration::app_configuration::AppConfiguration;
 #[derive(Default, Clone, Debug)]
 pub struct MemoryStats {
     pub total_kib: u64,
+    /// The memory in use, averaged over the samples.
     pub used_kib: u64,
-}
-
-impl MemoryStats {
-    pub fn new(total_kib: u64, used_kib: u64) -> Self {
-        Self {
-            total_kib,
-            used_kib,
-        }
-    }
+    /// The latest page cache and buffers, which the kernel frees when it needs the memory.
+    pub cached_kib: u64,
+    /// The latest swap total, which is 0 without swap.
+    pub swap_total_kib: u64,
+    /// The latest swap in use.
+    pub swap_used_kib: u64,
 }
 
 pub struct MemoryMonitor<S: SensorReader<Output = ProcMemInfoStatus>> {
@@ -51,7 +49,13 @@ impl<S: SensorReader<Output = ProcMemInfoStatus>> MemoryMonitor<S> {
         
         let average_used = self.sample_buffer.iter().sum::<u64>() / self.sample_buffer.len() as u64;
 
-        Ok(MemoryStats::new(meminfo_state.total_kib, average_used))
+        Ok(MemoryStats {
+            total_kib: meminfo_state.total_kib,
+            used_kib: average_used,
+            cached_kib: meminfo_state.cached_kib,
+            swap_total_kib: meminfo_state.swap_total_kib,
+            swap_used_kib: meminfo_state.swap_total_kib.saturating_sub(meminfo_state.swap_free_kib),
+        })
     }
 }
 
@@ -170,6 +174,26 @@ mod tests {
         _ = monitor.poll();
 
         assert!(monitor.sample_buffer.len() == 2);
+    }
+
+    #[test]
+    fn reports_latest_cache_and_swap() {
+        let reading = |cached_kib, swap_free_kib| ProcMemInfoStatus {
+            total_kib: TOTAL_KIB,
+            available_kib: 22048124,
+            cached_kib,
+            swap_total_kib: 8000,
+            swap_free_kib,
+        };
+        let reader = MockProcMeminfoReader::new(vec![Ok(reading(1000, 7000)), Ok(reading(3000, 5000))]);
+        let mut monitor = MemoryMonitor::new(reader, &make_config(3));
+
+        _ = monitor.poll();
+        let result = monitor.poll().unwrap();
+
+        assert_eq!(result.cached_kib, 3000);
+        assert_eq!(result.swap_total_kib, 8000);
+        assert_eq!(result.swap_used_kib, 3000);
     }
 
     #[test]

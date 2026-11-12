@@ -982,6 +982,7 @@ dependencies = [
  "i18n-embed 0.14.1",
  "i18n-embed-fl 0.8.0",
  "indexmap 2.11.4",
+ "libc",
  "libcosmic",
  "log",
  "once_cell",

@@ -1,7 +1,8 @@
-use crate::sensors::network_utilities::is_physical_interface;
+use crate::sensors::network_utilities::{ipv4_addresses, is_interface_up, is_physical_interface};
 use crate::sensors::sensor_traits::SensorReader;
 use std::fs::File;
 use std::io::Read;
+use std::net::Ipv4Addr;
 use std::path::Path;
 
 const PROC_NET_DEV_FILE: &str = "/proc/net/dev";
@@ -20,27 +21,22 @@ impl ProcNetDevStatus {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct ProcNetDevDeviceStatus {
+    pub name: String,
     pub rx_bytes: u64,
     pub tx_bytes: u64,
     pub is_physical_device: bool,
+    /// Whether the link is up. Only read for physical devices.
+    pub is_up: bool,
+    /// The device's IPv4 address, if it has one. Only read for physical devices.
+    pub ipv4: Option<Ipv4Addr>,
 }
 
 struct ProcNetDevLine {
     device_name: String,
     rx_bytes: u64,
     tx_bytes: u64,
-}
-
-impl ProcNetDevDeviceStatus {
-    pub fn new(rx_bytes: u64, tx_bytes: u64, is_physical_device: bool) -> Self {
-        Self {
-            rx_bytes,
-            tx_bytes,
-            is_physical_device,
-        }
-    }
 }
 
 pub struct ProcNetDevReader;
@@ -63,15 +59,28 @@ impl SensorReader for ProcNetDevReader {
         }
 
         let mut statuses = Vec::new();
+        let mut addresses = None;
 
         for line in contents.lines().skip(2) {
-            let device_status = self.parse_proc_file_line(line)?;
+            let line = self.parse_proc_file_line(line)?;
+            let is_physical_device = is_physical_interface(&line.device_name);
 
-            statuses.push(ProcNetDevDeviceStatus::new(
-                device_status.rx_bytes,
-                device_status.tx_bytes,
-                is_physical_interface(device_status.device_name.as_str()),
-            ));
+            let (is_up, ipv4) = if is_physical_device {
+                // Only looked up once there's a physical device to look it up for.
+                let addresses = addresses.get_or_insert_with(ipv4_addresses);
+                (is_interface_up(&line.device_name), addresses.get(&line.device_name).copied())
+            } else {
+                (false, None)
+            };
+
+            statuses.push(ProcNetDevDeviceStatus {
+                name: line.device_name,
+                rx_bytes: line.rx_bytes,
+                tx_bytes: line.tx_bytes,
+                is_physical_device,
+                is_up,
+                ipv4,
+            });
         }
 
         Ok(ProcNetDevStatus::new(statuses))

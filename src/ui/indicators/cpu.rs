@@ -5,7 +5,7 @@ use crate::core::app_icons::CPU_ICON;
 use crate::fl;
 use crate::monitors::cpu_monitor::{CoreUsage, CpuStats};
 use crate::monitors::cpu_sensors_monitor::CpuSensorStats;
-use crate::ui::components::detail_popup::{coloured_bar_class, detail_popup};
+use crate::ui::components::detail_popup::{coloured_bar_class, detail_popup, detail_rows};
 use crate::ui::components::indicator::{IndicatorContent, IndicatorIcon, IndicatorLine};
 use cosmic::iced::alignment::Horizontal;
 use cosmic::iced::widget::{progress_bar, Column, Row};
@@ -69,15 +69,7 @@ impl CpuStats {
         .collect();
 
         if !readings.is_empty() {
-            let rows = readings.into_iter().map(|(label, value)| {
-                Row::new()
-                    .spacing(8)
-                    .align_y(Alignment::Center)
-                    .push(widget::text::body(label).width(Length::Fill))
-                    .push(widget::text::body(value))
-                    .into()
-            });
-            sections.push(Column::with_children(rows).spacing(4).into());
+            sections.push(detail_rows(readings));
         }
 
         if !self.cores.is_empty() {

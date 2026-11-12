@@ -18,6 +18,9 @@ for those fighting with iced/libcosmic, etc.
   mounted in more than one place, e.g. btrfs subvolumes, is only counted once.
 * Hover over the CPU indicator for the usage of each thread, or each physical core, and the CPU temperature and fan
   speed where the system reports them. See [CPU Temperature and Fan Speed](#cpu-temperature-and-fan-speed)
+* Hover over the memory indicator for the memory used, cached and available, and the swap used
+* Hover over the network indicator for the download / upload of each interface, and its IPv4 address
+* Hover over the disk indicator for the reads / writes of each disk, its model, and how busy it is
 * Hover over the storage indicator for the free space of every mount
 * Click an indicator to open its settings
 * Horizontal / Vertical Layouts - The horizontal layout has seen a little more testing as I 
