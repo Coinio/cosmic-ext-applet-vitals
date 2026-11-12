@@ -1,90 +1,37 @@
-use crate::app::{AppState, Message};
 use crate::configuration::app_configuration::AppConfiguration;
 use crate::core::app_icons::STORAGE_ICON;
 use crate::monitors::storage_monitor::StorageStats;
-use crate::ui::components::indicator::{indicator, IndicatorProps, IndicatorValueItem};
-use crate::ui::indicators::{configured_colour, text_line_metrics, themed_icon};
-use cosmic::Element;
+use crate::ui::components::indicator::{IndicatorContent, IndicatorIcon, IndicatorLine};
 
 impl StorageStats {
-    pub fn draw<'app>(&self, app_state: &'app AppState, horizontal: bool) -> Option<Element<'app, Message>> {
-        let core = app_state.core();
-        let configuration = app_state.configuration();
-
-        if self.is_hidden(configuration) {
+    pub fn content(&self, configuration: &AppConfiguration, horizontal: bool) -> Option<IndicatorContent> {
+        let storage = &configuration.storage;
+        if storage.hide_indicator {
             return None;
         }
-
-        let font_size = app_state.font_size(horizontal);
-        let (line_height, digit_centre) = text_line_metrics(app_state, font_size);
-        let icon = if configuration.storage.hide_icon {
-            None
-        } else {
-            Some(themed_icon(
-                app_state,
-                STORAGE_ICON,
-                configured_colour(configuration.storage.icon_colour.as_deref()),
-                font_size,
-            ))
-        };
-
-        let max_text_width = if configuration.general.fix_indicator_size {
-            app_state.app_text_measurements().measure(
-                self.max_label_text(configuration, horizontal),
-                font_size,
-                app_state.indicator_font(),
-            )
-        } else {
-            None
-        };
 
         let available = format_storage_bytes(self.available_bytes, configuration);
         let total = format_storage_bytes(self.total_bytes, configuration);
 
         // There's room for "available/total" on a single line in a horizontal panel, but not in a vertical one.
-        let values = if horizontal {
-            vec![IndicatorValueItem {
-                text: format!("{available}/{total}"),
-                icon: None,
-            }]
+        let lines = if horizontal {
+            vec![IndicatorLine::text(format!("{available}/{total}"))]
         } else {
-            vec![
-                IndicatorValueItem {
-                    text: available,
-                    icon: None,
-                },
-                IndicatorValueItem { text: total, icon: None },
-            ]
+            vec![IndicatorLine::text(available), IndicatorLine::text(total)]
         };
 
-        indicator(
-            core,
-            IndicatorProps {
-                icon,
-                font_size,
-                font: app_state.indicator_font(),
-                line_height,
-                digit_centre,
-                value_width: max_text_width,
-                horizontal,
-                spacing: app_state.core().applet.suggested_padding(true).1,
-                icon_spacing: 2,
-                values,
-            },
-        )
-    }
-
-    fn max_label_text(&self, app_config: &AppConfiguration, horizontal: bool) -> &'static str {
-        match (app_config.general.use_iec_units, horizontal) {
+        let max_label_text = match (configuration.general.use_iec_units, horizontal) {
             (true, true) => "99.9TiB/99.9TiB",
             (true, false) => "99.9TiB",
             (false, true) => "99.9TB/99.9TB",
             (false, false) => "99.9TB",
-        }
-    }
+        };
 
-    fn is_hidden(&self, app_config: &AppConfiguration) -> bool {
-        app_config.storage.hide_indicator
+        Some(IndicatorContent {
+            icon: (!storage.hide_icon).then(|| IndicatorIcon::new(STORAGE_ICON, storage.icon_colour.as_deref())),
+            lines,
+            max_label_text,
+        })
     }
 }
 

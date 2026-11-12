@@ -1,8 +1,5 @@
-use crate::app::AppState;
 use crate::configuration::app_configuration::AppConfiguration;
-use crate::core::app_text_measurements::indicator_line_height;
-use crate::core::app_colours::AppColour;
-use crate::ui::components::svg_icon::SvgIconProps;
+use crate::ui::components::indicator::{IndicatorContent, IndicatorIcon, IndicatorLine};
 
 pub mod disk;
 pub mod network;
@@ -33,26 +30,24 @@ fn format_bytes_per_second(bytes_per_sec: u64, app_config: &AppConfiguration) ->
         }
     }
 }
-/// One of the app's icons, sized to sit alongside indicator text and tinted with `colour`. Without a colour the
-/// icon keeps its own (white) fill.
-fn themed_icon<'a>(app_state: &'a AppState, icon_key: &str, colour: Option<AppColour>, size: u16) -> SvgIconProps<'a> {
-    SvgIconProps {
-        icon: app_state.app_icons().get(icon_key),
-        size,
-        colour,
+/// One direction of a data rate indicator, e.g. download.
+struct DataRate<'a> {
+    icon_key: &'static str,
+    colour: Option<&'a str>,
+    bytes_per_second: u64,
+}
+
+/// A data rate indicator, such as network or disk, with a line per direction.
+fn data_rate_content(app_config: &AppConfiguration, rates: [DataRate; 2]) -> IndicatorContent {
+    IndicatorContent {
+        icon: None,
+        lines: rates
+            .into_iter()
+            .map(|rate| IndicatorLine {
+                icon: Some(IndicatorIcon::new(rate.icon_key, rate.colour)),
+                text: format_bytes_per_second(rate.bytes_per_second, app_config),
+            })
+            .collect(),
+        max_label_text: if app_config.general.use_iec_units { "99.9MiB/s" } else { "99.9MB/s" },
     }
-}
-
-/// The icon colour from a configuration value. Unrecognised values leave the icon untinted.
-fn configured_colour(value: Option<&str>) -> Option<AppColour> {
-    value.and_then(AppColour::parse)
-}
-
-/// The line height of the indicator text and the centre of the rendered digits within it, for aligning icons.
-fn text_line_metrics(app_state: &AppState, font_size: u16) -> (u16, Option<f32>) {
-    let line_height = indicator_line_height(font_size);
-    let digit_centre = app_state
-        .app_text_measurements()
-        .digit_centre(font_size, line_height, app_state.indicator_font());
-    (line_height, digit_centre)
 }

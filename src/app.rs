@@ -16,6 +16,7 @@ use crate::sensors::proc_net_dev_reader::ProcNetDevReader;
 use crate::sensors::proc_stat_reader::ProcStatSensorReader;
 use crate::sensors::storage_reader::StorageReader;
 use crate::settings_app::SETTINGS_FLAG;
+use crate::ui::components::indicator::indicator;
 use crate::ui::components::no_indicator::{no_indicators_content, NoIndicatorProps};
 use cosmic::app::{Core, Task};
 use cosmic::applet::cosmic_panel_config::{PanelAnchor, PanelSize};
@@ -261,24 +262,15 @@ impl Application for AppState {
 
         elements.push(divider::vertical::default().into());
 
-        if let Some(element) = self.cpu.draw(&self, is_horizontal) {
-            elements.push(element);
-            elements.push(divider::vertical::default().into())
-        }
-        if let Some(element) = self.memory.draw(&self, is_horizontal) {
-            elements.push(element);
-            elements.push(divider::vertical::default().into())
-        }
-        if let Some(element) = self.network.draw(&self, is_horizontal) {
-            elements.push(element);
-            elements.push(divider::vertical::default().into())
-        }
-        if let Some(element) = self.disk.draw(&self, is_horizontal) {
-            elements.push(element);
-            elements.push(divider::vertical::default().into());
-        }
-        if let Some(element) = self.storage.draw(&self, is_horizontal) {
-            elements.push(element);
+        let indicators = [
+            self.cpu.content(&self.configuration),
+            self.memory.content(&self.configuration),
+            self.network.content(&self.configuration),
+            self.disk.content(&self.configuration),
+            self.storage.content(&self.configuration, is_horizontal),
+        ];
+        for content in indicators.into_iter().flatten() {
+            elements.push(indicator(self, is_horizontal, content));
             elements.push(divider::vertical::default().into());
         }
         if elements.len() <= 1 {

@@ -1,4 +1,3 @@
-pub mod indicator_value;
 pub mod no_indicator;
 pub mod svg_icon;
 pub mod indicator;
