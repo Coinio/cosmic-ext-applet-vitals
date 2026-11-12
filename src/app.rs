@@ -9,10 +9,12 @@ use crate::monitors::cpu_monitor::{CpuMonitor, CpuStats};
 use crate::monitors::disk_monitor::{DiskMonitor, DiskStats};
 use crate::monitors::memory_monitor::{MemoryMonitor, MemoryStats};
 use crate::monitors::network_monitor::{NetworkMonitor, NetworkStats};
+use crate::monitors::storage_monitor::{StorageMonitor, StorageStats};
 use crate::sensors::proc_disk_stats_reader::ProcDiskStatsReader;
 use crate::sensors::proc_meminfo_reader::ProcMemInfoSensorReader;
 use crate::sensors::proc_net_dev_reader::ProcNetDevReader;
 use crate::sensors::proc_stat_reader::ProcStatSensorReader;
+use crate::sensors::storage_reader::StorageReader;
 use crate::settings_app::SETTINGS_FLAG;
 use crate::ui::components::no_indicator::{no_indicators_content, NoIndicatorProps};
 use cosmic::app::{Core, Task};
@@ -62,6 +64,8 @@ pub struct AppState {
     network: NetworkStats,
     /// The current disk usage stats   
     disk: DiskStats,
+    /// The current available and total storage
+    storage: StorageStats,
     /// The settings window process, if one has been launched. See [`crate::settings_app`] for why it is separate.
     settings_process: Option<Child>,
 }
@@ -76,6 +80,7 @@ pub struct StatsUpdate {
     cpu: Option<CpuStats>,
     network: Option<NetworkStats>,
     disk: Option<DiskStats>,
+    storage: Option<StorageStats>,
 }
 
 /// The messages processed by the application update
@@ -169,6 +174,8 @@ impl Application for AppState {
                         .then(|| NetworkMonitor::new(ProcNetDevReader, &config));
                     let mut disk_monitor = (!config.disk.hide_indicator)
                         .then(|| DiskMonitor::new(ProcDiskStatsReader, &config));
+                    let mut storage_monitor = (!config.storage.hide_indicator)
+                        .then(|| StorageMonitor::new(StorageReader::new(config.storage.mounts.clone())));
 
                     // A single scheduler drives every monitor. Monitors that fall due at (nearly) the same
                     // time are polled together and sent as one message, because every message rebuilds and
@@ -179,6 +186,7 @@ impl Application for AppState {
                         cpu_monitor.is_some().then_some((start, config.cpu.update_interval)),
                         network_monitor.is_some().then_some((start, config.network.update_interval)),
                         disk_monitor.is_some().then_some((start, config.disk.update_interval)),
+                        storage_monitor.is_some().then_some((start, config.storage.update_interval)),
                     ];
 
                     loop {
@@ -194,7 +202,7 @@ impl Application for AppState {
                         }
 
                         let now = Instant::now();
-                        let mut due = [false; 4];
+                        let mut due = [false; 5];
 
                         for (index, schedule) in schedules.iter_mut().enumerate() {
                             if let Some((next, interval)) = schedule {
@@ -212,6 +220,7 @@ impl Application for AppState {
                             cpu: cpu_monitor.as_mut().filter(|_| due[1]).map(|m| m.poll().unwrap_or_default()),
                             network: network_monitor.as_mut().filter(|_| due[2]).map(|m| m.poll().unwrap_or_default()),
                             disk: disk_monitor.as_mut().filter(|_| due[3]).map(|m| m.poll().unwrap_or_default()),
+                            storage: storage_monitor.as_mut().filter(|_| due[4]).map(|m| m.poll().unwrap_or_default()),
                         };
 
                         yield Message::StatsUpdate(update);
@@ -231,6 +240,9 @@ impl Application for AppState {
                 }
                 if let Some(disk) = update.disk {
                     self.disk = disk;
+                }
+                if let Some(storage) = update.storage {
+                    self.storage = storage;
                 }
             }
             Message::ConfigFileChanged(configuration) => {
@@ -262,6 +274,10 @@ impl Application for AppState {
             elements.push(divider::vertical::default().into())
         }
         if let Some(element) = self.disk.draw(&self, is_horizontal) {
+            elements.push(element);
+            elements.push(divider::vertical::default().into());
+        }
+        if let Some(element) = self.storage.draw(&self, is_horizontal) {
             elements.push(element);
             elements.push(divider::vertical::default().into());
         }

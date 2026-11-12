@@ -10,11 +10,12 @@
 use crate::app::GLOBAL_APP_ID;
 use crate::configuration::app_configuration::{
     AppConfiguration, CPU_SETTINGS_WINDOW_ID, DISK_SETTINGS_WINDOW_ID, GENERAL_SETTINGS_WINDOW_ID,
-    MEMORY_SETTINGS_WINDOW_ID, NETWORK_SETTINGS_WINDOW_ID,
+    MEMORY_SETTINGS_WINDOW_ID, NETWORK_SETTINGS_WINDOW_ID, STORAGE_SETTINGS_WINDOW_ID,
 };
 use crate::configuration::general::FontSizeSlot;
 use crate::core::app_colours::AppColour;
 use crate::core::app_fonts::FontOptions;
+use crate::core::mount_options::MountOptions;
 use crate::core::settings::{SettingsForm, SettingsFormEvent};
 use crate::fl;
 use crate::ui::components::colour_picker::{ColourPickerEvent, ColourPickerState};
@@ -57,6 +58,8 @@ pub struct SettingsApp {
     font_size_slot: Option<FontSizeSlot>,
     /// The fonts that can be selected for the indicators
     font_options: FontOptions,
+    /// The mount points that can be included in the storage totals
+    mount_options: MountOptions,
     /// The settings forms that are available for configuration of the monitors.
     settings_forms: BTreeMap<window::Id, SettingsForm>,
     /// The navigation model for the sidebar. Each entry holds the id of its settings form.
@@ -117,6 +120,7 @@ impl Application for SettingsApp {
         let app = SettingsApp {
             core,
             font_options: FontOptions::new(&configuration.general.font),
+            mount_options: MountOptions::new(&configuration.storage.mounts),
             configuration,
             font_size_slot: flags.font_size_slot,
             settings_forms,
@@ -219,6 +223,10 @@ impl SettingsApp {
         &self.font_options
     }
 
+    pub fn mount_options(&self) -> &MountOptions {
+        &self.mount_options
+    }
+
     /// The custom colour picker, if it is open for the given settings form field.
     pub fn custom_colour_picker(
         &self,
@@ -272,6 +280,7 @@ impl SettingsApp {
             cpu: self.configuration.cpu.update(form(&CPU_SETTINGS_WINDOW_ID, "cpu")),
             network: self.configuration.network.update(form(&NETWORK_SETTINGS_WINDOW_ID, "network")),
             disk: self.configuration.disk.update(form(&DISK_SETTINGS_WINDOW_ID, "disk")),
+            storage: self.configuration.storage.update(form(&STORAGE_SETTINGS_WINDOW_ID, "storage")),
         };
 
         if configuration == self.configuration {

@@ -5,3 +5,4 @@ pub mod cpu;
 pub mod memory;
 pub mod disk;
 pub mod general;
+pub mod storage;

@@ -32,3 +32,7 @@ settings-download-colour = Download Colour
 settings-upload-colour = Upload Colour
 settings-read-colour = Read Colour
 settings-write-colour = Write Colour
+settings-storage-title = Storage Settings
+settings-storage-mounts = Included Mounts
+settings-storage-mounts-helper = The available / total space shown is the sum of the ticked mounts. A filesystem mounted in more than one place is only counted once.
+settings-storage-not-mounted = Not mounted

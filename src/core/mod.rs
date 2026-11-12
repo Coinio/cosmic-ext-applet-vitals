@@ -7,5 +7,6 @@ pub mod app_text_measurements;
 pub mod cosmic_text_measurer;
 pub mod app_icons;
 pub mod settings;
+pub mod mount_options;
 
 

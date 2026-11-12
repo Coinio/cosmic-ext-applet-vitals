@@ -1,7 +1,7 @@
 use std::time::Duration;
 use cosmic::iced::window;
 use indexmap::IndexMap;
-use crate::configuration::app_configuration::{CPU_SETTINGS_WINDOW_ID, DISK_SETTINGS_WINDOW_ID, GENERAL_SETTINGS_WINDOW_ID, HIDE_INDICATOR_SETTING_KEY, HIDE_ICON_SETTING_KEY, ICON_COLOUR_SETTING_KEY, DOWNLOAD_COLOUR_SETTING_KEY, UPLOAD_COLOUR_SETTING_KEY, READ_COLOUR_SETTING_KEY, WRITE_COLOUR_SETTING_KEY, MAX_SAMPLES_SETTING_KEY, MEMORY_SETTINGS_WINDOW_ID, NETWORK_SETTINGS_WINDOW_ID, UPDATE_INTERVAL_SETTING_KEY, FIX_INDICATOR_SIZE_SETTING_KEY, FONT_SETTING_KEY, FONT_SIZE_SETTING_KEY};
+use crate::configuration::app_configuration::{CPU_SETTINGS_WINDOW_ID, DISK_SETTINGS_WINDOW_ID, GENERAL_SETTINGS_WINDOW_ID, HIDE_INDICATOR_SETTING_KEY, HIDE_ICON_SETTING_KEY, ICON_COLOUR_SETTING_KEY, DOWNLOAD_COLOUR_SETTING_KEY, UPLOAD_COLOUR_SETTING_KEY, READ_COLOUR_SETTING_KEY, WRITE_COLOUR_SETTING_KEY, MAX_SAMPLES_SETTING_KEY, MEMORY_SETTINGS_WINDOW_ID, NETWORK_SETTINGS_WINDOW_ID, UPDATE_INTERVAL_SETTING_KEY, FIX_INDICATOR_SIZE_SETTING_KEY, FONT_SETTING_KEY, FONT_SIZE_SETTING_KEY, STORAGE_MOUNTS_SETTING_KEY, STORAGE_SETTINGS_WINDOW_ID};
 use crate::configuration::cpu::CpuConfiguration;
 use crate::configuration::disk::DiskConfiguration;
 use crate::configuration::general::{
@@ -9,6 +9,7 @@ use crate::configuration::general::{
 };
 use crate::configuration::memory::MemoryConfiguration;
 use crate::configuration::network::NetworkConfiguration;
+use crate::configuration::storage::{mounts_to_form_value, StorageConfiguration};
 use crate::configuration::validation::ConfigurationValidation;
 use crate::fl;
 
@@ -27,6 +28,9 @@ pub enum SettingsFormInputType {
     FontPicker,
     /// The value is an integer within the inclusive bounds.
     SpinButton { min: u16, max: u16 },
+    /// A checkbox per mount point. The value is the encoded list of included mount points, see
+    /// [`mounts_to_form_value`].
+    MountList,
 }
 
 #[derive(Debug, Clone)]
@@ -57,7 +61,7 @@ impl From<&CpuConfiguration> for SettingsForm {
             Some((config.hide_icon, config.icon_colour.clone())),
             Vec::new(),
             config.update_interval,
-            config.max_samples,
+            Some(config.max_samples),
         );
 
         SettingsForm {
@@ -75,7 +79,7 @@ impl From<&MemoryConfiguration> for SettingsForm {
             Some((config.hide_icon, config.icon_colour.clone())),
             Vec::new(),
             config.update_interval,
-            config.max_samples,
+            Some(config.max_samples),
         );
         SettingsForm {
             settings_window_id: MEMORY_SETTINGS_WINDOW_ID.clone(),
@@ -95,7 +99,7 @@ impl From<&NetworkConfiguration> for SettingsForm {
                 colour_setting(UPLOAD_COLOUR_SETTING_KEY, fl!("settings-upload-colour"), &config.upload_colour),
             ],
             config.update_interval,
-            config.max_samples,
+            Some(config.max_samples),
         );
 
         SettingsForm {
@@ -116,11 +120,39 @@ impl From<&DiskConfiguration> for SettingsForm {
                 colour_setting(WRITE_COLOUR_SETTING_KEY, fl!("settings-write-colour"), &config.write_colour),
             ],
             config.update_interval,
-            config.max_samples,
+            Some(config.max_samples),
         );
         SettingsForm {
             settings_window_id: DISK_SETTINGS_WINDOW_ID.clone(),
             title: fl!("settings-disk-title"),
+            values,
+        }
+    }
+}
+
+impl From<&StorageConfiguration> for SettingsForm {
+    fn from(config: &StorageConfiguration) -> SettingsForm {
+        let mut values = build_shared_settings(
+            config.hide_indicator,
+            Some((config.hide_icon, config.icon_colour.clone())),
+            Vec::new(),
+            config.update_interval,
+            None,
+        );
+        values.insert(
+            STORAGE_MOUNTS_SETTING_KEY,
+            SettingsFormItem {
+                label: fl!("settings-storage-mounts"),
+                value: mounts_to_form_value(&config.mounts),
+                input_type: SettingsFormInputType::MountList,
+                validator: None,
+                helper_text: Some(fl!("settings-storage-mounts-helper")),
+            },
+        );
+
+        SettingsForm {
+            settings_window_id: STORAGE_SETTINGS_WINDOW_ID.clone(),
+            title: fl!("settings-storage-title"),
             values,
         }
     }
@@ -193,7 +225,7 @@ fn build_shared_settings(
     icon: Option<(bool, Option<String>)>,
     colours: Vec<(&'static str, SettingsFormItem)>,
     update_interval: Duration,
-    max_samples: usize,
+    max_samples: Option<usize>,
 ) -> IndexMap<&'static str, SettingsFormItem> {
     let mut settings = IndexMap::from([(
         HIDE_INDICATOR_SETTING_KEY,
@@ -231,18 +263,19 @@ fn build_shared_settings(
 
     settings.extend(colours);
 
-    settings.extend([
-        (
-            UPDATE_INTERVAL_SETTING_KEY,
-            SettingsFormItem {
-                label: fl!("settings-update-interval"),
-                value: update_interval.as_millis().to_string(),
-                input_type: SettingsFormInputType::String,
-                validator: Some(ConfigurationValidation::is_valid_interval),
-                helper_text: None,
-            },
-        ),
-        (
+    settings.insert(
+        UPDATE_INTERVAL_SETTING_KEY,
+        SettingsFormItem {
+            label: fl!("settings-update-interval"),
+            value: update_interval.as_millis().to_string(),
+            input_type: SettingsFormInputType::String,
+            validator: Some(ConfigurationValidation::is_valid_interval),
+            helper_text: None,
+        },
+    );
+
+    if let Some(max_samples) = max_samples {
+        settings.insert(
             MAX_SAMPLES_SETTING_KEY,
             SettingsFormItem {
                 label: fl!("settings-max-samples"),
@@ -251,8 +284,8 @@ fn build_shared_settings(
                 validator: Some(ConfigurationValidation::is_valid_max_samples),
                 helper_text: None,
             },
-        ),
-    ]);
+        );
+    }
 
     settings
 }

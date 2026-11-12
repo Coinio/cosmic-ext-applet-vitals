@@ -3,6 +3,7 @@ use crate::configuration::disk::DiskConfiguration;
 use crate::configuration::general::{FontSizeSlot, GeneralConfiguration};
 use crate::configuration::memory::MemoryConfiguration;
 use crate::configuration::network::NetworkConfiguration;
+use crate::configuration::storage::StorageConfiguration;
 use crate::core::settings::SettingsForm;
 use cosmic::cosmic_config::{self, cosmic_config_derive::CosmicConfigEntry, CosmicConfigEntry};
 use cosmic::iced::window;
@@ -16,6 +17,8 @@ pub static MEMORY_SETTINGS_WINDOW_ID: Lazy<cosmic::iced::window::Id> = Lazy::new
 pub static NETWORK_SETTINGS_WINDOW_ID: Lazy<cosmic::iced::window::Id> =
     Lazy::new(|| cosmic::iced::window::Id::unique());
 pub static DISK_SETTINGS_WINDOW_ID: Lazy<cosmic::iced::window::Id> = Lazy::new(|| cosmic::iced::window::Id::unique());
+pub static STORAGE_SETTINGS_WINDOW_ID: Lazy<cosmic::iced::window::Id> =
+    Lazy::new(|| cosmic::iced::window::Id::unique());
 
 pub const SENSOR_INTERVAL_MINIMUM_IN_MS: u64 = 250;
 pub const SENSOR_MAX_SAMPLES_MINIMUM: usize = 1;
@@ -32,6 +35,7 @@ pub const FIX_INDICATOR_SIZE_SETTING_KEY: &'static str = "settings-fix-indicator
 pub const USE_IEC_UNITS_SETTING_KEY: &'static str = "settings-use-iec-units";
 pub const FONT_SETTING_KEY: &'static str = "settings-font";
 pub const FONT_SIZE_SETTING_KEY: &'static str = "settings-font-size";
+pub const STORAGE_MOUNTS_SETTING_KEY: &'static str = "settings-storage-mounts";
 
 #[derive(Debug, Default, Clone, CosmicConfigEntry, Eq, PartialEq)]
 #[version = 1]
@@ -41,6 +45,7 @@ pub struct AppConfiguration {
     pub memory: MemoryConfiguration,
     pub network: NetworkConfiguration,
     pub disk: DiskConfiguration,
+    pub storage: StorageConfiguration,
 }
 
 impl AppConfiguration {
@@ -55,6 +60,7 @@ impl AppConfiguration {
             (MEMORY_SETTINGS_WINDOW_ID.clone(), SettingsForm::from(&self.memory)),
             (NETWORK_SETTINGS_WINDOW_ID.clone(), SettingsForm::from(&self.network)),
             (DISK_SETTINGS_WINDOW_ID.clone(), SettingsForm::from(&self.disk)),
+            (STORAGE_SETTINGS_WINDOW_ID.clone(), SettingsForm::from(&self.storage)),
         ])
     }
 }

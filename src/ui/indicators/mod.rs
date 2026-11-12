@@ -8,6 +8,7 @@ pub mod disk;
 pub mod network;
 pub mod cpu;
 pub mod memory;
+pub mod storage;
 
 fn format_bytes_per_second(bytes_per_sec: u64, app_config: &AppConfiguration) -> String {
     if app_config.general.use_iec_units {
