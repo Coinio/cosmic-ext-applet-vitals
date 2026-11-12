@@ -1,5 +1,5 @@
 use crate::sensors::sensor_traits::SensorReader;
-use crate::sensors::storage_reader::MountUsage;
+use crate::sensors::storage_reader::{MountUsage, StorageReading, UnmountedVolume};
 use log::info;
 use std::collections::HashSet;
 
@@ -11,16 +11,18 @@ pub struct StorageStats {
     pub total_bytes: u64,
     /// Every mounted filesystem, including those not counted in the totals, in mount table order.
     pub mounts: Vec<MountUsage>,
+    /// The volumes that aren't mounted, which have no free space to count.
+    pub unmounted: Vec<UnmountedVolume>,
 }
 
 /// Totals the space across the configured mounts. Free space doesn't need smoothing, so there are no samples.
-pub struct StorageMonitor<S: SensorReader<Output = Vec<MountUsage>>> {
+pub struct StorageMonitor<S: SensorReader<Output = StorageReading>> {
     sensor_reader: S,
     /// The mount points counted in the totals.
     counted_mount_points: Vec<String>,
 }
 
-impl<S: SensorReader<Output = Vec<MountUsage>>> StorageMonitor<S> {
+impl<S: SensorReader<Output = StorageReading>> StorageMonitor<S> {
     pub fn new(sensor_reader: S, counted_mount_points: Vec<String>) -> Self {
         info!("Creating new storage monitor");
         Self {
@@ -30,7 +32,7 @@ impl<S: SensorReader<Output = Vec<MountUsage>>> StorageMonitor<S> {
     }
 
     pub fn poll(&mut self) -> Result<StorageStats, String> {
-        let mounts = self.sensor_reader.read()?;
+        let StorageReading { mounts, unmounted } = self.sensor_reader.read()?;
 
         let mut counted: HashSet<String> = HashSet::new();
         let mut stats = StorageStats::default();
@@ -46,6 +48,7 @@ impl<S: SensorReader<Output = Vec<MountUsage>>> StorageMonitor<S> {
         }
 
         stats.mounts = mounts;
+        stats.unmounted = unmounted;
         Ok(stats)
     }
 }
@@ -80,12 +83,15 @@ mod tests {
     }
 
     impl SensorReader for MockStorageReader {
-        type Output = Vec<MountUsage>;
+        type Output = StorageReading;
 
         fn read(&self) -> Result<Self::Output, String> {
             let index = self.index.get();
             self.index.set(index + 1);
-            self.readings[index].clone()
+            self.readings[index].clone().map(|mounts| StorageReading {
+                mounts,
+                unmounted: Vec::new(),
+            })
         }
     }
 

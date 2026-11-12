@@ -4,8 +4,11 @@ use crate::core::app_colours::AppColour;
 use crate::core::app_icons::STORAGE_ICON;
 use crate::fl;
 use crate::monitors::storage_monitor::StorageStats;
-use crate::sensors::storage_reader::MountUsage;
+use crate::sensors::storage_reader::{MountUsage, UnmountedVolume};
 use crate::ui::components::detail_popup::{detail_popup, labelled_bar, used_fraction};
+use cosmic::iced::widget::Row;
+use cosmic::iced::{Alignment, Length};
+use cosmic::widget;
 use crate::ui::components::indicator::{IndicatorContent, IndicatorIcon, IndicatorLine};
 use crate::ui::indicators::format_size_bytes;
 use cosmic::Element;
@@ -41,15 +44,17 @@ impl StorageStats {
         })
     }
 
-    /// The popup shown when hovering over the indicator, which lists every mount, not only the ones in the totals.
+    /// The popup shown when hovering over the indicator, which lists every mount, not only the ones in the totals,
+    /// followed by the volumes that aren't mounted.
     pub fn detail(&self, configuration: &AppConfiguration) -> Element<'_, Message> {
         let bar_colour = configuration.storage.icon_colour.as_deref().and_then(AppColour::parse);
         let mounts = self
             .mounts
             .iter()
             .map(|mount| mount_detail(mount, bar_colour, configuration));
+        let unmounted = self.unmounted.iter().map(|volume| unmounted_detail(volume, configuration));
 
-        detail_popup(fl!("popup-storage-title"), mounts)
+        detail_popup(fl!("popup-storage-title"), mounts.chain(unmounted))
     }
 }
 
@@ -68,4 +73,25 @@ fn mount_detail<'a>(
     let used_bytes = mount.total_bytes.saturating_sub(mount.available_bytes);
 
     labelled_bar(mount.mount_point.as_str(), space, used_fraction(used_bytes, mount.total_bytes), bar_colour)
+}
+
+/// A volume that isn't mounted, by its label and device, with its size and why there's no free space shown.
+fn unmounted_detail<'a>(volume: &'a UnmountedVolume, configuration: &AppConfiguration) -> Element<'a, Message> {
+    let name = match &volume.label {
+        Some(label) => format!("{label} ({})", volume.name),
+        None => volume.name.clone(),
+    };
+    let size = format_size_bytes(volume.size_bytes, configuration);
+    let caption = if volume.is_locked {
+        fl!("popup-storage-locked", size = size)
+    } else {
+        fl!("popup-storage-unmounted", size = size)
+    };
+
+    Row::new()
+        .spacing(8)
+        .align_y(Alignment::Center)
+        .push(widget::text::body(name).width(Length::Fill))
+        .push(widget::text::caption(caption))
+        .into()
 }

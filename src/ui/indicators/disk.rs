@@ -55,7 +55,7 @@ impl DiskStats {
     }
 }
 
-/// The disk's name and model, above its read and write rates and how busy it is.
+/// The disk's name and model, and whether it's mounted, above its read and write rates and how busy it is.
 fn device_detail<'a>(
     device: &'a DiskDeviceStats,
     configuration: &'a AppConfiguration,
@@ -63,11 +63,17 @@ fn device_detail<'a>(
 ) -> Element<'a, Message> {
     let disk = &configuration.disk;
 
+    let caption = match (device.model.as_deref(), device.is_mounted) {
+        (model, true) => model.map(str::to_string),
+        (None, false) => Some(fl!("popup-disk-unmounted")),
+        (Some(model), false) => Some(format!("{model} · {}", fl!("popup-disk-unmounted"))),
+    };
+
     let heading = Row::new()
         .spacing(8)
         .align_y(Alignment::Center)
         .push(widget::text::body(device.name.as_str()).width(Length::Fill))
-        .push_maybe(device.model.as_deref().map(widget::text::caption));
+        .push_maybe(caption.map(widget::text::caption));
 
     let rates = detail_rates(
         configuration,

@@ -1,21 +1,25 @@
 use crate::configuration::app_configuration::AppConfiguration;
+use crate::monitors::per_second;
 use crate::sensors::proc_net_dev_reader::ProcNetDevStatus;
 use crate::sensors::sensor_traits::SensorReader;
 use log::info;
 use std::collections::{HashMap, VecDeque};
 use std::net::Ipv4Addr;
+use std::time::{Duration, Instant};
 
 #[derive(Debug, Clone, Default)]
 struct NetworkSample {
     pub rx_bytes: u64,
     pub tx_bytes: u64,
+    /// The time the bytes were counted over.
+    pub elapsed: Duration,
 }
 
 #[derive(Debug, Clone, Default)]
 pub struct NetworkStats {
-    /// The bytes received by all the physical interfaces, averaged over the samples.
+    /// The bytes received per second by all the physical interfaces, averaged over the samples.
     pub rx_bytes: u64,
-    /// The bytes sent by all the physical interfaces, averaged over the samples.
+    /// The bytes sent per second by all the physical interfaces, averaged over the samples.
     pub tx_bytes: u64,
     /// Each physical interface, connected ones first.
     pub interfaces: Vec<InterfaceStats>,
@@ -24,9 +28,9 @@ pub struct NetworkStats {
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct InterfaceStats {
     pub name: String,
-    /// The bytes received, averaged over the samples.
+    /// The bytes received per second, averaged over the samples.
     pub rx_bytes: u64,
-    /// The bytes sent, averaged over the samples.
+    /// The bytes sent per second, averaged over the samples.
     pub tx_bytes: u64,
     pub is_up: bool,
     pub ipv4: Option<Ipv4Addr>,
@@ -43,6 +47,8 @@ pub struct NetworkMonitor<S: SensorReader<Output = ProcNetDevStatus>> {
     sensor_reader: S,
     interfaces: HashMap<String, InterfaceHistory>,
     max_samples: usize,
+    /// When the totals were last read.
+    last_poll: Option<Instant>,
 }
 
 impl<S: SensorReader<Output = ProcNetDevStatus>> NetworkMonitor<S> {
@@ -52,11 +58,19 @@ impl<S: SensorReader<Output = ProcNetDevStatus>> NetworkMonitor<S> {
             sensor_reader,
             interfaces: HashMap::new(),
             max_samples: configuration.network.max_samples,
+            last_poll: None,
         }
     }
 
     pub fn poll(&mut self) -> Result<NetworkStats, String> {
+        self.poll_at(Instant::now())
+    }
+
+    /// Poll, with the totals read at `now`.
+    fn poll_at(&mut self, now: Instant) -> Result<NetworkStats, String> {
         let current = self.sensor_reader.read()?;
+        let elapsed = self.last_poll.map_or(Duration::ZERO, |last| now.saturating_duration_since(last));
+        self.last_poll = Some(now);
 
         let mut interfaces = Vec::new();
         let mut previous_interfaces = std::mem::take(&mut self.interfaces);
@@ -69,29 +83,38 @@ impl<S: SensorReader<Output = ProcNetDevStatus>> NetworkMonitor<S> {
             let totals = NetworkSample {
                 rx_bytes: device.rx_bytes,
                 tx_bytes: device.tx_bytes,
+                elapsed: Duration::ZERO,
             };
 
-            // A new interface starts from its current totals, so its first sample is 0 rather than everything since
-            // boot.
-            let mut history = previous_interfaces.remove(&device.name).unwrap_or_else(|| InterfaceHistory {
-                previous: totals.clone(),
-                samples: VecDeque::with_capacity(self.max_samples),
-            });
+            // A new interface starts from its current totals, so its first sample is 0 over no time, rather than
+            // everything since boot.
+            let (mut history, elapsed) = match previous_interfaces.remove(&device.name) {
+                Some(history) => (history, elapsed),
+                None => (
+                    InterfaceHistory {
+                        previous: totals.clone(),
+                        samples: VecDeque::with_capacity(self.max_samples),
+                    },
+                    Duration::ZERO,
+                ),
+            };
 
             // Saturating, as the totals restart from 0 if the driver is reloaded.
             history.samples.push_back(NetworkSample {
                 rx_bytes: totals.rx_bytes.saturating_sub(history.previous.rx_bytes),
                 tx_bytes: totals.tx_bytes.saturating_sub(history.previous.tx_bytes),
+                elapsed,
             });
             while history.samples.len() > self.max_samples {
                 history.samples.pop_front();
             }
             history.previous = totals;
 
+            let elapsed = history.samples.iter().map(|sample| sample.elapsed).sum();
             interfaces.push(InterfaceStats {
                 name: device.name.clone(),
-                rx_bytes: average(history.samples.iter().map(|sample| sample.rx_bytes)),
-                tx_bytes: average(history.samples.iter().map(|sample| sample.tx_bytes)),
+                rx_bytes: per_second(history.samples.iter().map(|sample| sample.rx_bytes).sum(), elapsed),
+                tx_bytes: per_second(history.samples.iter().map(|sample| sample.tx_bytes).sum(), elapsed),
                 is_up: device.is_up,
                 ipv4: device.ipv4,
             });
@@ -107,14 +130,6 @@ impl<S: SensorReader<Output = ProcNetDevStatus>> NetworkMonitor<S> {
             interfaces,
         })
     }
-}
-
-fn average(values: impl ExactSizeIterator<Item = u64>) -> u64 {
-    let count = values.len() as u64;
-    if count == 0 {
-        return 0;
-    }
-    values.sum::<u64>() / count
 }
 
 #[cfg(test)]
@@ -144,6 +159,14 @@ mod tests {
             let result = self.readings[i].clone();
             self.index.set(i + 1);
             result
+        }
+    }
+
+    impl NetworkMonitor<MockProcNetDevReader> {
+        /// Poll a second after the last poll, as at the default update interval.
+        fn poll_next_second(&mut self) -> Result<NetworkStats, String> {
+            let now = self.last_poll.map_or_else(Instant::now, |last| last + Duration::from_secs(1));
+            self.poll_at(now)
         }
     }
 
@@ -181,7 +204,7 @@ mod tests {
         let reader = MockProcNetDevReader::new(vec![Ok(status)]);
 
         let mut monitor = NetworkMonitor::new(reader, &make_config(3));
-        let result = monitor.poll();
+        let result = monitor.poll_next_second();
 
         assert!(result.is_ok());
         let result = result.unwrap();
@@ -208,14 +231,14 @@ mod tests {
         let mut monitor = NetworkMonitor::new(reader, &make_config(2));
 
         // Throw away first result as we don't have any previous readings to compare against.
-        let _ = monitor.poll();
-        let result = monitor.poll();
+        let _ = monitor.poll_next_second();
+        let result = monitor.poll_next_second();
 
         assert!(result.is_ok());
         let result = result.unwrap();
 
-        assert_eq!(result.rx_bytes, (3000 - 2000) / 2);
-        assert_eq!(result.tx_bytes, (1500 - 1000) / 2);
+        assert_eq!(result.rx_bytes, 3000 - 2000);
+        assert_eq!(result.tx_bytes, 1500 - 1000);
     }
 
     #[test]
@@ -242,19 +265,21 @@ mod tests {
 
         let mut monitor = NetworkMonitor::new(reader, &make_config(3));
 
-        _ = monitor.poll();
+        _ = monitor.poll_next_second();
 
-        let result2 = monitor.poll().unwrap();
-        assert_eq!(result2.rx_bytes, (6000 - 2000) / 2);
-        assert_eq!(result2.tx_bytes, (3000 - 1000) / 2);
+        let result2 = monitor.poll_next_second().unwrap();
+        assert_eq!(result2.rx_bytes, 6000 - 2000);
+        assert_eq!(result2.tx_bytes, 3000 - 1000);
 
-        let result3 = monitor.poll().unwrap();
-        assert_eq!(result3.rx_bytes, (9000 - 4000 + 2000) / 3);
-        assert_eq!(result3.tx_bytes, (6000 - 2000 + 1000) / 3);
+        // Over 2 seconds.
+        let result3 = monitor.poll_next_second().unwrap();
+        assert_eq!(result3.rx_bytes, (9000 - 2000) / 2);
+        assert_eq!(result3.tx_bytes, (6000 - 1000) / 2);
 
-        let result4 = monitor.poll().unwrap();
-        assert_eq!(result4.rx_bytes, (12000 - 3000 + 1000) / 3);
-        assert_eq!(result4.tx_bytes, (7000 - 3000 + 2000) / 3);
+        // The first sample, over no time, has been dropped, leaving 3 seconds.
+        let result4 = monitor.poll_next_second().unwrap();
+        assert_eq!(result4.rx_bytes, (12000 - 2000) / 3);
+        assert_eq!(result4.tx_bytes, (7000 - 1000) / 3);
     }
 
     #[test]
@@ -268,11 +293,30 @@ mod tests {
 
         let mut monitor = NetworkMonitor::new(reader, &make_config(2));
 
-        let _ = monitor.poll();
-        let _ = monitor.poll();
-        let _ = monitor.poll();
+        let _ = monitor.poll_next_second();
+        let _ = monitor.poll_next_second();
+        let _ = monitor.poll_next_second();
 
         assert_eq!(monitor.interfaces["eth0"].samples.len(), 2);
+    }
+
+    /// Rates are per second whatever the update interval, and however late the poll is.
+    #[test]
+    fn rates_are_per_second_of_elapsed_time() {
+        let reader = MockProcNetDevReader::new(vec![
+            Ok(ProcNetDevStatus::new(vec![create_device_status(0, 0, true)])),
+            Ok(ProcNetDevStatus::new(vec![create_device_status(4000, 2000, true)])),
+            Ok(ProcNetDevStatus::new(vec![create_device_status(5000, 2500, true)])),
+        ]);
+        let mut monitor = NetworkMonitor::new(reader, &make_config(1));
+
+        let start = Instant::now();
+        _ = monitor.poll_at(start);
+        let result = monitor.poll_at(start + Duration::from_secs(2)).unwrap();
+        assert_eq!((result.rx_bytes, result.tx_bytes), (2000, 1000));
+
+        let result = monitor.poll_at(start + Duration::from_millis(2500)).unwrap();
+        assert_eq!((result.rx_bytes, result.tx_bytes), (2000, 1000));
     }
 
     #[test]
@@ -303,8 +347,8 @@ mod tests {
         let reader = MockProcNetDevReader::new(vec![Ok(sample1), Ok(sample2)]);
         let mut monitor = NetworkMonitor::new(reader, &make_config(1));
 
-        _ = monitor.poll();
-        let result = monitor.poll().unwrap();
+        _ = monitor.poll_next_second();
+        let result = monitor.poll_next_second().unwrap();
 
         let names: Vec<&str> = result.interfaces.iter().map(|interface| interface.name.as_str()).collect();
         assert_eq!(names, ["eth0", "wlan0"]);
@@ -322,7 +366,7 @@ mod tests {
         let reader = MockProcNetDevReader::new(vec![Ok(status)]);
         let mut monitor = NetworkMonitor::new(reader, &make_config(1));
 
-        let names: Vec<String> = monitor.poll().unwrap().interfaces.into_iter().map(|i| i.name).collect();
+        let names: Vec<String> = monitor.poll_next_second().unwrap().interfaces.into_iter().map(|i| i.name).collect();
         assert_eq!(names, ["wlan0", "eth0"]);
     }
 
@@ -338,8 +382,8 @@ mod tests {
         let reader = MockProcNetDevReader::new(vec![Ok(sample1), Ok(sample2)]);
         let mut monitor = NetworkMonitor::new(reader, &make_config(1));
 
-        _ = monitor.poll();
-        let result = monitor.poll().unwrap();
+        _ = monitor.poll_next_second();
+        let result = monitor.poll_next_second().unwrap();
 
         assert_eq!((result.rx_bytes, result.tx_bytes), (1000, 500));
         assert_eq!(result.interfaces.len(), 1);
@@ -354,8 +398,8 @@ mod tests {
         let reader = MockProcNetDevReader::new(vec![Ok(sample1), Ok(sample2)]);
         let mut monitor = NetworkMonitor::new(reader, &make_config(1));
 
-        _ = monitor.poll();
-        let result = monitor.poll().unwrap();
+        _ = monitor.poll_next_second();
+        let result = monitor.poll_next_second().unwrap();
 
         assert_eq!((result.rx_bytes, result.tx_bytes), (0, 0));
     }
@@ -365,7 +409,7 @@ mod tests {
         let reader = MockProcNetDevReader::new(vec![Err("boom".to_string())]);
         let mut monitor = NetworkMonitor::new(reader, &make_config(1));
 
-        let err = monitor.poll().unwrap_err();
+        let err = monitor.poll_next_second().unwrap_err();
         assert_eq!(err, "boom");
     }
 }

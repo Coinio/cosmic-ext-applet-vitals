@@ -15,6 +15,7 @@ use crate::sensors::cpu_topology_reader::{CpuTopology, SYSFS_CPU_ROOT};
 use crate::sensors::hwmon_reader::HWMON_ROOT;
 use crate::sensors::proc_disk_stats_reader::{ProcDiskStatsReader, SYS_BLOCK_ROOT};
 use crate::sensors::proc_meminfo_reader::ProcMemInfoSensorReader;
+use crate::sensors::proc_mounts_reader::ProcMountsReader;
 use crate::sensors::proc_net_dev_reader::ProcNetDevReader;
 use crate::sensors::proc_stat_reader::ProcStatSensorReader;
 use crate::sensors::storage_reader::StorageReader;
@@ -391,7 +392,12 @@ impl AppState {
                     let mut network_monitor = (!config.network.hide_indicator)
                         .then(|| NetworkMonitor::new(ProcNetDevReader, &config));
                     let mut disk_monitor = (!config.disk.hide_indicator)
-                        .then(|| DiskMonitor::new(ProcDiskStatsReader, &config, Path::new(SYS_BLOCK_ROOT)));
+                        .then(|| DiskMonitor::new(
+                            ProcDiskStatsReader,
+                            ProcMountsReader,
+                            &config,
+                            Path::new(SYS_BLOCK_ROOT),
+                        ));
                     let mut storage_monitor = (!config.storage.hide_indicator)
                         .then(|| StorageMonitor::new(StorageReader, config.storage.mounts.clone()));
 
