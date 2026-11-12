@@ -207,6 +207,16 @@ impl SettingsForm {
                 helper_text: Some(fl!("settings-use-iec-units-helper")),
             },
         );
+        values.insert(
+            crate::configuration::app_configuration::SHOW_INDICATOR_SEPARATORS_SETTING_KEY,
+            SettingsFormItem {
+                label: fl!("settings-show-indicator-separators"),
+                value: config.show_indicator_separators.to_string(),
+                input_type: SettingsFormInputType::CheckBox,
+                validator: Some(ConfigurationValidation::is_valid_boolean),
+                helper_text: None,
+            },
+        );
 
         SettingsForm {
             settings_window_id: GENERAL_SETTINGS_WINDOW_ID.clone(),

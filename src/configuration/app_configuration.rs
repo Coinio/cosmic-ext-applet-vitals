@@ -33,6 +33,7 @@ pub const UPDATE_INTERVAL_SETTING_KEY: &'static str = "settings-update-interval"
 pub const MAX_SAMPLES_SETTING_KEY: &'static str = "settings-max-samples";
 pub const FIX_INDICATOR_SIZE_SETTING_KEY: &'static str = "settings-fix-indicator-size";
 pub const USE_IEC_UNITS_SETTING_KEY: &'static str = "settings-use-iec-units";
+pub const SHOW_INDICATOR_SEPARATORS_SETTING_KEY: &'static str = "settings-show-indicator-separators";
 pub const FONT_SETTING_KEY: &'static str = "settings-font";
 pub const FONT_SIZE_SETTING_KEY: &'static str = "settings-font-size";
 pub const STORAGE_MOUNTS_SETTING_KEY: &'static str = "settings-storage-mounts";

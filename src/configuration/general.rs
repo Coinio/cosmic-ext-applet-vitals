@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::configuration::app_configuration::{
     FIX_INDICATOR_SIZE_SETTING_KEY, FONT_SETTING_KEY, FONT_SIZE_SETTING_KEY,
-    GENERAL_SETTINGS_WINDOW_ID, USE_IEC_UNITS_SETTING_KEY,
+    GENERAL_SETTINGS_WINDOW_ID, SHOW_INDICATOR_SEPARATORS_SETTING_KEY, USE_IEC_UNITS_SETTING_KEY,
 };
 use crate::configuration::validation::ConfigurationValidation;
 use crate::core::settings::SettingsForm;
@@ -128,6 +128,8 @@ pub struct GeneralConfiguration {
     pub fix_indicator_size: bool,
     /// When true, use IEC units (MiB, GiB); when false, use SI (MB, GB).
     pub use_iec_units: bool,
+    /// When true, separators are drawn between (and either side of) the indicators.
+    pub show_indicator_separators: bool,
     pub font: IndicatorFont,
 }
 
@@ -146,6 +148,7 @@ impl Default for GeneralConfiguration {
             horizontal_font_size_xl: DEFAULT_INDICATOR_FONT_SIZE + 8,
             fix_indicator_size: true,
             use_iec_units: false,
+            show_indicator_separators: true,
             font: IndicatorFont::System,
         }
     }
@@ -206,6 +209,15 @@ impl GeneralConfiguration {
                     .value
                     .clone(),
                 self.use_iec_units,
+            ),
+            show_indicator_separators: ConfigurationValidation::sanitise_boolean_input(
+                settings_form
+                    .values
+                    .get(SHOW_INDICATOR_SEPARATORS_SETTING_KEY)
+                    .expect("Show indicator separators missing from settings form options")
+                    .value
+                    .clone(),
+                self.show_indicator_separators,
             ),
             font: settings_form
                 .values
@@ -299,6 +311,14 @@ mod tests {
                 ..configuration
             }
         );
+    }
+
+    #[test]
+    fn saved_configs_without_the_separator_setting_show_separators() {
+        let configuration: GeneralConfiguration =
+            ron::from_str("(fix_indicator_size: false, use_iec_units: true)").expect("Config failed to parse");
+        assert!(configuration.show_indicator_separators);
+        assert!(!configuration.fix_indicator_size);
     }
 
     #[test]

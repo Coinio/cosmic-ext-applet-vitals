@@ -258,10 +258,6 @@ impl Application for AppState {
     fn view(&self) -> Element<'_, Self::Message> {
         let is_horizontal = is_horizontal(&self.core);
 
-        let mut elements: Vec<Element<Message>> = Vec::new();
-
-        elements.push(divider::vertical::default().into());
-
         let indicators = [
             self.cpu.content(&self.configuration),
             self.memory.content(&self.configuration),
@@ -269,16 +265,28 @@ impl Application for AppState {
             self.disk.content(&self.configuration),
             self.storage.content(&self.configuration, is_horizontal),
         ];
-        for content in indicators.into_iter().flatten() {
-            elements.push(indicator(self, is_horizontal, content));
-            elements.push(divider::vertical::default().into());
-        }
-        if elements.len() <= 1 {
-            elements.push(no_indicators_content(NoIndicatorProps {
+        let mut contents: Vec<Element<Message>> = indicators
+            .into_iter()
+            .flatten()
+            .map(|content| indicator(self, is_horizontal, content))
+            .collect();
+        if contents.is_empty() {
+            contents.push(no_indicators_content(NoIndicatorProps {
                 icon: self.app_icons.get(APP_LOGO_ICON),
                 size: self.icon_size(),
             }));
+        }
+
+        let show_separators = self.configuration.general.show_indicator_separators;
+        let mut elements: Vec<Element<Message>> = Vec::new();
+        if show_separators {
             elements.push(divider::vertical::default().into());
+        }
+        for content in contents {
+            elements.push(content);
+            if show_separators {
+                elements.push(divider::vertical::default().into());
+            }
         }
 
         let wrapper: Element<Message> = if is_horizontal {
