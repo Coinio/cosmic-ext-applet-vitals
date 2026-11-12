@@ -20,6 +20,7 @@ use crate::sensors::proc_net_dev_reader::ProcNetDevReader;
 use crate::sensors::proc_stat_reader::ProcStatSensorReader;
 use crate::sensors::storage_reader::StorageReader;
 use crate::settings_app::{SettingsPage, SettingsPageRequest, SETTINGS_FLAG};
+use crate::ui::components::detail_popup::PopupStyle;
 use crate::ui::components::indicator_area::indicator_area;
 use crate::ui::components::indicator::indicator;
 use crate::ui::components::indicator_strip::indicator_strip;
@@ -645,12 +646,14 @@ impl AppState {
     }
 
     fn detail_popup_content(&self, kind: IndicatorKind) -> Option<Element<'_, Message>> {
+        let style = PopupStyle::new(self.indicator_font);
+        let (configuration, app_icons) = (&self.configuration, &self.app_icons);
         match kind {
-            IndicatorKind::Cpu => Some(self.cpu.detail(&self.cpu_sensors, &self.configuration)),
-            IndicatorKind::Memory => Some(self.memory.detail(&self.configuration)),
-            IndicatorKind::Network => Some(self.network.detail(&self.configuration, &self.app_icons)),
-            IndicatorKind::Disk => Some(self.disk.detail(&self.configuration, &self.app_icons)),
-            IndicatorKind::Storage => Some(self.storage.detail(&self.configuration)),
+            IndicatorKind::Cpu => Some(self.cpu.detail(&self.cpu_sensors, configuration, app_icons, style)),
+            IndicatorKind::Memory => Some(self.memory.detail(configuration, app_icons, style)),
+            IndicatorKind::Network => Some(self.network.detail(configuration, app_icons, style)),
+            IndicatorKind::Disk => Some(self.disk.detail(configuration, app_icons, style)),
+            IndicatorKind::Storage => Some(self.storage.detail(configuration, app_icons, style)),
         }
     }
 

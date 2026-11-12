@@ -2,10 +2,10 @@ use crate::app::Message;
 use crate::configuration::app_configuration::AppConfiguration;
 use crate::core::app_icons::AppIcons;
 use crate::ui::components::indicator::{IndicatorContent, IndicatorIcon, IndicatorLine};
-use crate::ui::components::svg_icon::{svg_icon, SvgIconProps};
+use crate::ui::components::detail_popup::{popup_icon, PopupStyle};
 use cosmic::iced::widget::Row;
 use cosmic::iced::{Alignment, Length};
-use cosmic::{widget, Element};
+use cosmic::Element;
 
 /// The size of the direction icons before the data rates in a detail popup.
 const DETAIL_RATE_ICON_SIZE: u16 = 12;
@@ -69,25 +69,37 @@ struct DataRate<'a> {
     bytes_per_second: u64,
 }
 
-/// Both directions of a data rate in a detail popup, side by side, each with the indicator's icon and colour. Each
-/// takes half the width, so the rates of every interface or disk line up.
-fn detail_rates<'a>(app_config: &AppConfiguration, app_icons: &'a AppIcons, rates: [DataRate; 2]) -> Element<'a, Message> {
+/// Both directions of a data rate in a detail popup, side by side, each after the indicator's icon in its colour. In a
+/// card, each takes half the width, so the rates of every interface or disk line up. In the header, they're compact
+/// and bold.
+fn detail_rates<'a>(
+    style: PopupStyle,
+    app_config: &AppConfiguration,
+    app_icons: &'a AppIcons,
+    rates: [DataRate; 2],
+    in_header: bool,
+) -> Element<'a, Message> {
     let rates = rates.into_iter().map(|rate| {
         let icon = IndicatorIcon::new(rate.icon_key, rate.colour);
+        let text = format_bytes_per_second(rate.bytes_per_second, app_config);
+        let text = if in_header { style.label(text) } else { style.value(text) };
         Row::new()
             .spacing(4)
             .align_y(Alignment::Center)
-            .width(Length::Fill)
-            .push_maybe(svg_icon(SvgIconProps {
-                icon: app_icons.get(icon.key),
-                size: DETAIL_RATE_ICON_SIZE,
-                colour: icon.colour,
-            }))
-            .push(widget::text::body(format_bytes_per_second(rate.bytes_per_second, app_config)))
+            .width(if in_header { Length::Shrink } else { Length::Fill })
+            .push_maybe(
+                app_icons
+                    .get(icon.key)
+                    .map(|app_icon| popup_icon(app_icon, DETAIL_RATE_ICON_SIZE, icon.colour)),
+            )
+            .push(text)
             .into()
     });
 
-    Row::with_children(rates).spacing(8).into()
+    Row::with_children(rates)
+        .spacing(if in_header { 10 } else { 8 })
+        .align_y(Alignment::Center)
+        .into()
 }
 
 /// A data rate indicator, such as network or disk, with a line per direction.

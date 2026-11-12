@@ -1,12 +1,15 @@
 use crate::app::Message;
 use crate::configuration::app_configuration::AppConfiguration;
 use crate::core::app_colours::AppColour;
-use crate::core::app_icons::MEMORY_ICON;
+use crate::core::app_icons::{AppIcons, MEMORY_ICON};
 use crate::fl;
 use crate::monitors::memory_monitor::MemoryStats;
-use crate::ui::components::detail_popup::{detail_popup, detail_rows, labelled_bar, used_fraction};
+use crate::ui::components::detail_popup::{
+    card, detail_popup, labelled_bar, popup_header, stat_tiles, used_fraction, PopupStyle,
+};
 use crate::ui::components::indicator::{IndicatorContent, IndicatorIcon, IndicatorLine};
 use crate::ui::indicators::format_size_bytes;
+use cosmic::iced::widget::Column;
 use cosmic::Element;
 
 const BYTES_PER_KIB: u64 = 1024;
@@ -29,36 +32,56 @@ impl MemoryStats {
 
     /// The popup shown when hovering over the indicator: the memory used, as the indicator shows it, what the kernel
     /// is using as cache and what is available, followed by the swap used when there is swap.
-    pub fn detail(&self, configuration: &AppConfiguration) -> Element<'_, Message> {
-        let bar_colour = configuration.memory.icon_colour.as_deref().and_then(AppColour::parse);
+    pub fn detail<'a>(
+        &'a self,
+        configuration: &AppConfiguration,
+        app_icons: &'a AppIcons,
+        style: PopupStyle,
+    ) -> Element<'a, Message> {
+        let colour = configuration.memory.icon_colour.as_deref().and_then(AppColour::parse);
         let size = |kib: u64| format_size_bytes(kib.saturating_mul(BYTES_PER_KIB), configuration);
         let used_of = |used_kib: u64, total_kib: u64| {
             fl!("popup-memory-used-of", used = size(used_kib), total = size(total_kib))
         };
 
-        let mut sections = vec![
-            labelled_bar(
-                fl!("popup-memory-used"),
-                used_of(self.used_kib, self.total_kib),
-                used_fraction(self.used_kib, self.total_kib),
-                bar_colour,
-            ),
-            detail_rows([
-                (fl!("popup-memory-cached"), size(self.cached_kib)),
-                (fl!("popup-memory-available"), size(self.total_kib.saturating_sub(self.used_kib))),
-            ]),
-        ];
+        let mut cards = vec![card(
+            Column::new()
+                .spacing(12)
+                .push(labelled_bar(
+                    style,
+                    fl!("popup-memory-used"),
+                    used_of(self.used_kib, self.total_kib),
+                    used_fraction(self.used_kib, self.total_kib),
+                    colour,
+                ))
+                .push(stat_tiles(
+                    style,
+                    [
+                        (fl!("popup-memory-cached"), size(self.cached_kib)),
+                        (fl!("popup-memory-available"), size(self.total_kib.saturating_sub(self.used_kib))),
+                    ],
+                )),
+        )];
 
         if self.swap_total_kib > 0 {
-            sections.push(labelled_bar(
+            cards.push(card(labelled_bar(
+                style,
                 fl!("popup-memory-swap"),
                 used_of(self.swap_used_kib, self.swap_total_kib),
                 used_fraction(self.swap_used_kib, self.swap_total_kib),
-                bar_colour,
-            ));
+                colour,
+            )));
         }
 
-        detail_popup(fl!("popup-memory-title"), sections)
+        let header = popup_header(
+            style,
+            app_icons.get(MEMORY_ICON),
+            colour,
+            fl!("popup-memory-title"),
+            Some(style.summary(self.value(configuration.general.use_iec_units), colour).into()),
+        );
+
+        detail_popup(header, cards)
     }
 
     fn value(&self, use_iec_units: bool) -> String {
