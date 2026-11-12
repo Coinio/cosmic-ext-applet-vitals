@@ -19,6 +19,7 @@ for those fighting with iced/libcosmic, etc.
 * Hover over the CPU indicator for the usage of each thread, or each physical core, and the CPU temperature and fan
   speed where the system reports them. See [CPU Temperature and Fan Speed](#cpu-temperature-and-fan-speed)
 * Hover over the storage indicator for the free space of every mount
+* Click an indicator to open its settings
 * Horizontal / Vertical Layouts - The horizontal layout has seen a little more testing as I 
   don't use the vertical.
 * Config:

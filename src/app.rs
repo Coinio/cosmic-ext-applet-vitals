@@ -18,9 +18,10 @@ use crate::sensors::proc_meminfo_reader::ProcMemInfoSensorReader;
 use crate::sensors::proc_net_dev_reader::ProcNetDevReader;
 use crate::sensors::proc_stat_reader::ProcStatSensorReader;
 use crate::sensors::storage_reader::StorageReader;
-use crate::settings_app::SETTINGS_FLAG;
-use crate::ui::components::hover_area::hover_area;
+use crate::settings_app::{SettingsPage, SettingsPageRequest, SETTINGS_FLAG};
+use crate::ui::components::indicator_area::indicator_area;
 use crate::ui::components::indicator::indicator;
+use crate::ui::components::indicator_strip::indicator_strip;
 use crate::ui::components::no_indicator::{no_indicators_content, NoIndicatorProps};
 use cosmic::app::{Core, Task};
 use cosmic::applet::cosmic_panel_config::{PanelAnchor, PanelSize};
@@ -28,8 +29,7 @@ use cosmic::cosmic_config::CosmicConfigEntry;
 use cosmic::font::Font;
 use cosmic::iced::platform_specific::runtime::wayland::popup::SctkPopupSettings;
 use cosmic::iced::platform_specific::shell::commands::popup::{destroy_popup, get_popup};
-use cosmic::iced::{window, Alignment, Point, Rectangle, Size, Subscription};
-use cosmic::iced::widget::{Column, Row};
+use cosmic::iced::{window, Alignment, Padding, Point, Rectangle, Size, Subscription};
 use cosmic::widget;
 use cosmic::widget::{autosize, container, divider, Id};
 use cosmic::{cosmic_config, Application, Element};
@@ -68,6 +68,17 @@ impl IndicatorKind {
     /// Whether hovering over the indicator shows a popup with more detail.
     fn has_detail(self) -> bool {
         matches!(self, IndicatorKind::Cpu | IndicatorKind::Storage)
+    }
+
+    /// The settings page that clicking the indicator opens.
+    fn settings_page(self) -> SettingsPage {
+        match self {
+            IndicatorKind::Cpu => SettingsPage::Cpu,
+            IndicatorKind::Memory => SettingsPage::Memory,
+            IndicatorKind::Network => SettingsPage::Network,
+            IndicatorKind::Disk => SettingsPage::Disk,
+            IndicatorKind::Storage => SettingsPage::Storage,
+        }
     }
 }
 
@@ -136,8 +147,8 @@ pub struct StatsUpdate {
 /// The messages processed by the application update
 #[derive(Debug, Clone)]
 pub enum Message {
-    /// Open the settings window, unless it is already open
-    OpenSettingsWindow,
+    /// Open the settings window on a page, or show the page if the window is already open
+    OpenSettingsWindow(SettingsPage),
     /// Start monitoring the system resources
     StartMonitoring,
     /// One or more monitors were polled. Updates are batched so each tick causes a single redraw.
@@ -226,63 +237,93 @@ impl Application for AppState {
             (IndicatorKind::Disk, self.disk.content(&self.configuration)),
             (IndicatorKind::Storage, self.storage.content(&self.configuration, is_horizontal)),
         ];
-        let mut contents: Vec<Element<Message>> = indicators
+        let mut contents: Vec<(Element<Message>, Option<IndicatorKind>)> = indicators
             .into_iter()
-            .filter_map(|(kind, content)| Some((kind, content?)))
-            .map(|(kind, content)| {
-                let content = indicator(self, is_horizontal, content);
-                if kind.has_detail() {
-                    hover_area(
-                        content,
-                        move |bounds| Message::IndicatorHovered(kind, bounds),
-                        Message::IndicatorUnhovered(kind),
-                    )
-                    .into()
-                } else {
-                    content
-                }
-            })
+            .filter_map(|(kind, content)| Some((indicator(self, is_horizontal, content?), Some(kind))))
             .collect();
         if contents.is_empty() {
-            contents.push(no_indicators_content(NoIndicatorProps {
+            let content = no_indicators_content(NoIndicatorProps {
                 icon: self.app_icons.get(APP_LOGO_ICON),
                 size: self.icon_size(),
-            }));
+            });
+            contents.push((content, None));
         }
-
-        let show_separators = self.configuration.general.show_indicator_separators;
-        let mut elements: Vec<Element<Message>> = Vec::new();
-        if show_separators {
-            elements.push(divider::vertical::default().into());
-        }
-        for content in contents {
-            elements.push(content);
-            if show_separators {
-                elements.push(divider::vertical::default().into());
-            }
-        }
-
-        let wrapper: Element<Message> = if is_horizontal {
-            Row::from_vec(elements)
-                .align_y(Alignment::Center)
-                .spacing(DEFAULT_INDICATOR_SPACING)
-                .into()
-        } else {
-            Column::from_vec(elements).align_x(Alignment::Center).into()
-        };
 
         // The minor-axis padding, which is what `suggested_padding` returned before it also reported the major axis.
         let (_, applet_padding) = self.core.applet.suggested_padding(false);
-        let padding = if is_horizontal {
-            [applet_padding, applet_padding]
-        } else {
-            [applet_padding, 1]
+        let applet_padding = f32::from(applet_padding);
+        let show_separators = self.configuration.general.show_indicator_separators;
+
+        // The applet's padding, and the gaps between indicators, belong to the indicators rather than the button and
+        // strip, so each indicator's hover area and highlight reach the applet's edges and the next indicator.
+        // Separators keep the applet's padding along the panel, so they aren't drawn on its edge.
+        let across = if is_horizontal { applet_padding } else { 1.0 };
+        let gap = if is_horizontal { f32::from(DEFAULT_INDICATOR_SPACING) } else { 0.0 };
+        let half_gap = gap / 2.0;
+        let spacing = if show_separators { half_gap } else { 0.0 };
+        let edge = if show_separators { half_gap } else { applet_padding };
+        let count = contents.len();
+
+        let separator = || -> Element<Message> {
+            // Inset across the panel, so it's the length of the indicators' text rather than the applet's thickness.
+            let inset = if is_horizontal { [applet_padding, 0.0] } else { [0.0, 0.0] };
+            container(divider::vertical::default()).padding(inset).into()
         };
 
+        let mut elements: Vec<Element<Message>> = Vec::new();
+        if show_separators {
+            elements.push(separator());
+        }
+        for (index, (content, kind)) in contents.into_iter().enumerate() {
+            let before = if index == 0 { edge } else { half_gap };
+            let after = if index + 1 == count { edge } else { half_gap };
+            let padding = if is_horizontal {
+                Padding { top: across, right: after, bottom: across, left: before }
+            } else {
+                Padding { top: before, right: across, bottom: after, left: across }
+            };
+            let content: Element<Message> = container(content)
+                .padding(padding)
+                .align_x(Alignment::Center)
+                .align_y(Alignment::Center)
+                .into();
+            let page = kind.map_or(SettingsPage::General, IndicatorKind::settings_page);
+            let mut area = indicator_area(content, Message::OpenSettingsWindow(page));
+            if let Some(kind) = kind.filter(|kind| kind.has_detail()) {
+                area = area.on_hover(
+                    move |bounds| Message::IndicatorHovered(kind, bounds),
+                    Message::IndicatorUnhovered(kind),
+                );
+            }
+            elements.push(area.into());
+            if show_separators {
+                elements.push(separator());
+            }
+        }
+
+        let wrapper = indicator_strip(is_horizontal, spacing, elements);
+
+        let padding = match (show_separators, is_horizontal) {
+            (false, _) => Padding::ZERO,
+            (true, true) => Padding::from([0.0, applet_padding]),
+            (true, false) => Padding::from([applet_padding, 0.0]),
+        };
+
+        // The indicators highlight themselves, so the button keeps its resting look while hovered or pressed rather
+        // than highlighting the whole applet. Clicking it away from an indicator, e.g. on a separator, opens the
+        // general settings.
+        let resting = |focused: bool, theme: &cosmic::Theme| {
+            widget::button::Catalog::active(theme, focused, false, &cosmic::theme::Button::AppletIcon)
+        };
         let button = widget::button::custom(wrapper)
-            .class(cosmic::theme::Button::AppletIcon)
+            .class(cosmic::theme::Button::Custom {
+                active: Box::new(resting),
+                disabled: Box::new(move |theme| resting(false, theme)),
+                hovered: Box::new(resting),
+                pressed: Box::new(resting),
+            })
             .padding(padding)
-            .on_press(Message::OpenSettingsWindow);
+            .on_press(Message::OpenSettingsWindow(SettingsPage::General));
 
         autosize::autosize(container(button), AUTOSIZE_MAIN_ID.clone()).into()
     }
@@ -325,8 +366,8 @@ impl Application for AppState {
 impl AppState {
     fn handle_message(&mut self, message: Message) -> Task<Message> {
         match message {
-            Message::OpenSettingsWindow => {
-                self.open_settings_window();
+            Message::OpenSettingsWindow(page) => {
+                self.open_settings_window(page);
                 return self.close_detail_popup();
             }
             Message::StartMonitoring => {
@@ -515,12 +556,13 @@ impl AppState {
         }
     }
 
-    /// Launch the settings window as a separate process, unless it is already running.
-    fn open_settings_window(&mut self) {
+    /// Launch the settings window as a separate process on `page`. If it's already running, ask it to show `page`.
+    fn open_settings_window(&mut self, page: SettingsPage) {
         if let Some(child) = self.settings_process.as_mut() {
             match child.try_wait() {
                 Ok(None) => {
-                    info!("Settings window is already open");
+                    info!("Settings window is already open, showing the {:?} page", page);
+                    SettingsPageRequest::send(page);
                     return;
                 }
                 // It has exited, and is now reaped. Launch a new one.
@@ -550,6 +592,7 @@ impl AppState {
         if let Some(slot) = font_size_slot(&self.core) {
             command.arg(slot.to_arg());
         }
+        command.arg(page.to_arg());
 
         // The privileged socket belongs to the applet, the settings window has no use for it.
         command

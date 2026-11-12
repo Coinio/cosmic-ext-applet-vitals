@@ -9,5 +9,6 @@ pub mod gradient_pad;
 pub mod form_dropdown_input;
 pub mod form_spin_button_input;
 pub mod form_mount_list_input;
-pub mod hover_area;
+pub mod indicator_area;
+pub mod indicator_strip;
 pub mod detail_popup;
