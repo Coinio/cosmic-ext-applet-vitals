@@ -10,30 +10,17 @@ for those fighting with iced/libcosmic, etc.
 
 ## Features
 
-* Show CPU Usage
-* Show RAM Usage
-* Show Network upload / download. This filters out virtual devices so won't count upload / download twice when using a VPN, etc.
-* Show Disk upload / down. This counts reads / writes to logical disks, not partitions, etc.
-* Show available / total storage. Choose which mounts are included in the settings, `/` by default. A filesystem
-  mounted in more than one place, e.g. btrfs subvolumes, is only counted once.
-* Hover over the CPU indicator for the usage of each thread, or each physical core, and the CPU temperature and fan
-  speed where the system reports them. See [CPU Temperature and Fan Speed](#cpu-temperature-and-fan-speed)
-* Hover over the memory indicator for the memory used, cached and available, and the swap used
-* Hover over the network indicator for the download / upload of each interface, and its IPv4 address
-* Hover over the disk indicator for the reads / writes of each disk, its model, and how busy it is
-* Hover over the storage indicator for the free space of every mount
-* Click an indicator to open its settings
-* Horizontal / Vertical Layouts - The horizontal layout has seen a little more testing as I 
-  don't use the vertical.
-* Config:
-  * Read Intervals - How often each monitor is polled
-  * Max Samples - The number of samples to keep to average the readings across
-  * Show / Hide each monitor
-  * Show / Hide the CPU, memory and storage icons
-  * Icon Colours - The CPU, memory and storage icon colours can be selected from the current theme libcosmic palette,
-    or picked with a custom colour picker
-  * Switch between SI and IEC units
-  * Font - Uses the COSMIC system font by default, or switch to any installed font. See [Fonts](#fonts)
+* CPU, memory, network, disk and storage usage
+* Hover any indicator for a detailed breakdown
+* CPU temperature and fan speed ([setup](#cpu-temperature-and-fan-speed))
+* Click any indicator to open its settings
+* Horizontal and vertical panel layouts
+* Show or hide each indicator and icon
+* Custom icon colours
+* Configurable update intervals and sample averaging
+* Choose which mounts count towards storage
+* SI or IEC units
+* Any installed font ([recommended](#fonts))
 
 ## Screenshots
 
