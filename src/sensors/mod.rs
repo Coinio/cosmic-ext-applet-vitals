@@ -8,3 +8,5 @@ pub mod proc_mounts_reader;
 pub mod storage_reader;
 pub mod cpu_topology_reader;
 pub mod hwmon_reader;
+pub mod gpu_reader;
+pub mod nvml;

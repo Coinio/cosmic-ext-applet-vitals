@@ -10,9 +10,10 @@ for those fighting with iced/libcosmic, etc.
 
 ## Features
 
-* CPU, memory, network, disk and storage usage
+* CPU, memory, GPU, network, disk and storage usage
 * Hover any indicator for a detailed breakdown
 * CPU temperature and fan speed ([setup](#cpu-temperature-and-fan-speed))
+* GPU usage and VRAM for AMD and NVIDIA GPUs ([details](#gpu-usage-and-vram))
 * Click any indicator to open its settings
 * Horizontal and vertical panel layouts
 * Show or hide each indicator and icon
@@ -119,3 +120,21 @@ sudo sensors-detect
 It offers to load the driver on every boot. Restart the applet afterwards, e.g. by logging out and back in, so it
 finds the new sensors. A few chips, e.g. on some MSI and Gigabyte boards, need a newer kernel or an out-of-tree driver,
 and many laptops don't report their fans at all.
+
+## GPU Usage and VRAM
+
+The GPU indicator shows the usage and VRAM used of one GPU, the discrete one by default. Another can be chosen under
+**Settings > GPU > Panel GPU**. Hovering it shows every GPU, with its temperature and power draw where the GPU reports
+them.
+
+* **AMD** - Read from the files the `amdgpu` driver provides. Nothing extra is needed.
+* **NVIDIA** - Read through NVML (`libnvidia-ml.so.1`), which comes with NVIDIA's driver. The applet loads it when an
+  NVIDIA GPU is first read, so it doesn't need to be installed on systems without one.
+* **Intel** - Not supported, as Intel's drivers don't report the usage cheaply. Without a supported GPU, there's no
+  GPU indicator.
+
+Laptops put their discrete GPU to sleep when it isn't in use, to save battery, and reading a GPU that's asleep wakes
+it. So the applet never reads a GPU that's asleep, and shows its usage as 0%. A GPU only falls asleep after it has been
+idle for a few seconds, and reading it counts as using it, so once a GPU that can sleep has been idle for a few
+seconds, the applet leaves it alone long enough for it to fall asleep. The popup shows it as idle meanwhile. If
+something starts using it during that time, the indicator catches up within 15 seconds.

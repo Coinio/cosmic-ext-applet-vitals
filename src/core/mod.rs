@@ -9,3 +9,4 @@ pub mod app_icons;
 pub mod settings;
 pub mod mount_options;
 pub mod sensor_options;
+pub mod gpu_options;

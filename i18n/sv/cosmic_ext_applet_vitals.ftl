@@ -33,3 +33,4 @@ settings-download-colour = Nedladdningsfärg
 settings-upload-colour = Uppladdningsfärg
 settings-read-colour = Läsfärg
 settings-write-colour = Skrivfärg
+settings-gpu-title = GPU-inställningar

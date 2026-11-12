@@ -1,6 +1,7 @@
 use crate::configuration::cpu::CpuConfiguration;
 use crate::configuration::disk::DiskConfiguration;
 use crate::configuration::general::{FontSizeSlot, GeneralConfiguration};
+use crate::configuration::gpu::GpuConfiguration;
 use crate::configuration::memory::MemoryConfiguration;
 use crate::configuration::network::NetworkConfiguration;
 use crate::configuration::storage::StorageConfiguration;
@@ -14,6 +15,7 @@ pub static GENERAL_SETTINGS_WINDOW_ID: Lazy<cosmic::iced::window::Id> =
     Lazy::new(|| cosmic::iced::window::Id::unique());
 pub static CPU_SETTINGS_WINDOW_ID: Lazy<cosmic::iced::window::Id> = Lazy::new(|| cosmic::iced::window::Id::unique());
 pub static MEMORY_SETTINGS_WINDOW_ID: Lazy<cosmic::iced::window::Id> = Lazy::new(|| cosmic::iced::window::Id::unique());
+pub static GPU_SETTINGS_WINDOW_ID: Lazy<cosmic::iced::window::Id> = Lazy::new(|| cosmic::iced::window::Id::unique());
 pub static NETWORK_SETTINGS_WINDOW_ID: Lazy<cosmic::iced::window::Id> =
     Lazy::new(|| cosmic::iced::window::Id::unique());
 pub static DISK_SETTINGS_WINDOW_ID: Lazy<cosmic::iced::window::Id> = Lazy::new(|| cosmic::iced::window::Id::unique());
@@ -41,6 +43,8 @@ pub const CPU_COMBINE_CORES_SETTING_KEY: &'static str = "settings-cpu-combine-co
 pub const CPU_TEMPERATURE_SENSOR_SETTING_KEY: &'static str = "settings-cpu-temperature-sensor";
 pub const CPU_FAN_SENSOR_SETTING_KEY: &'static str = "settings-cpu-fan-sensor";
 pub const CPU_USE_FAHRENHEIT_SETTING_KEY: &'static str = "settings-cpu-use-fahrenheit";
+pub const GPU_DEVICE_SETTING_KEY: &'static str = "settings-gpu-device";
+pub const GPU_SHOW_VRAM_SETTING_KEY: &'static str = "settings-gpu-show-vram";
 
 #[derive(Debug, Default, Clone, CosmicConfigEntry, Eq, PartialEq)]
 #[version = 1]
@@ -48,6 +52,7 @@ pub struct AppConfiguration {
     pub general: GeneralConfiguration,
     pub cpu: CpuConfiguration,
     pub memory: MemoryConfiguration,
+    pub gpu: GpuConfiguration,
     pub network: NetworkConfiguration,
     pub disk: DiskConfiguration,
     pub storage: StorageConfiguration,
@@ -63,6 +68,8 @@ impl AppConfiguration {
             ),
             (CPU_SETTINGS_WINDOW_ID.clone(), SettingsForm::from(&self.cpu)),
             (MEMORY_SETTINGS_WINDOW_ID.clone(), SettingsForm::from(&self.memory)),
+            // Created in this order, which is the order of the settings pages.
+            (GPU_SETTINGS_WINDOW_ID.clone(), SettingsForm::from(&self.gpu)),
             (NETWORK_SETTINGS_WINDOW_ID.clone(), SettingsForm::from(&self.network)),
             (DISK_SETTINGS_WINDOW_ID.clone(), SettingsForm::from(&self.disk)),
             (STORAGE_SETTINGS_WINDOW_ID.clone(), SettingsForm::from(&self.storage)),

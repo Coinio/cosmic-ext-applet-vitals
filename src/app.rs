@@ -8,10 +8,12 @@ use crate::core::app_text_measurements::AppTextMeasurements;
 use crate::monitors::cpu_monitor::{CpuMonitor, CpuStats};
 use crate::monitors::cpu_sensors_monitor::{CpuSensorStats, CpuSensorsMonitor};
 use crate::monitors::disk_monitor::{DiskMonitor, DiskStats};
+use crate::monitors::gpu_monitor::{GpuMonitor, GpuStats};
 use crate::monitors::memory_monitor::{MemoryMonitor, MemoryStats};
 use crate::monitors::network_monitor::{NetworkMonitor, NetworkStats};
 use crate::monitors::storage_monitor::{StorageMonitor, StorageStats};
 use crate::sensors::cpu_topology_reader::{CpuTopology, SYSFS_CPU_ROOT};
+use crate::sensors::gpu_reader::GpuPaths;
 use crate::sensors::hwmon_reader::HWMON_ROOT;
 use crate::sensors::proc_disk_stats_reader::{ProcDiskStatsReader, SYS_BLOCK_ROOT};
 use crate::sensors::proc_meminfo_reader::ProcMemInfoSensorReader;
@@ -61,6 +63,7 @@ const DETAIL_POPUP_DELAY: Duration = Duration::from_millis(400);
 pub enum IndicatorKind {
     Cpu,
     Memory,
+    Gpu,
     Network,
     Disk,
     Storage,
@@ -72,6 +75,7 @@ impl IndicatorKind {
         match self {
             IndicatorKind::Cpu => SettingsPage::Cpu,
             IndicatorKind::Memory => SettingsPage::Memory,
+            IndicatorKind::Gpu => SettingsPage::Gpu,
             IndicatorKind::Network => SettingsPage::Network,
             IndicatorKind::Disk => SettingsPage::Disk,
             IndicatorKind::Storage => SettingsPage::Storage,
@@ -111,8 +115,10 @@ pub struct AppState {
     cpu: CpuStats,
     /// The latest cpu temperature and fan speed, which are only read while the cpu detail popup is wanted.
     cpu_sensors: CpuSensorStats,
-    /// Tells the monitors whether the cpu detail popup is wanted, so they only read its sensors while it is.
-    cpu_detail_wanted: watch::Sender<bool>,
+    /// The current gpu usage stats. Only the panel's gpu is read, except while the gpu detail popup is wanted.
+    gpu: GpuStats,
+    /// Tells the monitors which indicator's detail popup is wanted, so they only read what only it shows while it is.
+    detail_wanted: watch::Sender<Option<IndicatorKind>>,
     /// The current network usage stats
     network: NetworkStats,
     /// The current disk usage stats   
@@ -136,6 +142,7 @@ pub struct StatsUpdate {
     memory: Option<MemoryStats>,
     cpu: Option<CpuStats>,
     cpu_sensors: Option<CpuSensorStats>,
+    gpu: Option<GpuStats>,
     network: Option<NetworkStats>,
     disk: Option<DiskStats>,
     storage: Option<StorageStats>,
@@ -220,7 +227,7 @@ impl Application for AppState {
 
     fn update(&mut self, message: Self::Message) -> Task<Self::Message> {
         let task = self.handle_message(message);
-        self.sync_cpu_detail_wanted();
+        self.sync_detail_wanted();
         task
     }
 
@@ -230,6 +237,7 @@ impl Application for AppState {
         let indicators = [
             (IndicatorKind::Cpu, self.cpu.content(&self.configuration)),
             (IndicatorKind::Memory, self.memory.content(&self.configuration)),
+            (IndicatorKind::Gpu, self.gpu.content(&self.configuration)),
             (IndicatorKind::Network, self.network.content(&self.configuration)),
             (IndicatorKind::Disk, self.disk.content(&self.configuration)),
             (IndicatorKind::Storage, self.storage.content(&self.configuration, is_horizontal)),
@@ -377,7 +385,7 @@ impl AppState {
                 self.monitor_cancellation_token = Some(cancellation_token.clone());
 
                 let config = self.configuration.clone();
-                let mut cpu_detail_wanted = self.cpu_detail_wanted.subscribe();
+                let mut detail_wanted = self.detail_wanted.subscribe();
 
                 return cosmic::Task::stream(async_stream::stream! {
                     let mut memory_monitor = (!config.memory.hide_indicator)
@@ -401,6 +409,10 @@ impl AppState {
                         ));
                     let mut storage_monitor = (!config.storage.hide_indicator)
                         .then(|| StorageMonitor::new(StorageReader, config.storage.mounts.clone()));
+                    // Only the panel's gpu is read on every tick. The others are only shown in the gpu detail popup,
+                    // so they're only read while it's wanted, which leaves them free to sleep the rest of the time.
+                    let mut gpu_monitor = (!config.gpu.hide_indicator)
+                        .then(|| GpuMonitor::new(&GpuPaths::system(), &config));
 
                     // A single scheduler drives every monitor. Monitors that fall due at (nearly) the same
                     // time are polled together and sent as one message, because every message rebuilds and
@@ -412,6 +424,7 @@ impl AppState {
                         network_monitor.is_some().then_some((start, config.network.update_interval)),
                         disk_monitor.is_some().then_some((start, config.disk.update_interval)),
                         storage_monitor.is_some().then_some((start, config.storage.update_interval)),
+                        gpu_monitor.is_some().then_some((start, config.gpu.update_interval)),
                     ];
 
                     loop {
@@ -421,24 +434,24 @@ impl AppState {
                             break;
                         };
 
-                        // Set when the cpu detail popup has just become wanted, to read its sensors straight away
-                        // instead of at the next cpu tick.
-                        let mut cpu_sensors_requested = false;
+                        // Set when a detail popup has just become wanted, to read what only it shows straight
+                        // away instead of at the next tick.
+                        let mut detail_requested = None;
 
                         tokio::select! {
                             _ = tokio::time::sleep_until(next_due) => {},
-                            changed = cpu_detail_wanted.changed(), if cpu_sensors_monitor.is_some() => {
+                            changed = detail_wanted.changed(), if cpu_sensors_monitor.is_some() || gpu_monitor.is_some() => {
                                 // The sender lives as long as the applet, so this only fails as it exits.
                                 if changed.is_err() {
                                     break;
                                 }
-                                cpu_sensors_requested = *cpu_detail_wanted.borrow();
+                                detail_requested = *detail_wanted.borrow();
                             },
                             _ = cancellation_token.cancelled() => break,
                         }
 
                         let now = Instant::now();
-                        let mut due = [false; 5];
+                        let mut due = [false; 6];
 
                         for (index, schedule) in schedules.iter_mut().enumerate() {
                             if let Some((next, interval)) = schedule {
@@ -451,11 +464,15 @@ impl AppState {
                             }
                         }
 
-                        let read_cpu_sensors = cpu_sensors_requested || (due[1] && *cpu_detail_wanted.borrow());
+                        let wanted = *detail_wanted.borrow();
+                        let read_cpu_sensors = detail_requested == Some(IndicatorKind::Cpu)
+                            || (due[1] && wanted == Some(IndicatorKind::Cpu));
+                        let read_gpu = due[5] || detail_requested == Some(IndicatorKind::Gpu);
+                        let read_all_gpus = wanted == Some(IndicatorKind::Gpu);
 
-                        // Waking for the cpu detail popup can find nothing else due, and nothing to read when it
-                        // stopped being wanted.
-                        if !read_cpu_sensors && !due.contains(&true) {
+                        // Waking for a detail popup can find nothing else due, and nothing to read when it stopped
+                        // being wanted.
+                        if !read_cpu_sensors && !read_gpu && !due.contains(&true) {
                             continue;
                         }
 
@@ -466,6 +483,7 @@ impl AppState {
                             network: network_monitor.as_mut().filter(|_| due[2]).map(|m| m.poll().unwrap_or_default()),
                             disk: disk_monitor.as_mut().filter(|_| due[3]).map(|m| m.poll().unwrap_or_default()),
                             storage: storage_monitor.as_mut().filter(|_| due[4]).map(|m| m.poll().unwrap_or_default()),
+                            gpu: gpu_monitor.as_mut().filter(|_| read_gpu).map(|m| m.poll(read_all_gpus)),
                         };
 
                         yield Message::StatsUpdate(update);
@@ -491,6 +509,9 @@ impl AppState {
                 }
                 if let Some(storage) = update.storage {
                     self.storage = storage;
+                }
+                if let Some(gpu) = update.gpu {
+                    self.gpu = gpu;
                 }
             }
             Message::ConfigFileChanged(configuration) => {
@@ -627,11 +648,11 @@ impl AppState {
         get_popup(detail_popup_settings(&self.core, parent, id, popup.bounds))
     }
 
-    /// The cpu detail popup is wanted from when the cpu indicator is hovered, so its sensors have been read by the
-    /// time it opens, until it closes.
-    fn sync_cpu_detail_wanted(&self) {
-        let wanted = self.detail_popup.as_ref().is_some_and(|popup| popup.kind == IndicatorKind::Cpu);
-        self.cpu_detail_wanted.send_if_modified(|current| {
+    /// A detail popup is wanted from when its indicator is hovered, so what only it shows has been read by the time it
+    /// opens, until it closes.
+    fn sync_detail_wanted(&self) {
+        let wanted = self.detail_popup.as_ref().map(|popup| popup.kind);
+        self.detail_wanted.send_if_modified(|current| {
             let changed = *current != wanted;
             *current = wanted;
             changed
@@ -651,6 +672,7 @@ impl AppState {
         match kind {
             IndicatorKind::Cpu => Some(self.cpu.detail(&self.cpu_sensors, configuration, app_icons, style)),
             IndicatorKind::Memory => Some(self.memory.detail(configuration, app_icons, style)),
+            IndicatorKind::Gpu => Some(self.gpu.detail(configuration, app_icons, style)),
             IndicatorKind::Network => Some(self.network.detail(configuration, app_icons, style)),
             IndicatorKind::Disk => Some(self.disk.detail(configuration, app_icons, style)),
             IndicatorKind::Storage => Some(self.storage.detail(configuration, app_icons, style)),

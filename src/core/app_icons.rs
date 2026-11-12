@@ -9,6 +9,7 @@ pub const WRITE_ICON: &str = "write-icon";
 pub const CPU_ICON: &str = "cpu-icon";
 pub const MEMORY_ICON: &str = "memory-icon";
 pub const STORAGE_ICON: &str = "storage-icon";
+pub const GPU_ICON: &str = "gpu-icon";
 
 #[derive(RustEmbed)]
 #[folder = "res/icons/"]
@@ -75,6 +76,7 @@ impl AppIcons {
                 (CPU_ICON, AppIcon::embedded("cpu.svg")),
                 (MEMORY_ICON, AppIcon::embedded("memory.svg")),
                 (STORAGE_ICON, AppIcon::embedded("storage.svg")),
+                (GPU_ICON, AppIcon::embedded("gpu.svg")),
             ]),
         }
     }

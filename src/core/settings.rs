@@ -1,9 +1,10 @@
 use std::time::Duration;
 use cosmic::iced::window;
 use indexmap::IndexMap;
-use crate::configuration::app_configuration::{CPU_SETTINGS_WINDOW_ID, DISK_SETTINGS_WINDOW_ID, GENERAL_SETTINGS_WINDOW_ID, HIDE_INDICATOR_SETTING_KEY, HIDE_ICON_SETTING_KEY, ICON_COLOUR_SETTING_KEY, DOWNLOAD_COLOUR_SETTING_KEY, UPLOAD_COLOUR_SETTING_KEY, READ_COLOUR_SETTING_KEY, WRITE_COLOUR_SETTING_KEY, MAX_SAMPLES_SETTING_KEY, MEMORY_SETTINGS_WINDOW_ID, NETWORK_SETTINGS_WINDOW_ID, UPDATE_INTERVAL_SETTING_KEY, FIX_INDICATOR_SIZE_SETTING_KEY, FONT_SETTING_KEY, FONT_SIZE_SETTING_KEY, STORAGE_MOUNTS_SETTING_KEY, STORAGE_SETTINGS_WINDOW_ID, CPU_COMBINE_CORES_SETTING_KEY, CPU_TEMPERATURE_SENSOR_SETTING_KEY, CPU_FAN_SENSOR_SETTING_KEY, CPU_USE_FAHRENHEIT_SETTING_KEY};
+use crate::configuration::app_configuration::{CPU_SETTINGS_WINDOW_ID, DISK_SETTINGS_WINDOW_ID, GENERAL_SETTINGS_WINDOW_ID, HIDE_INDICATOR_SETTING_KEY, HIDE_ICON_SETTING_KEY, ICON_COLOUR_SETTING_KEY, DOWNLOAD_COLOUR_SETTING_KEY, UPLOAD_COLOUR_SETTING_KEY, READ_COLOUR_SETTING_KEY, WRITE_COLOUR_SETTING_KEY, MAX_SAMPLES_SETTING_KEY, MEMORY_SETTINGS_WINDOW_ID, NETWORK_SETTINGS_WINDOW_ID, UPDATE_INTERVAL_SETTING_KEY, FIX_INDICATOR_SIZE_SETTING_KEY, FONT_SETTING_KEY, FONT_SIZE_SETTING_KEY, STORAGE_MOUNTS_SETTING_KEY, STORAGE_SETTINGS_WINDOW_ID, CPU_COMBINE_CORES_SETTING_KEY, CPU_TEMPERATURE_SENSOR_SETTING_KEY, CPU_FAN_SENSOR_SETTING_KEY, CPU_USE_FAHRENHEIT_SETTING_KEY, GPU_DEVICE_SETTING_KEY, GPU_SETTINGS_WINDOW_ID, GPU_SHOW_VRAM_SETTING_KEY};
 use crate::configuration::cpu::CpuConfiguration;
 use crate::configuration::disk::DiskConfiguration;
+use crate::configuration::gpu::{device_to_form_value, GpuConfiguration};
 use crate::configuration::general::{
     FontSizeSlot, GeneralConfiguration, INDICATOR_FONT_SIZE_MAXIMUM, INDICATOR_FONT_SIZE_MINIMUM,
 };
@@ -35,6 +36,8 @@ pub enum SettingsFormInputType {
     /// A dropdown of the sensors of the kind. The value is an encoded optional `HwmonSensorId`, see
     /// [`HwmonSensorId::to_form_value`], where empty picks the sensor automatically.
     SensorPicker(HwmonSensorKind),
+    /// A dropdown of the GPUs. The value is a GPU's PCI address, where empty picks the GPU automatically.
+    GpuPicker,
 }
 
 #[derive(Debug, Clone)]
@@ -120,6 +123,38 @@ impl From<&MemoryConfiguration> for SettingsForm {
         SettingsForm {
             settings_window_id: MEMORY_SETTINGS_WINDOW_ID.clone(),
             title: fl!("settings-memory-title"),
+            values,
+        }
+    }
+}
+
+impl From<&GpuConfiguration> for SettingsForm {
+    fn from(config: &GpuConfiguration) -> SettingsForm {
+        let mut values = build_shared_settings(
+            config.hide_indicator,
+            Some((config.hide_icon, config.icon_colour.clone())),
+            Vec::new(),
+            config.update_interval,
+            Some(config.max_samples),
+        );
+        values.insert(
+            GPU_DEVICE_SETTING_KEY,
+            SettingsFormItem {
+                label: fl!("settings-gpu-device"),
+                value: device_to_form_value(config.device.as_deref()),
+                input_type: SettingsFormInputType::GpuPicker,
+                validator: None,
+                helper_text: Some(fl!("settings-gpu-device-helper")),
+            },
+        );
+        values.insert(
+            GPU_SHOW_VRAM_SETTING_KEY,
+            checkbox_setting(fl!("settings-gpu-show-vram"), config.show_vram, None),
+        );
+
+        SettingsForm {
+            settings_window_id: GPU_SETTINGS_WINDOW_ID.clone(),
+            title: fl!("settings-gpu-title"),
             values,
         }
     }

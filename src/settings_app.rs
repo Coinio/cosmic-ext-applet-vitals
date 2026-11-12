@@ -13,11 +13,12 @@
 use crate::app::GLOBAL_APP_ID;
 use crate::configuration::app_configuration::{
     AppConfiguration, CPU_SETTINGS_WINDOW_ID, DISK_SETTINGS_WINDOW_ID, GENERAL_SETTINGS_WINDOW_ID,
-    MEMORY_SETTINGS_WINDOW_ID, NETWORK_SETTINGS_WINDOW_ID, STORAGE_SETTINGS_WINDOW_ID,
+    GPU_SETTINGS_WINDOW_ID, MEMORY_SETTINGS_WINDOW_ID, NETWORK_SETTINGS_WINDOW_ID, STORAGE_SETTINGS_WINDOW_ID,
 };
 use crate::configuration::general::FontSizeSlot;
 use crate::core::app_colours::AppColour;
 use crate::core::app_fonts::FontOptions;
+use crate::core::gpu_options::GpuOptions;
 use crate::core::mount_options::MountOptions;
 use crate::core::sensor_options::SensorOptions;
 use crate::core::settings::{SettingsForm, SettingsFormEvent};
@@ -48,16 +49,18 @@ pub enum SettingsPage {
     General,
     Cpu,
     Memory,
+    Gpu,
     Network,
     Disk,
     Storage,
 }
 
 impl SettingsPage {
-    const ALL: [SettingsPage; 6] = [
+    const ALL: [SettingsPage; 7] = [
         SettingsPage::General,
         SettingsPage::Cpu,
         SettingsPage::Memory,
+        SettingsPage::Gpu,
         SettingsPage::Network,
         SettingsPage::Disk,
         SettingsPage::Storage,
@@ -68,6 +71,7 @@ impl SettingsPage {
             SettingsPage::General => "general",
             SettingsPage::Cpu => "cpu",
             SettingsPage::Memory => "memory",
+            SettingsPage::Gpu => "gpu",
             SettingsPage::Network => "network",
             SettingsPage::Disk => "disk",
             SettingsPage::Storage => "storage",
@@ -90,6 +94,7 @@ impl SettingsPage {
             SettingsPage::General => *GENERAL_SETTINGS_WINDOW_ID,
             SettingsPage::Cpu => *CPU_SETTINGS_WINDOW_ID,
             SettingsPage::Memory => *MEMORY_SETTINGS_WINDOW_ID,
+            SettingsPage::Gpu => *GPU_SETTINGS_WINDOW_ID,
             SettingsPage::Network => *NETWORK_SETTINGS_WINDOW_ID,
             SettingsPage::Disk => *DISK_SETTINGS_WINDOW_ID,
             SettingsPage::Storage => *STORAGE_SETTINGS_WINDOW_ID,
@@ -156,6 +161,8 @@ pub struct SettingsApp {
     temperature_sensor_options: SensorOptions,
     /// The sensors that can be chosen for the CPU fan
     fan_sensor_options: SensorOptions,
+    /// The GPUs that can be chosen for the panel
+    gpu_options: GpuOptions,
     /// The settings forms that are available for configuration of the monitors.
     settings_forms: BTreeMap<window::Id, SettingsForm>,
     /// The navigation model for the sidebar. Each entry holds the id of its settings form.
@@ -231,6 +238,7 @@ impl Application for SettingsApp {
                 configuration.cpu.fan_sensor.as_ref(),
                 configuration.cpu.use_fahrenheit,
             ),
+            gpu_options: GpuOptions::new(configuration.gpu.device.as_deref()),
             configuration,
             font_size_slot: flags.font_size_slot,
             settings_forms,
@@ -369,6 +377,10 @@ impl SettingsApp {
         }
     }
 
+    pub fn gpu_options(&self) -> &GpuOptions {
+        &self.gpu_options
+    }
+
     /// The custom colour picker, if it is open for the given settings form field.
     pub fn custom_colour_picker(
         &self,
@@ -420,6 +432,7 @@ impl SettingsApp {
                 .update(form(&GENERAL_SETTINGS_WINDOW_ID, "general"), self.font_size_slot),
             memory: self.configuration.memory.update(form(&MEMORY_SETTINGS_WINDOW_ID, "memory")),
             cpu: self.configuration.cpu.update(form(&CPU_SETTINGS_WINDOW_ID, "cpu")),
+            gpu: self.configuration.gpu.update(form(&GPU_SETTINGS_WINDOW_ID, "gpu")),
             network: self.configuration.network.update(form(&NETWORK_SETTINGS_WINDOW_ID, "network")),
             disk: self.configuration.disk.update(form(&DISK_SETTINGS_WINDOW_ID, "disk")),
             storage: self.configuration.storage.update(form(&STORAGE_SETTINGS_WINDOW_ID, "storage")),

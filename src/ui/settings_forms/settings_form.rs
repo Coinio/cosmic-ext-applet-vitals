@@ -148,6 +148,30 @@ impl SettingsForm {
 
                     column = column.add(el);
                 }
+                SettingsFormInputType::GpuPicker => {
+                    let helper_color: Color = AppColour::Palette(EXT_WARM_GREY).resolve(theme);
+                    let options = app_state.gpu_options();
+
+                    // Without any GPUs, the choice is moot, so explain why there are none instead.
+                    let helper_text = if options.has_gpus {
+                        settings_form_item.helper_text.clone()
+                    } else {
+                        Some(fl!("settings-gpu-none"))
+                    };
+
+                    let el = form_dropdown_input(FormDropdownInputProps {
+                        settings_window_id: self.settings_window_id,
+                        label: settings_form_item.label.clone(),
+                        value: &settings_form_item.value,
+                        form_value_key,
+                        labels: options.labels.as_slice(),
+                        values: options.values.clone(),
+                        helper_text,
+                        helper_text_color: helper_color,
+                    });
+
+                    column = column.add(el);
+                }
             };
         }
 
