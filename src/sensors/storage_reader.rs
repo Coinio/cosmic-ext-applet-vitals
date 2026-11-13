@@ -22,6 +22,13 @@ pub struct MountUsage {
     pub available_bytes: u64,
 }
 
+impl MountUsage {
+    /// The space unprivileged users can't use, which counts the blocks reserved for root as used.
+    pub fn used_bytes(&self) -> u64 {
+        self.total_bytes.saturating_sub(self.available_bytes)
+    }
+}
+
 /// A partition, or a disk without partitions, with a filesystem on it that isn't mounted, e.g. a second drive, or an
 /// encrypted partition that hasn't been unlocked. Its free space can't be read until it's mounted.
 #[derive(Debug, Clone, PartialEq, Eq)]

@@ -20,14 +20,14 @@ impl StorageStats {
             return None;
         }
 
-        let available = format_size_bytes(self.available_bytes, configuration);
+        let used = format_size_bytes(self.used_bytes(), configuration);
         let total = format_size_bytes(self.total_bytes, configuration);
 
-        // There's room for "available/total" on a single line in a horizontal panel, but not in a vertical one.
+        // There's room for "used/total" on a single line in a horizontal panel, but not in a vertical one.
         let lines = if horizontal {
-            vec![IndicatorLine::text(format!("{available}/{total}"))]
+            vec![IndicatorLine::text(format!("{used}/{total}"))]
         } else {
-            vec![IndicatorLine::text(available), IndicatorLine::text(total)]
+            vec![IndicatorLine::text(used), IndicatorLine::text(total)]
         };
 
         let max_label_text = match (configuration.general.use_iec_units, horizontal) {
@@ -73,7 +73,7 @@ impl StorageStats {
 
         let summary = fl!(
             "popup-storage-space",
-            available = format_size_bytes(self.available_bytes, configuration),
+            used = format_size_bytes(self.used_bytes(), configuration),
             total = format_size_bytes(self.total_bytes, configuration)
         );
         let header = popup_header(
@@ -88,20 +88,19 @@ impl StorageStats {
     }
 }
 
-/// A mount point and its free space, above a bar showing how much of it is used. Blocks reserved for root count as
-/// used, matching the free space shown.
+/// A mount point and its used space, above a bar showing the same.
 fn mount_detail<'a>(
     style: PopupStyle,
     mount: &'a MountUsage,
     bar_colour: Option<AppColour>,
     configuration: &AppConfiguration,
 ) -> Element<'a, Message> {
+    let used_bytes = mount.used_bytes();
     let space = fl!(
         "popup-storage-space",
-        available = format_size_bytes(mount.available_bytes, configuration),
+        used = format_size_bytes(used_bytes, configuration),
         total = format_size_bytes(mount.total_bytes, configuration)
     );
-    let used_bytes = mount.total_bytes.saturating_sub(mount.available_bytes);
 
     labelled_bar(
         style,
@@ -112,7 +111,7 @@ fn mount_detail<'a>(
     )
 }
 
-/// A volume that isn't mounted, by its label and device, with its size and why there's no free space shown.
+/// A volume that isn't mounted, by its label and device, with its size and why there's no used space shown.
 fn unmounted_detail<'a>(
     style: PopupStyle,
     volume: &'a UnmountedVolume,

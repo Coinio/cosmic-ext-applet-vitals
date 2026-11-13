@@ -51,7 +51,7 @@ Reads / writes, model and busy time of each disk, including disks that aren't mo
 ![Disk Detail Popup](https://github.com/Coinio/cosmic-vitals/blob/main/res/screenshots/disk-detail.png)
 
 ##### Storage Details
-Free space of every mount, plus any unmounted drives.
+Used space of every mount, and the size of any drives that aren't mounted.
 
 ![Storage Detail Popup](https://github.com/Coinio/cosmic-vitals/blob/main/res/screenshots/storage-detail.png)
 

@@ -16,7 +16,14 @@ pub struct StorageStats {
     pub unmounted: Vec<UnmountedVolume>,
 }
 
-/// Totals the space across the configured mounts. Free space doesn't need smoothing, so there are no samples.
+impl StorageStats {
+    /// The used space across the configured mounts, which counts the blocks reserved for root as used.
+    pub fn used_bytes(&self) -> u64 {
+        self.total_bytes.saturating_sub(self.available_bytes)
+    }
+}
+
+/// Totals the space across the configured mounts. Storage space doesn't need smoothing, so there are no samples.
 pub struct StorageMonitor<S: SensorReader<Output = StorageReading>> {
     sensor_reader: S,
     /// The mount points counted in the totals.
@@ -127,6 +134,7 @@ mod tests {
 
         assert_eq!(stats.total_bytes, 3000);
         assert_eq!(stats.available_bytes, 1900);
+        assert_eq!(stats.used_bytes(), 1100);
     }
 
     #[test]
