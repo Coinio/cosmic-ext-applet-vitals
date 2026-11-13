@@ -1,9 +1,31 @@
-<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <!-- Background -->
-    <rect width="128" height="128" rx="24" fill="#0D1117"/>
+<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <defs>
+    <path id="tile" d="M120 64L120 82.8L119.8 88.8L119.6 93.1L119.2 96.6L118.8 99.6L118.3 102.1L117.6 104.4L116.9 106.4L116 108.3L115 109.9L114 111.4L112.8 112.8L111.4 114L109.9 115L108.3 116L106.4 116.9L104.4 117.6L102.1 118.3L99.6 118.8L96.6 119.2L93.1 119.6L88.8 119.8L82.8 120L64 120L45.2 120L39.2 119.8L34.9 119.6L31.4 119.2L28.4 118.8L25.9 118.3L23.6 117.6L21.6 116.9L19.7 116L18.1 115L16.6 114L15.2 112.8L14 111.4L13 109.9L12 108.3L11.1 106.4L10.4 104.4L9.7 102.1L9.2 99.6L8.8 96.6L8.4 93.1L8.2 88.8L8 82.8L8 64L8 45.2L8.2 39.2L8.4 34.9L8.8 31.4L9.2 28.4L9.7 25.9L10.4 23.6L11.1 21.6L12 19.7L13 18.1L14 16.6L15.2 15.2L16.6 14L18.1 13L19.7 12L21.6 11.1L23.6 10.4L25.9 9.7L28.4 9.2L31.4 8.8L34.9 8.4L39.2 8.2L45.2 8L64 8L82.8 8L88.8 8.2L93.1 8.4L96.6 8.8L99.6 9.2L102.1 9.7L104.4 10.4L106.4 11.1L108.3 12L109.9 13L111.4 14L112.8 15.2L114 16.6L115 18.1L116 19.7L116.9 21.6L117.6 23.6L118.3 25.9L118.8 28.4L119.2 31.4L119.6 34.9L119.8 39.2L120 45.2Z"/>
+    <linearGradient id="bg" x1="8" y1="8" x2="120" y2="120" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#2DD4BF"/>
+      <stop offset="0.5" stop-color="#3B82F6"/>
+      <stop offset="1" stop-color="#7C3AED"/>
+    </linearGradient>
+    <linearGradient id="sheen" x1="0" y1="8" x2="0" y2="70" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.25"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
 
-    <!-- Pulse Line -->
-    <path d="M16 64 L32 64 L38 48 L44 80 L50 32 L56 96 L62 64 L112 64"
-          stroke="#00FF8B" stroke-width="5" fill="none" stroke-linecap="round"
-          stroke-linejoin="round"/>
+  <!-- Tile: drop shadow, gradient body, top sheen -->
+  <use xlink:href="#tile" y="3" fill="#000000" fill-opacity="0.22"/>
+  <use xlink:href="#tile" fill="url(#bg)"/>
+  <use xlink:href="#tile" fill="url(#sheen)"/>
+
+  <!-- Usage bars -->
+  <g fill="#FFFFFF" fill-opacity="0.18">
+    <rect x="30" y="74" width="14" height="26" rx="5"/>
+    <rect x="48" y="58" width="14" height="42" rx="5"/>
+    <rect x="66" y="82" width="14" height="18" rx="5"/>
+    <rect x="84" y="46" width="14" height="54" rx="5"/>
+  </g>
+
+  <!-- Pulse line with soft shadow -->
+  <path d="M22 70H38L46 52L56 88L66 40L76 76L82 66H106" transform="translate(0 2)" stroke="#1E1B4B" stroke-opacity="0.25" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M22 70H38L46 52L56 88L66 40L76 76L82 66H106" stroke="#FFFFFF" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
