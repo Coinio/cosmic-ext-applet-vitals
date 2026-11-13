@@ -5,6 +5,7 @@ use crate::core::app_icons::CPU_ICON;
 use crate::fl;
 use crate::monitors::cpu_monitor::{CoreUsage, CpuStats};
 use crate::monitors::cpu_sensors_monitor::CpuSensorStats;
+use crate::sensors::cpu_info_reader::CpuInfo;
 use crate::core::app_icons::AppIcons;
 use crate::ui::components::detail_popup::{
     card, card_with_heading, detail_popup, inline_bar, popup_header, stat_tiles, PopupStyle,
@@ -47,10 +48,11 @@ impl CpuStats {
         }
     }
 
-    /// The popup shown when hovering over the indicator: the total usage, the temperature and fan speed when there
-    /// are sensors for them, then the usage of each thread or core.
+    /// The popup shown when hovering over the indicator: the total usage, the CPU's model, cores and threads, its
+    /// clock speed, temperature and fan speed when they can be read, then the usage of each thread or core.
     pub fn detail<'a>(
         &'a self,
+        info: &'a CpuInfo,
         sensors: &CpuSensorStats,
         configuration: &AppConfiguration,
         app_icons: &'a AppIcons,
@@ -60,7 +62,14 @@ impl CpuStats {
         let colour = cpu.icon_colour.as_deref().and_then(AppColour::parse);
         let mut cards: Vec<Element<'a, Message>> = Vec::new();
 
+        if let Some(info) = info_card(style, info) {
+            cards.push(info);
+        }
+
         let readings: Vec<(String, String)> = [
+            sensors
+                .frequency_khz
+                .map(|khz| (fl!("popup-cpu-clock"), format_frequency(khz))),
             sensors.temperature_celsius.map(|celsius| {
                 (
                     fl!("popup-cpu-temperature"),
@@ -96,6 +105,30 @@ impl CpuStats {
 
         detail_popup(header, cards)
     }
+}
+
+/// The CPU's model over its cores, threads and highest clock speed, or `None` when none of them are known.
+fn info_card<'a>(style: PopupStyle, info: &'a CpuInfo) -> Option<Element<'a, Message>> {
+    let details: Vec<String> = [
+        (info.cores > 0).then(|| fl!("popup-cpu-core-count", cores = info.cores)),
+        (info.threads > 0).then(|| fl!("popup-cpu-thread-count", threads = info.threads)),
+        info.max_frequency_khz
+            .map(|khz| fl!("popup-cpu-max-clock", frequency = format_frequency(khz))),
+    ]
+    .into_iter()
+    .flatten()
+    .collect();
+
+    if info.model.is_none() && details.is_empty() {
+        return None;
+    }
+
+    let content = Column::new()
+        .spacing(2)
+        .push_maybe(info.model.as_deref().map(|model| style.label(model)))
+        .push_maybe((!details.is_empty()).then(|| style.caption(details.join(" · "))));
+
+    Some(card(content))
 }
 
 /// The usage bars in columns, filled top to bottom. CPUs usually number the second thread of each core after every
@@ -147,6 +180,15 @@ pub fn format_temperature(celsius: f64, use_fahrenheit: bool) -> String {
     }
 }
 
+/// A clock speed in GHz to two decimal places, or in whole MHz below 1 GHz.
+pub fn format_frequency(khz: u64) -> String {
+    if khz >= 1_000_000 {
+        format!("{:.2} GHz", khz as f64 / 1_000_000.0)
+    } else {
+        format!("{} MHz", khz / 1000)
+    }
+}
+
 pub fn format_fan_speed(rpm: u32) -> String {
     fl!("popup-cpu-fan-speed", rpm = rpm.to_string())
 }
@@ -161,6 +203,13 @@ mod tests {
         assert_eq!(format_temperature(0.0, false), "0°C");
         assert_eq!(format_temperature(100.0, true), "212°F");
         assert_eq!(format_temperature(-40.0, true), "-40°F");
+    }
+
+    #[test]
+    fn formats_frequencies() {
+        assert_eq!(format_frequency(5_392_872), "5.39 GHz");
+        assert_eq!(format_frequency(1_000_000), "1.00 GHz");
+        assert_eq!(format_frequency(800_000), "800 MHz");
     }
 
     #[test]

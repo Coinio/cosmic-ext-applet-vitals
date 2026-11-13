@@ -62,6 +62,16 @@ impl CpuTopology {
         self.core_of_cpu.get(&cpu).copied()
     }
 
+    /// The number of physical cores.
+    pub fn core_count(&self) -> usize {
+        self.core_of_cpu.values().collect::<std::collections::BTreeSet<_>>().len()
+    }
+
+    /// The number of hardware threads.
+    pub fn thread_count(&self) -> usize {
+        self.core_of_cpu.len()
+    }
+
     #[cfg(test)]
     pub fn from_cores(core_of_cpu: impl IntoIterator<Item = (usize, usize)>) -> Self {
         CpuTopology {
@@ -99,6 +109,8 @@ mod tests {
         assert_eq!(topology.core_of(2), Some(0));
         assert_eq!(topology.core_of(3), Some(1));
         assert_eq!(topology.core_of(4), None);
+        assert_eq!(topology.core_count(), 2);
+        assert_eq!(topology.thread_count(), 4);
     }
 
     #[test]

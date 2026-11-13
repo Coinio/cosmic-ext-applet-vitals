@@ -1,5 +1,5 @@
 use crate::sensors::sensor_traits::SensorReader;
-use crate::sensors::storage_reader::{MountUsage, StorageReading, UnmountedVolume};
+use crate::sensors::storage_reader::{MountUsage, StorageDisk, StorageReading, UnmountedVolume};
 use log::info;
 use std::collections::HashSet;
 
@@ -9,17 +9,79 @@ pub struct StorageStats {
     pub available_bytes: u64,
     /// The total space across the configured mounts.
     pub total_bytes: u64,
-    /// Every mounted filesystem, including those not counted in the totals, in mount table order. Only the counted
-    /// ones unless the poll was detailed.
+    /// The counted mounts, in mount table order. A filesystem mounted in more than one place is listed at each.
     pub mounts: Vec<MountUsage>,
     /// The volumes that aren't mounted, which have no free space to count. Only found by a detailed poll.
     pub unmounted: Vec<UnmountedVolume>,
+    /// The disks the mounts and unmounted volumes are on. Only found by a detailed poll.
+    pub disks: Vec<StorageDisk>,
+}
+
+/// The mounts and unmounted volumes on one disk, or the mounts that aren't on a single disk.
+#[derive(Debug, PartialEq, Eq)]
+pub struct DiskGroup<'a> {
+    /// The disk, or `None` for the mounts that aren't on a single disk, e.g. network shares.
+    pub disk: Option<&'a StorageDisk>,
+    pub mounts: Vec<&'a MountUsage>,
+    pub unmounted: Vec<&'a UnmountedVolume>,
 }
 
 impl StorageStats {
     /// The used space across the configured mounts, which counts the blocks reserved for root as used.
     pub fn used_bytes(&self) -> u64 {
         self.total_bytes.saturating_sub(self.available_bytes)
+    }
+
+    /// The mounts and unmounted volumes grouped by disk. The disks with mounts come first, in the order of their first
+    /// mount, so the disk with the root filesystem is usually first. Then the disks with only unmounted volumes, by
+    /// name, and last the mounts that aren't on a single disk, e.g. network shares.
+    pub fn by_disk(&self) -> Vec<DiskGroup<'_>> {
+        let mut groups: Vec<DiskGroup<'_>> = Vec::new();
+        let mut elsewhere = DiskGroup::new(None);
+
+        for mount in &self.mounts {
+            match self.disk(mount.disk.as_deref()) {
+                Some(disk) => DiskGroup::of(&mut groups, disk).mounts.push(mount),
+                None => elsewhere.mounts.push(mount),
+            }
+        }
+        for volume in &self.unmounted {
+            match self.disk(Some(&volume.disk)) {
+                Some(disk) => DiskGroup::of(&mut groups, disk).unmounted.push(volume),
+                None => elsewhere.unmounted.push(volume),
+            }
+        }
+
+        if !elsewhere.mounts.is_empty() || !elsewhere.unmounted.is_empty() {
+            groups.push(elsewhere);
+        }
+        groups
+    }
+
+    fn disk(&self, name: Option<&str>) -> Option<&StorageDisk> {
+        self.disks.iter().find(|disk| Some(disk.name.as_str()) == name)
+    }
+}
+
+impl<'a> DiskGroup<'a> {
+    fn new(disk: Option<&'a StorageDisk>) -> Self {
+        Self {
+            disk,
+            mounts: Vec::new(),
+            unmounted: Vec::new(),
+        }
+    }
+
+    /// The disk's group in `groups`, added at the end when it isn't there yet.
+    fn of<'g>(groups: &'g mut Vec<DiskGroup<'a>>, disk: &'a StorageDisk) -> &'g mut DiskGroup<'a> {
+        let index = match groups.iter().position(|group| group.disk == Some(disk)) {
+            Some(index) => index,
+            None => {
+                groups.push(DiskGroup::new(Some(disk)));
+                groups.len() - 1
+            }
+        };
+        &mut groups[index]
     }
 }
 
@@ -39,19 +101,28 @@ impl<S: SensorReader<Output = StorageReading>> StorageMonitor<S> {
         }
     }
 
-    /// Poll the space on the counted mounts, and when `detailed`, e.g. while the detail popup is wanted, every mount
-    /// and the volumes that aren't mounted too.
+    /// Poll the space on the counted mounts, and when `detailed`, e.g. while the detail popup is wanted, the disk each
+    /// is on and the volumes that aren't mounted too.
     pub fn poll(&mut self, detailed: bool) -> Result<StorageStats, String> {
-        let StorageReading { mounts, unmounted } = if detailed {
+        let StorageReading {
+            mounts,
+            unmounted,
+            disks,
+        } = if detailed {
             self.sensor_reader.read_detailed()?
         } else {
             self.sensor_reader.read()?
         };
 
+        let mounts: Vec<MountUsage> = mounts
+            .into_iter()
+            .filter(|mount| self.counted_mount_points.contains(&mount.mount_point))
+            .collect();
+
         let mut counted: HashSet<String> = HashSet::new();
         let mut stats = StorageStats::default();
 
-        for mount in mounts.iter().filter(|mount| self.counted_mount_points.contains(&mount.mount_point)) {
+        for mount in &mounts {
             // Bind mounts and btrfs subvolumes are the same filesystem mounted more than once, so only count it once.
             if !counted.insert(filesystem_key(mount)) {
                 continue;
@@ -63,6 +134,7 @@ impl<S: SensorReader<Output = StorageReading>> StorageMonitor<S> {
 
         stats.mounts = mounts;
         stats.unmounted = unmounted;
+        stats.disks = disks;
         Ok(stats)
     }
 }
@@ -104,7 +176,7 @@ mod tests {
             self.index.set(index + 1);
             self.readings[index].clone().map(|mounts| StorageReading {
                 mounts,
-                unmounted: Vec::new(),
+                ..StorageReading::default()
             })
         }
     }
@@ -115,6 +187,7 @@ mod tests {
             mount_point: mount_point.to_string(),
             total_bytes,
             available_bytes,
+            disk: None,
         }
     }
 
@@ -166,7 +239,7 @@ mod tests {
     }
 
     #[test]
-    fn lists_every_mount_but_only_counts_the_configured_ones() {
+    fn only_lists_and_counts_the_configured_mounts() {
         let mounts = vec![
             usage("/dev/nvme0n1p2", "/", 1000, 400),
             usage("/dev/nvme0n1p1", "/boot/efi", 100, 90),
@@ -179,7 +252,7 @@ mod tests {
 
         assert_eq!(stats.total_bytes, 3000);
         assert_eq!(stats.available_bytes, 1900);
-        assert_eq!(stats.mounts, mounts);
+        assert_eq!(stats.mounts, vec![mounts[0].clone(), mounts[2].clone()]);
     }
 
     #[test]
@@ -191,6 +264,83 @@ mod tests {
 
         assert_eq!(stats.total_bytes, 0);
         assert_eq!(stats.available_bytes, 0);
+    }
+
+    fn disk(name: &str) -> StorageDisk {
+        StorageDisk {
+            name: name.to_string(),
+            model: None,
+            size_bytes: 0,
+        }
+    }
+
+    fn on_disk(mount: MountUsage, disk: &str) -> MountUsage {
+        MountUsage {
+            disk: Some(disk.to_string()),
+            ..mount
+        }
+    }
+
+    fn unmounted(name: &str, disk: &str) -> UnmountedVolume {
+        UnmountedVolume {
+            name: name.to_string(),
+            disk: disk.to_string(),
+            label: None,
+            size_bytes: 0,
+            is_locked: false,
+        }
+    }
+
+    #[test]
+    fn groups_by_disk_in_the_order_of_their_first_mount() {
+        let stats = StorageStats {
+            mounts: vec![
+                on_disk(usage("/dev/dm-1", "/", 0, 0), "nvme0n1"),
+                on_disk(usage("/dev/sdb1", "/data", 0, 0), "sdb"),
+                usage("server:/export", "/mnt/share", 0, 0),
+                on_disk(usage("/dev/nvme0n1p1", "/boot/efi", 0, 0), "nvme0n1"),
+            ],
+            unmounted: vec![unmounted("sda1", "sda"), unmounted("sdb2", "sdb")],
+            disks: vec![disk("nvme0n1"), disk("sda"), disk("sdb")],
+            ..StorageStats::default()
+        };
+
+        let groups = stats.by_disk();
+        let summary: Vec<(Option<&str>, Vec<&str>, Vec<&str>)> = groups
+            .iter()
+            .map(|group| {
+                (
+                    group.disk.map(|disk| disk.name.as_str()),
+                    group.mounts.iter().map(|mount| mount.mount_point.as_str()).collect(),
+                    group.unmounted.iter().map(|volume| volume.name.as_str()).collect(),
+                )
+            })
+            .collect();
+
+        assert_eq!(
+            summary,
+            vec![
+                (Some("nvme0n1"), vec!["/", "/boot/efi"], vec![]),
+                (Some("sdb"), vec!["/data"], vec!["sdb2"]),
+                (Some("sda"), vec![], vec!["sda1"]),
+                (None, vec!["/mnt/share"], vec![]),
+            ]
+        );
+    }
+
+    #[test]
+    fn mounts_without_known_disks_are_one_group() {
+        // A poll that wasn't detailed doesn't find the disks.
+        let stats = StorageStats {
+            mounts: vec![usage("/dev/sda1", "/", 0, 0), usage("/dev/sdb1", "/data", 0, 0)],
+            ..StorageStats::default()
+        };
+
+        let groups = stats.by_disk();
+
+        assert_eq!(groups.len(), 1);
+        assert_eq!(groups[0].disk, None);
+        assert_eq!(groups[0].mounts.len(), 2);
     }
 
     #[test]

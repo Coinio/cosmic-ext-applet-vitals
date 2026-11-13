@@ -26,7 +26,7 @@ for those fighting with iced/libcosmic, etc.
 ## Screenshots
 
 ##### CPU Details
-Usage of each thread and the CPU temperature.
+The CPU's model, cores, threads and clock speed, its temperature, and the usage of each thread.
 
 ![CPU Detail Popup](https://github.com/Coinio/cosmic-vitals/blob/main/res/screenshots/cpu-detail.png)
 
@@ -51,7 +51,7 @@ Reads / writes, model and busy time of each disk, including disks that aren't mo
 ![Disk Detail Popup](https://github.com/Coinio/cosmic-vitals/blob/main/res/screenshots/disk-detail.png)
 
 ##### Storage Details
-Used space of every mount, and the size of any drives that aren't mounted.
+Used space of each included mount, grouped by drive with its model, and the size of any partitions that aren't mounted.
 
 ![Storage Detail Popup](https://github.com/Coinio/cosmic-vitals/blob/main/res/screenshots/storage-detail.png)
 

@@ -12,6 +12,7 @@ use crate::monitors::gpu_monitor::{GpuMonitor, GpuStats};
 use crate::monitors::memory_monitor::{MemoryMonitor, MemoryStats};
 use crate::monitors::network_monitor::{NetworkMonitor, NetworkStats};
 use crate::monitors::storage_monitor::{StorageMonitor, StorageStats};
+use crate::sensors::cpu_info_reader::{CpuInfo, PROC_CPUINFO_FILE};
 use crate::sensors::cpu_topology_reader::{CpuTopology, SYSFS_CPU_ROOT};
 use crate::sensors::gpu_reader::GpuPaths;
 use crate::sensors::hwmon_reader::HWMON_ROOT;
@@ -113,7 +114,9 @@ pub struct AppState {
     memory: MemoryStats,
     /// The current cpu usage stats
     cpu: CpuStats,
-    /// The latest cpu temperature and fan speed, which are only read while the cpu detail popup is wanted.
+    /// The cpu's model, cores, threads and highest clock speed, which don't change, so they're read once.
+    cpu_info: CpuInfo,
+    /// The latest cpu temperature, fan speed and clock speed, which are only read while the cpu detail popup is wanted.
     cpu_sensors: CpuSensorStats,
     /// The current gpu usage stats. Only the panel's gpu is read, except while the gpu detail popup is wanted.
     gpu: GpuStats,
@@ -207,6 +210,7 @@ impl Application for AppState {
             app_icons,
             app_text_measurements,
             configuration,
+            cpu_info: CpuInfo::read(Path::new(PROC_CPUINFO_FILE), Path::new(SYSFS_CPU_ROOT)),
             ..Default::default()
         };
 
@@ -394,12 +398,13 @@ impl AppState {
                         let topology = config.cpu.combine_cores.then(|| CpuTopology::read(Path::new(SYSFS_CPU_ROOT)));
                         CpuMonitor::new(ProcStatSensorReader, &config, topology)
                     });
-                    // The temperature and fan are only shown in the cpu detail popup, so they're only read while
-                    // it's wanted. Some sensor drivers are slow to read, or wake their device to do it.
-                    let cpu_sensors_monitor = (!config.cpu.hide_indicator)
-                        .then(|| CpuSensorsMonitor::new(Path::new(HWMON_ROOT), &config.cpu));
+                    // The temperature, fan and clock speed are only shown in the cpu detail popup, so they're only
+                    // read while it's wanted. Some sensor drivers are slow to read, or wake their device to do it.
+                    let cpu_sensors_monitor = (!config.cpu.hide_indicator).then(|| {
+                        CpuSensorsMonitor::new(Path::new(HWMON_ROOT), Path::new(SYSFS_CPU_ROOT), &config.cpu)
+                    });
                     // The network, disk and storage monitors only read what only their detail popups show, e.g. each
-                    // interface's address, each disk's mounts and every mount's space, while the popup is wanted.
+                    // interface's address, each disk's mounts and the disk each mount is on, while the popup is wanted.
                     let mut network_monitor = (!config.network.hide_indicator)
                         .then(|| NetworkMonitor::new(ProcNetDevReader::default(), &config));
                     let mut disk_monitor = (!config.disk.hide_indicator)
@@ -704,7 +709,7 @@ impl AppState {
         let style = PopupStyle::new(self.indicator_font);
         let (configuration, app_icons) = (&self.configuration, &self.app_icons);
         match kind {
-            IndicatorKind::Cpu => Some(self.cpu.detail(&self.cpu_sensors, configuration, app_icons, style)),
+            IndicatorKind::Cpu => Some(self.cpu.detail(&self.cpu_info, &self.cpu_sensors, configuration, app_icons, style)),
             IndicatorKind::Memory => Some(self.memory.detail(configuration, app_icons, style)),
             IndicatorKind::Gpu => Some(self.gpu.detail(configuration, app_icons, style)),
             IndicatorKind::Network => Some(self.network.detail(configuration, app_icons, style)),

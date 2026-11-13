@@ -42,6 +42,34 @@ fn format_bytes_per_second(bytes_per_sec: u64, app_config: &AppConfiguration) ->
 }
 /// Bytes as gigabytes, or terabytes once there are a thousand gigabytes, in at most 4 significant figures.
 fn format_size_bytes(bytes: u64, app_config: &AppConfiguration) -> String {
+    let (value, unit) = size_in_unit(bytes, app_config);
+
+    if value > 99.9 {
+        format!("{:.0}{unit}", value.round())
+    } else {
+        format!("{value:.1}{unit}")
+    }
+}
+
+/// Bytes like [`format_size_bytes`], but in 3 significant figures, e.g. 1.96TB, 23.4GB or 931GB, for storage. It tells
+/// apart sizes that one decimal rounds to the same, e.g. a 2TB drive and the 1.96TB filesystem on it, and shows a large
+/// drive's used space in steps of 10GB instead of 100GB. It's never wider than "99.9TB", so it fits the same space.
+/// Memory and VRAM change every tick, and never reach terabytes, so they keep [`format_size_bytes`].
+fn format_size_bytes_precise(bytes: u64, app_config: &AppConfiguration) -> String {
+    let (value, unit) = size_in_unit(bytes, app_config);
+
+    // The thresholds are where rounding adds a digit, so e.g. 9.996 shows as "10.0", not "10.00".
+    if value >= 99.95 {
+        format!("{:.0}{unit}", value.round())
+    } else if value >= 9.995 {
+        format!("{value:.1}{unit}")
+    } else {
+        format!("{value:.2}{unit}")
+    }
+}
+
+/// Bytes in gigabytes, or terabytes once there are a thousand gigabytes, and the unit.
+fn size_in_unit(bytes: u64, app_config: &AppConfiguration) -> (f64, &'static str) {
     let (base, giga, tera) = if app_config.general.use_iec_units {
         (1024.0_f64, "GiB", "TiB")
     } else {
@@ -50,16 +78,10 @@ fn format_size_bytes(bytes: u64, app_config: &AppConfiguration) -> String {
 
     let gigabytes = bytes as f64 / base.powi(3);
     // Rounded first, so a value that rounds up to 1000 moves to the next unit instead of showing as "1000GB".
-    let (value, unit) = if gigabytes.round() >= 1000.0 {
+    if gigabytes.round() >= 1000.0 {
         (gigabytes / base, tera)
     } else {
         (gigabytes, giga)
-    };
-
-    if value > 99.9 {
-        format!("{:.0}{unit}", value.round())
-    } else {
-        format!("{value:.1}{unit}")
     }
 }
 
@@ -146,5 +168,24 @@ mod tests {
 
         assert_eq!(format_size_bytes(10 * 1024 * 1024 * 1024, &config), "10.0GiB");
         assert_eq!(format_size_bytes(2 * 1024 * 1024 * 1024 * 1024, &config), "2.0TiB");
+    }
+
+    #[test]
+    fn formats_precise_sizes_in_three_significant_figures() {
+        let si = config(false);
+
+        assert_eq!(format_size_bytes_precise(0, &si), "0.00GB");
+        assert_eq!(format_size_bytes_precise(474_525_696, &si), "0.47GB");
+        assert_eq!(format_size_bytes_precise(9_996_000_000, &si), "10.0GB");
+        assert_eq!(format_size_bytes_precise(23_440_000_000, &si), "23.4GB");
+        assert_eq!(format_size_bytes_precise(99_960_000_000, &si), "100GB");
+        assert_eq!(format_size_bytes_precise(931_500_000_000, &si), "932GB");
+        assert_eq!(format_size_bytes_precise(999_700_000_000, &si), "1.00TB");
+        assert_eq!(format_size_bytes_precise(1_958_315_118_592, &si), "1.96TB");
+        assert_eq!(format_size_bytes_precise(2_000_398_934_016, &si), "2.00TB");
+        assert_eq!(format_size_bytes_precise(120_000_000_000_000, &si), "120TB");
+
+        let iec = config(true);
+        assert_eq!(format_size_bytes_precise(1_958_315_118_592, &iec), "1.78TiB");
     }
 }

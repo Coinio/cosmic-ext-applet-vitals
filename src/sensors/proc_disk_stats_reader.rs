@@ -121,12 +121,7 @@ pub fn has_media(sys_block_root: &Path, device_name: &str) -> bool {
 pub fn mounted_devices(sys_block_root: &Path, mounts: &[MountEntry]) -> HashSet<String> {
     let mut pending: Vec<String> = mounts
         .iter()
-        .filter(|mount| mount.source.starts_with("/dev/"))
-        .filter_map(|mount| {
-            // `/dev/mapper` and `/dev/disk/by-*` names are links to the kernel's device node.
-            let path = fs::canonicalize(&mount.source).unwrap_or_else(|_| PathBuf::from(&mount.source));
-            path.file_name()?.to_str().map(str::to_string)
-        })
+        .filter_map(|mount| device_name(&mount.source))
         .collect();
 
     let mut devices = HashSet::new();
@@ -140,6 +135,17 @@ pub fn mounted_devices(sys_block_root: &Path, mounts: &[MountEntry]) -> HashSet<
         }
     }
     devices
+}
+
+/// The kernel name of the block device a mount's `source` is, e.g. `nvme0n1p2` for `/dev/nvme0n1p2`, and `dm-1` for
+/// `/dev/mapper/vg-root`, or `None` when it isn't a device, e.g. `tmpfs` or a network share.
+pub fn device_name(source: &str) -> Option<String> {
+    if !source.starts_with("/dev/") {
+        return None;
+    }
+    // `/dev/mapper` and `/dev/disk/by-*` names are links to the kernel's device node.
+    let path = fs::canonicalize(source).unwrap_or_else(|_| PathBuf::from(source));
+    path.file_name()?.to_str().map(str::to_string)
 }
 
 /// Whether the disk, or one of its partitions, is in `devices`.

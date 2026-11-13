@@ -1,4 +1,5 @@
 use crate::configuration::cpu::CpuConfiguration;
+use crate::sensors::cpu_info_reader::CpuFrequencyReader;
 use crate::sensors::hwmon_reader::{
     discover_sensors, find_sensor, read_fan_speed, read_temperature, HwmonSensor, HwmonSensorKind,
 };
@@ -11,19 +12,22 @@ pub struct CpuSensorStats {
     pub temperature_celsius: Option<f64>,
     /// The CPU fan speed in RPM, when there's a sensor for it.
     pub fan_rpm: Option<u32>,
+    /// The current clock speed in kHz, averaged over the threads, when the CPU's frequency driver reports it.
+    pub frequency_khz: Option<u64>,
 }
 
-/// Reads the CPU temperature and fan speed. Only the two chosen sensors are read on each poll, as some drivers are
-/// slow to read, or wake their device to do it.
+/// Reads the CPU temperature, fan speed and clock speed. Only the two chosen sensors are read on each poll, as some
+/// drivers are slow to read, or wake their device to do it.
 pub struct CpuSensorsMonitor {
     temperature: Option<HwmonSensor>,
     fan: Option<HwmonSensor>,
+    frequency: CpuFrequencyReader,
 }
 
 impl CpuSensorsMonitor {
     /// Find the configured sensors, or the automatic ones, once. A driver loaded later is picked up the next time
     /// the monitors start, e.g. when the configuration changes.
-    pub fn new(hwmon_root: &Path, configuration: &CpuConfiguration) -> Self {
+    pub fn new(hwmon_root: &Path, sysfs_cpu_root: &Path, configuration: &CpuConfiguration) -> Self {
         let temperature = Self::find(hwmon_root, HwmonSensorKind::Temperature, configuration);
         let fan = Self::find(hwmon_root, HwmonSensorKind::Fan, configuration);
 
@@ -33,7 +37,11 @@ impl CpuSensorsMonitor {
             fan.as_ref().map(HwmonSensor::name)
         );
 
-        Self { temperature, fan }
+        Self {
+            temperature,
+            fan,
+            frequency: CpuFrequencyReader::new(sysfs_cpu_root),
+        }
     }
 
     fn find(hwmon_root: &Path, kind: HwmonSensorKind, configuration: &CpuConfiguration) -> Option<HwmonSensor> {
@@ -55,6 +63,7 @@ impl CpuSensorsMonitor {
         CpuSensorStats {
             temperature_celsius: self.temperature.as_ref().and_then(read_temperature),
             fan_rpm: self.fan.as_ref().and_then(read_fan_speed),
+            frequency_khz: self.frequency.read_average_khz(),
         }
     }
 }
@@ -65,6 +74,9 @@ mod tests {
     use crate::sensors::hwmon_reader::tests::FakeHwmon;
     use crate::sensors::hwmon_reader::HwmonSensorId;
     use std::fs;
+
+    /// The tests are about the hwmon sensors, so there are no CPUs to read the clock speed of.
+    const NO_CPU_ROOT: &str = "/nonexistent/cpu";
 
     #[test]
     fn reads_the_automatic_sensors() {
@@ -77,13 +89,14 @@ mod tests {
             &[("fan1", Some("CPU Fan"), "980"), ("fan2", None, "0")],
         );
 
-        let monitor = CpuSensorsMonitor::new(hwmon.path(), &CpuConfiguration::default());
+        let monitor = CpuSensorsMonitor::new(hwmon.path(), Path::new(NO_CPU_ROOT), &CpuConfiguration::default());
 
         assert_eq!(
             monitor.poll(),
             CpuSensorStats {
                 temperature_celsius: Some(52.5),
                 fan_rpm: Some(980),
+                frequency_khz: None,
             }
         );
     }
@@ -115,13 +128,14 @@ mod tests {
             }),
             ..CpuConfiguration::default()
         };
-        let monitor = CpuSensorsMonitor::new(hwmon.path(), &configuration);
+        let monitor = CpuSensorsMonitor::new(hwmon.path(), Path::new(NO_CPU_ROOT), &configuration);
 
         assert_eq!(
             monitor.poll(),
             CpuSensorStats {
                 temperature_celsius: Some(41.0),
                 fan_rpm: Some(1100),
+                frequency_khz: None,
             }
         );
     }
@@ -132,7 +146,7 @@ mod tests {
         // Unlabelled fans, which could be any of the board's fans.
         hwmon.chip("nct6775", "", &[("fan1", None, "700"), ("fan2", None, "1100")]);
 
-        let monitor = CpuSensorsMonitor::new(hwmon.path(), &CpuConfiguration::default());
+        let monitor = CpuSensorsMonitor::new(hwmon.path(), Path::new(NO_CPU_ROOT), &CpuConfiguration::default());
 
         assert_eq!(monitor.poll(), CpuSensorStats::default());
     }
@@ -142,7 +156,7 @@ mod tests {
         let mut hwmon = FakeHwmon::new();
         let chip = hwmon.chip("coretemp", "coretemp.0", &[("temp1", Some("Package id 0"), "40000")]);
 
-        let monitor = CpuSensorsMonitor::new(hwmon.path(), &CpuConfiguration::default());
+        let monitor = CpuSensorsMonitor::new(hwmon.path(), Path::new(NO_CPU_ROOT), &CpuConfiguration::default());
         assert_eq!(monitor.poll().temperature_celsius, Some(40.0));
 
         fs::write(chip.join("temp1_input"), "61000\n").unwrap();

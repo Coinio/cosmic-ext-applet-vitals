@@ -35,12 +35,13 @@ settings-read-colour = Read Colour
 settings-write-colour = Write Colour
 settings-storage-title = Storage Settings
 settings-storage-mounts = Included Mounts
-settings-storage-mounts-helper = The used / total space shown is the sum of the ticked mounts. A filesystem mounted in more than one place is only counted once.
+settings-storage-mounts-helper = The used / total space shown is the sum of the ticked mounts, and the detail popup only lists those. A filesystem mounted in more than one place is only counted once.
 settings-storage-not-mounted = Not mounted
 popup-storage-title = Storage
 popup-storage-space = { $used } used of { $total }
 popup-storage-unmounted = { $size }, not mounted
 popup-storage-locked = { $size }, locked
+popup-storage-other = Other
 settings-cpu-combine-cores = Combine Threads Into Cores
 settings-cpu-combine-cores-helper = The detail popup shows the usage of each physical core, instead of each thread.
 settings-cpu-temperature-sensor = Temperature Sensor
@@ -60,6 +61,16 @@ popup-cpu-fan = Fan
 popup-cpu-fan-speed = { $rpm } RPM
 popup-cpu-threads = Threads
 popup-cpu-cores = Cores
+popup-cpu-clock = Clock
+popup-cpu-core-count = { $cores ->
+    [one] { $cores } core
+   *[other] { $cores } cores
+}
+popup-cpu-thread-count = { $threads ->
+    [one] { $threads } thread
+   *[other] { $threads } threads
+}
+popup-cpu-max-clock = up to { $frequency }
 popup-memory-title = Memory
 popup-memory-used = Used
 popup-memory-used-of = { $used } of { $total }
