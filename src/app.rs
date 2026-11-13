@@ -398,8 +398,10 @@ impl AppState {
                     // it's wanted. Some sensor drivers are slow to read, or wake their device to do it.
                     let cpu_sensors_monitor = (!config.cpu.hide_indicator)
                         .then(|| CpuSensorsMonitor::new(Path::new(HWMON_ROOT), &config.cpu));
+                    // The network, disk and storage monitors only read what only their detail popups show, e.g. each
+                    // interface's address, each disk's mounts and every mount's space, while the popup is wanted.
                     let mut network_monitor = (!config.network.hide_indicator)
-                        .then(|| NetworkMonitor::new(ProcNetDevReader, &config));
+                        .then(|| NetworkMonitor::new(ProcNetDevReader::default(), &config));
                     let mut disk_monitor = (!config.disk.hide_indicator)
                         .then(|| DiskMonitor::new(
                             ProcDiskStatsReader,
@@ -408,7 +410,10 @@ impl AppState {
                             Path::new(SYS_BLOCK_ROOT),
                         ));
                     let mut storage_monitor = (!config.storage.hide_indicator)
-                        .then(|| StorageMonitor::new(StorageReader, config.storage.mounts.clone()));
+                        .then(|| StorageMonitor::new(
+                            StorageReader::new(config.storage.mounts.clone()),
+                            config.storage.mounts.clone(),
+                        ));
                     // Only the panel's gpu is read on every tick. The others are only shown in the gpu detail popup,
                     // so they're only read while it's wanted, which leaves them free to sleep the rest of the time.
                     let mut gpu_monitor = (!config.gpu.hide_indicator)
@@ -440,7 +445,7 @@ impl AppState {
 
                         tokio::select! {
                             _ = tokio::time::sleep_until(next_due) => {},
-                            changed = detail_wanted.changed(), if cpu_sensors_monitor.is_some() || gpu_monitor.is_some() => {
+                            changed = detail_wanted.changed() => {
                                 // The sender lives as long as the applet, so this only fails as it exits.
                                 if changed.is_err() {
                                     break;
@@ -465,14 +470,27 @@ impl AppState {
                         }
 
                         let wanted = *detail_wanted.borrow();
+                        let detailed = |kind| wanted == Some(kind);
+                        // A monitor whose popup has just become wanted is polled straight away, for what only its
+                        // popup shows. Its rates are worked out from the time that passed, so an early poll doesn't
+                        // skew them, and its schedule is left alone, so it stays in step with the others.
+                        let poll = |index: usize, kind| due[index] || detail_requested == Some(kind);
                         let read_cpu_sensors = detail_requested == Some(IndicatorKind::Cpu)
-                            || (due[1] && wanted == Some(IndicatorKind::Cpu));
-                        let read_gpu = due[5] || detail_requested == Some(IndicatorKind::Gpu);
-                        let read_all_gpus = wanted == Some(IndicatorKind::Gpu);
+                            || (due[1] && detailed(IndicatorKind::Cpu));
+                        let poll_network = poll(2, IndicatorKind::Network);
+                        let poll_disk = poll(3, IndicatorKind::Disk);
+                        let poll_storage = poll(4, IndicatorKind::Storage);
+                        let poll_gpu = poll(5, IndicatorKind::Gpu);
 
                         // Waking for a detail popup can find nothing else due, and nothing to read when it stopped
                         // being wanted.
-                        if !read_cpu_sensors && !read_gpu && !due.contains(&true) {
+                        if !read_cpu_sensors
+                            && !poll_network
+                            && !poll_disk
+                            && !poll_storage
+                            && !poll_gpu
+                            && !due.contains(&true)
+                        {
                             continue;
                         }
 
@@ -480,10 +498,19 @@ impl AppState {
                             memory: memory_monitor.as_mut().filter(|_| due[0]).map(|m| m.poll().unwrap_or_default()),
                             cpu: cpu_monitor.as_mut().filter(|_| due[1]).map(|m| m.poll().unwrap_or_default()),
                             cpu_sensors: cpu_sensors_monitor.as_ref().filter(|_| read_cpu_sensors).map(|m| m.poll()),
-                            network: network_monitor.as_mut().filter(|_| due[2]).map(|m| m.poll().unwrap_or_default()),
-                            disk: disk_monitor.as_mut().filter(|_| due[3]).map(|m| m.poll().unwrap_or_default()),
-                            storage: storage_monitor.as_mut().filter(|_| due[4]).map(|m| m.poll().unwrap_or_default()),
-                            gpu: gpu_monitor.as_mut().filter(|_| read_gpu).map(|m| m.poll(read_all_gpus)),
+                            network: network_monitor
+                                .as_mut()
+                                .filter(|_| poll_network)
+                                .map(|m| m.poll(detailed(IndicatorKind::Network)).unwrap_or_default()),
+                            disk: disk_monitor
+                                .as_mut()
+                                .filter(|_| poll_disk)
+                                .map(|m| m.poll(detailed(IndicatorKind::Disk)).unwrap_or_default()),
+                            storage: storage_monitor
+                                .as_mut()
+                                .filter(|_| poll_storage)
+                                .map(|m| m.poll(detailed(IndicatorKind::Storage)).unwrap_or_default()),
+                            gpu: gpu_monitor.as_mut().filter(|_| poll_gpu).map(|m| m.poll(detailed(IndicatorKind::Gpu))),
                         };
 
                         yield Message::StatsUpdate(update);
@@ -515,6 +542,11 @@ impl AppState {
                 }
             }
             Message::ConfigFileChanged(configuration) => {
+                // The configuration is reported once as the applet starts, which is the one it was started with.
+                // Restarting the monitors for it would discover the sensors and GPUs, and initialise NVML, again.
+                if configuration == self.configuration {
+                    return Task::none();
+                }
                 self.configuration = configuration;
                 self.refresh_indicator_font();
                 // The hovered indicator may have been hidden, which leaves nothing to report that it's no longer hovered.
@@ -618,9 +650,11 @@ impl AppState {
         }
         command.arg(page.to_arg());
 
-        // The privileged socket belongs to the applet, the settings window has no use for it.
+        // The privileged socket belongs to the applet, the settings window has no use for it. The applet's limit on
+        // its async runtime's threads is set for the applet alone.
         command
             .env_remove("X_PRIVILEGED_WAYLAND_SOCKET")
+            .env_remove(crate::TOKIO_WORKER_THREADS)
             .stdin(Stdio::null())
             .stdout(Stdio::null())
             .stderr(Stdio::null());

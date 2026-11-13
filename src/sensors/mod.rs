@@ -10,3 +10,4 @@ pub mod cpu_topology_reader;
 pub mod hwmon_reader;
 pub mod gpu_reader;
 pub mod nvml;
+pub mod proc_file;

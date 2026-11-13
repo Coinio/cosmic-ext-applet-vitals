@@ -5,6 +5,7 @@
 //! temperature in millidegrees Celsius, and one `fanX_input` file per fan in RPM. An optional `tempX_label` or
 //! `fanX_label` file names the channel.
 
+use crate::sensors::proc_file;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -251,7 +252,7 @@ pub fn read_fan_speed(sensor: &HwmonSensor) -> Option<u32> {
 
 /// Some drivers fail the read, e.g. with `ENODATA`, while a sensor isn't connected.
 fn read_integer(path: &Path) -> Option<i64> {
-    fs::read_to_string(path).ok()?.trim().parse().ok()
+    proc_file::read_value(path)
 }
 
 #[cfg(test)]

@@ -9,9 +9,10 @@ pub struct StorageStats {
     pub available_bytes: u64,
     /// The total space across the configured mounts.
     pub total_bytes: u64,
-    /// Every mounted filesystem, including those not counted in the totals, in mount table order.
+    /// Every mounted filesystem, including those not counted in the totals, in mount table order. Only the counted
+    /// ones unless the poll was detailed.
     pub mounts: Vec<MountUsage>,
-    /// The volumes that aren't mounted, which have no free space to count.
+    /// The volumes that aren't mounted, which have no free space to count. Only found by a detailed poll.
     pub unmounted: Vec<UnmountedVolume>,
 }
 
@@ -31,8 +32,14 @@ impl<S: SensorReader<Output = StorageReading>> StorageMonitor<S> {
         }
     }
 
-    pub fn poll(&mut self) -> Result<StorageStats, String> {
-        let StorageReading { mounts, unmounted } = self.sensor_reader.read()?;
+    /// Poll the space on the counted mounts, and when `detailed`, e.g. while the detail popup is wanted, every mount
+    /// and the volumes that aren't mounted too.
+    pub fn poll(&mut self, detailed: bool) -> Result<StorageStats, String> {
+        let StorageReading { mounts, unmounted } = if detailed {
+            self.sensor_reader.read_detailed()?
+        } else {
+            self.sensor_reader.read()?
+        };
 
         let mut counted: HashSet<String> = HashSet::new();
         let mut stats = StorageStats::default();
@@ -116,7 +123,7 @@ mod tests {
         ])]);
         let mut monitor = StorageMonitor::new(reader, mount_points(&["/", "/data"]));
 
-        let stats = monitor.poll().unwrap();
+        let stats = monitor.poll(true).unwrap();
 
         assert_eq!(stats.total_bytes, 3000);
         assert_eq!(stats.available_bytes, 1900);
@@ -130,7 +137,7 @@ mod tests {
         ])]);
         let mut monitor = StorageMonitor::new(reader, mount_points(&["/", "/home"]));
 
-        let stats = monitor.poll().unwrap();
+        let stats = monitor.poll(true).unwrap();
 
         assert_eq!(stats.total_bytes, 1000);
         assert_eq!(stats.available_bytes, 400);
@@ -144,7 +151,7 @@ mod tests {
         ])]);
         let mut monitor = StorageMonitor::new(reader, mount_points(&["/mnt/a", "/mnt/b"]));
 
-        let stats = monitor.poll().unwrap();
+        let stats = monitor.poll(true).unwrap();
 
         assert_eq!(stats.total_bytes, 1500);
         assert_eq!(stats.available_bytes, 150);
@@ -160,7 +167,7 @@ mod tests {
         let reader = MockStorageReader::new(vec![Ok(mounts.clone())]);
         let mut monitor = StorageMonitor::new(reader, mount_points(&["/", "/data"]));
 
-        let stats = monitor.poll().unwrap();
+        let stats = monitor.poll(true).unwrap();
 
         assert_eq!(stats.total_bytes, 3000);
         assert_eq!(stats.available_bytes, 1900);
@@ -172,7 +179,7 @@ mod tests {
         let reader = MockStorageReader::new(vec![Ok(Vec::new())]);
         let mut monitor = StorageMonitor::new(reader, mount_points(&["/"]));
 
-        let stats = monitor.poll().unwrap();
+        let stats = monitor.poll(true).unwrap();
 
         assert_eq!(stats.total_bytes, 0);
         assert_eq!(stats.available_bytes, 0);
@@ -183,6 +190,6 @@ mod tests {
         let reader = MockStorageReader::new(vec![Err("boom".to_string())]);
         let mut monitor = StorageMonitor::new(reader, mount_points(&["/"]));
 
-        assert_eq!(monitor.poll().unwrap_err(), "boom");
+        assert_eq!(monitor.poll(true).unwrap_err(), "boom");
     }
 }

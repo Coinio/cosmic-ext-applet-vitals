@@ -1,5 +1,5 @@
+use crate::sensors::proc_file;
 use crate::sensors::sensor_traits::SensorReader;
-use std::fs;
 
 const PROC_STAT_FILE: &str = "/proc/stat";
 const CPU_LINE_PREFIX: &str = "cpu";
@@ -58,10 +58,8 @@ impl SensorReader for ProcStatSensorReader {
     type Output = ProcStatStatus;
 
     fn read(&self) -> Result<ProcStatStatus, String> {
-        let contents =
-            fs::read_to_string(PROC_STAT_FILE).map_err(|e| format!("Unable to read file: {} {}", PROC_STAT_FILE, e))?;
-
-        parse_proc_stat(&contents)
+        proc_file::read(PROC_STAT_FILE, parse_proc_stat)
+            .map_err(|e| format!("Unable to read file: {} {}", PROC_STAT_FILE, e))?
     }
 }
 

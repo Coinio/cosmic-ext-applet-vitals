@@ -1,8 +1,8 @@
+use crate::sensors::proc_file;
 use crate::sensors::proc_mounts_reader::MountEntry;
 use crate::sensors::sensor_traits::SensorReader;
 use std::collections::HashSet;
-use std::fs::{self, File};
-use std::io::Read;
+use std::fs;
 use std::path::{Path, PathBuf};
 
 const PROC_DISK_STATS_FILE: &str = "/proc/diskstats";
@@ -56,27 +56,14 @@ impl SensorReader for ProcDiskStatsReader {
     type Output = ProcDiskStats;
 
     fn read(&self) -> Result<Self::Output, String> {
-        let path = Path::new(PROC_DISK_STATS_FILE);
-
-        let mut file = match File::open(path) {
-            Ok(file) => file,
-            Err(e) => return Err(format!("Unable to open file: {} {}", PROC_DISK_STATS_FILE, e)),
-        };
-
-        let mut contents = String::new();
-
-        if let Err(_) = file.read_to_string(&mut contents) {
-            return Err(format!("Unable to read {}", PROC_DISK_STATS_FILE));
-        }
-
-        let mut statuses = Vec::new();
-
-        for line in contents.lines() {
-            if line.trim().is_empty() { continue; }
-            let device_status = self.parse_disk_stats_line(line)?;
-
-            statuses.push(device_status);
-        }
+        let statuses = proc_file::read(PROC_DISK_STATS_FILE, |contents| {
+            contents
+                .lines()
+                .filter(|line| !line.trim().is_empty())
+                .map(|line| self.parse_disk_stats_line(line))
+                .collect::<Result<Vec<_>, _>>()
+        })
+        .map_err(|e| format!("Unable to read {}: {}", PROC_DISK_STATS_FILE, e))??;
 
         Ok(ProcDiskStats::new(statuses))
     }
@@ -126,10 +113,7 @@ pub fn is_disk(sys_block_root: &Path, device_name: &str) -> bool {
 
 /// Whether the disk has media in it. A card reader without a card, or an optical drive without a disc, has a size of 0.
 pub fn has_media(sys_block_root: &Path, device_name: &str) -> bool {
-    fs::read_to_string(sys_block_root.join(device_name).join("size"))
-        .ok()
-        .and_then(|size| size.trim().parse::<u64>().ok())
-        .is_some_and(|sectors| sectors > 0)
+    proc_file::read_value::<u64>(sys_block_root.join(device_name).join("size")).is_some_and(|sectors| sectors > 0)
 }
 
 /// The block devices that the mounts are on, and the devices those are stacked on, e.g. the encrypted partition

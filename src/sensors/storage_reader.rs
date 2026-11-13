@@ -37,25 +37,33 @@ pub struct UnmountedVolume {
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct StorageReading {
-    /// Every mounted storage filesystem, in mount table order.
+    /// Every mounted storage filesystem, or only the counted ones when the read isn't detailed, in mount table order.
     pub mounts: Vec<MountUsage>,
-    /// The volumes that aren't mounted, by disk and then partition.
+    /// The volumes that aren't mounted, by disk and then partition. Only found by a detailed read.
     pub unmounted: Vec<UnmountedVolume>,
 }
 
-/// Reads the space on every mounted storage filesystem, and finds the volumes that aren't mounted. Only mounted
-/// filesystems are read, so an unplugged drive doesn't report the space of the filesystem its mount point directory
-/// is on.
-pub struct StorageReader;
+/// Reads the space on the mounted storage filesystems. Only mounted filesystems are read, so an unplugged drive doesn't
+/// report the space of the filesystem its mount point directory is on.
+///
+/// The panel only shows the space on the counted mount points, so only those are read, except by a detailed read for
+/// the detail popup, which reads every mount, and finds the volumes that aren't mounted. Reading the space on a
+/// network mount asks its server, and finding the volumes reads a few sysfs and udev files for every partition.
+pub struct StorageReader {
+    counted_mount_points: Vec<String>,
+}
 
-impl SensorReader for StorageReader {
-    type Output = StorageReading;
+impl StorageReader {
+    pub fn new(counted_mount_points: Vec<String>) -> Self {
+        Self { counted_mount_points }
+    }
 
-    fn read(&self) -> Result<Self::Output, String> {
+    fn read_with(&self, detailed: bool) -> Result<StorageReading, String> {
         let all_mounts = ProcMountsReader.read()?;
 
         let mounts = storage_mounts(&all_mounts)
             .into_iter()
+            .filter(|mount| detailed || self.counted_mount_points.contains(&mount.mount_point))
             .filter_map(|mount| match rustix::fs::statvfs(mount.mount_point.as_str()) {
                 Ok(stats) => Some(MountUsage {
                     total_bytes: stats.f_blocks.saturating_mul(stats.f_frsize),
@@ -70,10 +78,25 @@ impl SensorReader for StorageReader {
             })
             .collect();
 
-        Ok(StorageReading {
-            mounts,
-            unmounted: unmounted_volumes(Path::new(SYS_BLOCK_ROOT), Path::new(UDEV_DATA_ROOT), &all_mounts),
-        })
+        let unmounted = if detailed {
+            unmounted_volumes(Path::new(SYS_BLOCK_ROOT), Path::new(UDEV_DATA_ROOT), &all_mounts)
+        } else {
+            Vec::new()
+        };
+
+        Ok(StorageReading { mounts, unmounted })
+    }
+}
+
+impl SensorReader for StorageReader {
+    type Output = StorageReading;
+
+    fn read(&self) -> Result<Self::Output, String> {
+        self.read_with(false)
+    }
+
+    fn read_detailed(&self) -> Result<Self::Output, String> {
+        self.read_with(true)
     }
 }
 
@@ -303,5 +326,19 @@ mod tests {
         assert_eq!(decode_udev_string("My\\x20Disk"), "My Disk");
         assert_eq!(decode_udev_string("plain"), "plain");
         assert_eq!(decode_udev_string("bad\\xZZ"), "bad\\xZZ");
+    }
+
+    /// The panel only shows the counted mounts, so a read that isn't detailed leaves the rest out. Reads this machine's
+    /// mounts, which can be anything, so only checks what's left out.
+    #[test]
+    fn only_a_detailed_read_reads_every_mount() {
+        let reader = StorageReader::new(vec!["/".to_string()]);
+
+        let reading = reader.read().unwrap();
+        assert!(reading.mounts.iter().all(|mount| mount.mount_point == "/"));
+        assert!(reading.unmounted.is_empty());
+
+        let detailed = reader.read_detailed().unwrap();
+        assert!(detailed.mounts.len() >= reading.mounts.len());
     }
 }

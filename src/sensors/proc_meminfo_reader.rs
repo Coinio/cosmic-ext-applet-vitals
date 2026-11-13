@@ -1,6 +1,4 @@
-use std::fs::File;
-use std::io::Read;
-use std::path::Path;
+use crate::sensors::proc_file;
 use crate::sensors::sensor_traits::SensorReader;
 
 const MEMORY_INFO_FILE: &str = "/proc/meminfo";
@@ -39,20 +37,8 @@ impl SensorReader for ProcMemInfoSensorReader {
     type Output = ProcMemInfoStatus;
 
     fn read(&self) -> Result<ProcMemInfoStatus, String> {
-        let path = Path::new(MEMORY_INFO_FILE);
-
-        let mut file = match File::open(path) {
-            Ok(file) => file,
-            Err(e) => return Err(format!("Unable to open file: {} {}", MEMORY_INFO_FILE, e)),
-        };
-
-        let mut contents = String::new();
-
-        if let Err(_) = file.read_to_string(&mut contents) {
-            return Err(format!("Unable to read {}", MEMORY_INFO_FILE))
-        }
-
-        self.parse(&contents)
+        proc_file::read(MEMORY_INFO_FILE, |contents| self.parse(contents))
+            .map_err(|e| format!("Unable to read {}: {}", MEMORY_INFO_FILE, e))?
     }
 }
 

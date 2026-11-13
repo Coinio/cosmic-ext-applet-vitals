@@ -33,7 +33,8 @@ pub struct DiskStats {
 pub struct DiskDeviceStats {
     pub name: String,
     pub model: Option<String>,
-    /// Whether the disk, or one of its partitions, is mounted. Also true when the mounts couldn't be read.
+    /// Whether the disk, or one of its partitions, is mounted. Only read by a detailed poll, and true when it isn't
+    /// read, or the mounts couldn't be read.
     pub is_mounted: bool,
     /// The bytes read per second, averaged over the samples.
     pub bytes_read: u64,
@@ -78,21 +79,22 @@ impl<S: SensorReader<Output = ProcDiskStats>, M: SensorReader<Output = Vec<Mount
         }
     }
 
-    pub fn poll(&mut self) -> Result<DiskStats, String> {
-        self.poll_at(Instant::now())
+    /// Poll the totals, and when `detailed`, e.g. while the detail popup is wanted, which disks are mounted too. Only
+    /// the popup shows that, and working it out reads the mount table and follows each mount's device in sysfs.
+    pub fn poll(&mut self, detailed: bool) -> Result<DiskStats, String> {
+        self.poll_at(Instant::now(), detailed)
     }
 
     /// Poll, with the totals read at `now`.
-    fn poll_at(&mut self, now: Instant) -> Result<DiskStats, String> {
+    fn poll_at(&mut self, now: Instant, detailed: bool) -> Result<DiskStats, String> {
         let current = self.sensor_reader.read()?;
         let elapsed = self.last_poll.map_or(Duration::ZERO, |last| now.saturating_duration_since(last));
         self.last_poll = Some(now);
 
         // Without the mounts, every disk is taken to be mounted rather than saying they all aren't.
-        let mounted = self
-            .mounts_reader
-            .read()
-            .ok()
+        let mounted = detailed
+            .then(|| self.mounts_reader.read().ok())
+            .flatten()
             .map(|mounts| mounted_devices(&self.sys_block_root, &mounts));
 
         let mut devices = Vec::new();
@@ -101,7 +103,9 @@ impl<S: SensorReader<Output = ProcDiskStats>, M: SensorReader<Output = Vec<Mount
 
         for device in current.device_statuses {
             let name = device.device_name;
-            if previous_not_disks.remove(&name) || !is_disk(&self.sys_block_root, &name) {
+            // A device's kind doesn't change, so it's only checked when it's new.
+            let is_known_disk = previous_disks.contains_key(&name);
+            if previous_not_disks.remove(&name) || (!is_known_disk && !is_disk(&self.sys_block_root, &name)) {
                 self.not_disks.insert(name);
                 continue;
             }
@@ -211,13 +215,26 @@ mod test {
     }
 
     /// The same mounts every poll.
-    struct MockMountsReader(Result<Vec<MountEntry>, String>);
+    struct MockMountsReader {
+        mounts: Result<Vec<MountEntry>, String>,
+        reads: Cell<usize>,
+    }
+
+    impl MockMountsReader {
+        fn new(mounts: Result<Vec<MountEntry>, String>) -> Self {
+            Self {
+                mounts,
+                reads: Cell::new(0),
+            }
+        }
+    }
 
     impl SensorReader for MockMountsReader {
         type Output = Vec<MountEntry>;
 
         fn read(&self) -> Result<Self::Output, String> {
-            self.0.clone()
+            self.reads.set(self.reads.get() + 1);
+            self.mounts.clone()
         }
     }
 
@@ -227,7 +244,7 @@ mod test {
         /// Poll a second after the last poll, as at the default update interval.
         fn poll_next_second(&mut self) -> Result<DiskStats, String> {
             let now = self.last_poll.map_or_else(Instant::now, |last| last + Duration::from_secs(1));
-            self.poll_at(now)
+            self.poll_at(now, true)
         }
     }
 
@@ -263,7 +280,7 @@ mod test {
 
     /// A monitor of the disks in `root`, with nothing mounted.
     fn make_monitor(reader: MockProcDiskStatsReader, max_samples: usize, root: &TempDir) -> TestMonitor {
-        DiskMonitor::new(reader, MockMountsReader(Ok(Vec::new())), &make_config(max_samples), root.path())
+        DiskMonitor::new(reader, MockMountsReader::new(Ok(Vec::new())), &make_config(max_samples), root.path())
     }
 
     fn disk_status(name: &str, sectors_read: u64, sectors_written: u64, io_time_ms: u64) -> ProcDiskStatsStatus {
@@ -326,12 +343,12 @@ mod test {
         let mut monitor = make_monitor(reader, 1, &root);
 
         let start = Instant::now();
-        _ = monitor.poll_at(start);
-        let result = monitor.poll_at(start + Duration::from_secs(2)).unwrap();
+        _ = monitor.poll_at(start, false);
+        let result = monitor.poll_at(start + Duration::from_secs(2), false).unwrap();
         assert_eq!((result.avg_bytes_read, result.avg_bytes_written), (2000 * 512, 1000 * 512));
         assert_eq!(result.devices[0].busy_percent, 25.0);
 
-        let result = monitor.poll_at(start + Duration::from_millis(2500)).unwrap();
+        let result = monitor.poll_at(start + Duration::from_millis(2500), false).unwrap();
         assert_eq!((result.avg_bytes_read, result.avg_bytes_written), (2000 * 512, 1000 * 512));
         assert_eq!(result.devices[0].busy_percent, 100.0);
     }
@@ -361,7 +378,7 @@ mod test {
 
         let monitor = DiskMonitor::new(
             MockProcDiskStatsReader::new(vec![]),
-            MockMountsReader(Ok(Vec::new())),
+            MockMountsReader::new(Ok(Vec::new())),
             &config,
             Path::new("/nonexistent"),
         );
@@ -386,7 +403,7 @@ mod test {
         ]);
 
         let reader = MockProcDiskStatsReader::new(vec![Ok(sample1), Ok(sample2)]);
-        let mounts = MockMountsReader(Ok(vec![mount("/dev/nonexistent/sda1")]));
+        let mounts = MockMountsReader::new(Ok(vec![mount("/dev/nonexistent/sda1")]));
         let mut monitor = DiskMonitor::new(reader, mounts, &make_config(1), root.path());
 
         _ = monitor.poll_next_second();
@@ -422,7 +439,7 @@ mod test {
     fn disks_are_mounted_when_the_mounts_are_unknown() {
         let root = sys_block();
         let reader = MockProcDiskStatsReader::new(vec![Ok(make_sensor_sample("sda", 0, 0))]);
-        let mounts = MockMountsReader(Err("boom".to_string()));
+        let mounts = MockMountsReader::new(Err("boom".to_string()));
         let mut monitor = DiskMonitor::new(reader, mounts, &make_config(1), root.path());
 
         assert!(monitor.poll_next_second().unwrap().devices[0].is_mounted);
@@ -498,7 +515,31 @@ mod test {
         let reader = MockProcDiskStatsReader::new(vec![Err("boom".to_string())]);
         let mut monitor = make_monitor(reader, 1, &root);
 
-        let err = monitor.poll().unwrap_err();
+        let err = monitor.poll(true).unwrap_err();
         assert_eq!(err, "boom");
+    }
+
+    /// Only the detail popup shows which disks are mounted, so the mounts are only read for it.
+    #[test]
+    fn only_a_detailed_poll_reads_the_mounts() {
+        let root = sys_block();
+        let reader = MockProcDiskStatsReader::new(vec![
+            Ok(make_sensor_sample("sda", 0, 0)),
+            Ok(make_sensor_sample("sda", 1000, 0)),
+            Ok(make_sensor_sample("sda", 2000, 0)),
+        ]);
+        let mounts = MockMountsReader::new(Ok(Vec::new()));
+        let mut monitor = DiskMonitor::new(reader, mounts, &make_config(1), root.path());
+
+        let start = Instant::now();
+        _ = monitor.poll_at(start, false);
+        let result = monitor.poll_at(start + Duration::from_secs(1), false).unwrap();
+        assert_eq!(monitor.mounts_reader.reads.get(), 0);
+        // The rates don't depend on it.
+        assert_eq!(result.avg_bytes_read, 1000 * 512);
+
+        let result = monitor.poll_at(start + Duration::from_secs(2), true).unwrap();
+        assert_eq!(monitor.mounts_reader.reads.get(), 1);
+        assert!(!result.devices[0].is_mounted);
     }
 }

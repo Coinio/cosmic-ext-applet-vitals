@@ -62,13 +62,19 @@ impl<S: SensorReader<Output = ProcNetDevStatus>> NetworkMonitor<S> {
         }
     }
 
-    pub fn poll(&mut self) -> Result<NetworkStats, String> {
-        self.poll_at(Instant::now())
+    /// Poll the totals, and when `detailed`, e.g. while the detail popup is wanted, each interface's link state and
+    /// address too. Otherwise they're left out, as only the popup shows them.
+    pub fn poll(&mut self, detailed: bool) -> Result<NetworkStats, String> {
+        self.poll_at(Instant::now(), detailed)
     }
 
     /// Poll, with the totals read at `now`.
-    fn poll_at(&mut self, now: Instant) -> Result<NetworkStats, String> {
-        let current = self.sensor_reader.read()?;
+    fn poll_at(&mut self, now: Instant, detailed: bool) -> Result<NetworkStats, String> {
+        let current = if detailed {
+            self.sensor_reader.read_detailed()?
+        } else {
+            self.sensor_reader.read()?
+        };
         let elapsed = self.last_poll.map_or(Duration::ZERO, |last| now.saturating_duration_since(last));
         self.last_poll = Some(now);
 
@@ -141,6 +147,8 @@ mod tests {
     struct MockProcNetDevReader {
         readings: Vec<Result<ProcNetDevStatus, String>>,
         index: Cell<usize>,
+        /// How many of the reads were detailed.
+        detailed_reads: Cell<usize>,
     }
 
     impl MockProcNetDevReader {
@@ -148,6 +156,7 @@ mod tests {
             Self {
                 readings,
                 index: Cell::new(0),
+                detailed_reads: Cell::new(0),
             }
         }
     }
@@ -160,13 +169,18 @@ mod tests {
             self.index.set(i + 1);
             result
         }
+
+        fn read_detailed(&self) -> Result<Self::Output, String> {
+            self.detailed_reads.set(self.detailed_reads.get() + 1);
+            self.read()
+        }
     }
 
     impl NetworkMonitor<MockProcNetDevReader> {
         /// Poll a second after the last poll, as at the default update interval.
         fn poll_next_second(&mut self) -> Result<NetworkStats, String> {
             let now = self.last_poll.map_or_else(Instant::now, |last| last + Duration::from_secs(1));
-            self.poll_at(now)
+            self.poll_at(now, true)
         }
     }
 
@@ -311,11 +325,11 @@ mod tests {
         let mut monitor = NetworkMonitor::new(reader, &make_config(1));
 
         let start = Instant::now();
-        _ = monitor.poll_at(start);
-        let result = monitor.poll_at(start + Duration::from_secs(2)).unwrap();
+        _ = monitor.poll_at(start, false);
+        let result = monitor.poll_at(start + Duration::from_secs(2), false).unwrap();
         assert_eq!((result.rx_bytes, result.tx_bytes), (2000, 1000));
 
-        let result = monitor.poll_at(start + Duration::from_millis(2500)).unwrap();
+        let result = monitor.poll_at(start + Duration::from_millis(2500), false).unwrap();
         assert_eq!((result.rx_bytes, result.tx_bytes), (2000, 1000));
     }
 
@@ -411,5 +425,21 @@ mod tests {
 
         let err = monitor.poll_next_second().unwrap_err();
         assert_eq!(err, "boom");
+    }
+
+    /// The link state and addresses are only shown in the detail popup, so they're only read for it.
+    #[test]
+    fn only_a_detailed_poll_reads_the_details() {
+        let status = || Ok(ProcNetDevStatus::new(vec![create_device_status(0, 0, true)]));
+        let reader = MockProcNetDevReader::new(vec![status(), status(), status()]);
+        let mut monitor = NetworkMonitor::new(reader, &make_config(1));
+
+        let start = Instant::now();
+        _ = monitor.poll_at(start, false);
+        _ = monitor.poll_at(start + Duration::from_secs(1), false);
+        assert_eq!(monitor.sensor_reader.detailed_reads.get(), 0);
+
+        _ = monitor.poll_at(start + Duration::from_secs(2), true);
+        assert_eq!(monitor.sensor_reader.detailed_reads.get(), 1);
     }
 }

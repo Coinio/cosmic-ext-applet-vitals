@@ -1,5 +1,5 @@
+use crate::sensors::proc_file;
 use crate::sensors::sensor_traits::SensorReader;
-use std::fs;
 
 const MOUNTS_FILE: &str = "/proc/self/mounts";
 
@@ -58,10 +58,7 @@ impl SensorReader for ProcMountsReader {
     type Output = Vec<MountEntry>;
 
     fn read(&self) -> Result<Self::Output, String> {
-        let contents =
-            fs::read_to_string(MOUNTS_FILE).map_err(|err| format!("Unable to read {MOUNTS_FILE}: {err}"))?;
-
-        Ok(parse_mounts(&contents))
+        proc_file::read(MOUNTS_FILE, parse_mounts).map_err(|err| format!("Unable to read {MOUNTS_FILE}: {err}"))
     }
 }
 

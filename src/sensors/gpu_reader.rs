@@ -7,6 +7,7 @@
 //! A GPU that the kernel has put to sleep (runtime suspended) is never read, as reading it wakes it. Whether it's
 //! asleep is read from its PCI device's `power/runtime_status`, which doesn't touch the GPU.
 
+use crate::sensors::proc_file;
 use std::fs::{self, File};
 use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
@@ -286,14 +287,13 @@ fn model_name(name: &str) -> String {
 }
 
 fn read_trimmed(path: &Path) -> Option<String> {
-    fs::read_to_string(path)
+    proc_file::read(path, |value| value.trim().to_string())
         .ok()
-        .map(|value| value.trim().to_string())
         .filter(|value| !value.is_empty())
 }
 
 fn read_integer(path: &Path) -> Option<u64> {
-    read_trimmed(path)?.parse().ok()
+    proc_file::read_value(path)
 }
 
 /// A PCI vendor or device id, which sysfs gives as e.g. `0x10de`.
